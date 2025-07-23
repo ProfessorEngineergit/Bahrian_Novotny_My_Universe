@@ -1,57 +1,67 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Enterprise Viewer</title>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      canvas { display: block; }
-    </style>
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
-          "GLTFLoader": "https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js"
-        }
+<head>
+  <meta charset="UTF-8" />
+  <title>Enterprise Viewer</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: black; color: white; font-family: monospace; }
+    #loader { position: absolute; top: 20px; left: 20px; z-index: 10; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
+        "GLTFLoader": "https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js"
       }
-    </script>
-  </head>
-  <body>
-    <script type="module">
-      import * as THREE from 'three';
-      import { GLTFLoader } from 'GLTFLoader';
+    }
+  </script>
+</head>
+<body>
+  <div id="loader">🚀 Lade Enterprise...</div>
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 2, 10);
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'GLTFLoader';
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 2, 10);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
+    scene.add(light);
+
+    const loader = new GLTFLoader();
+    loader.load('Assets/downscaled_USS_Enterprise_D.glb', function (gltf) {
+      const model = gltf.scene;
+      model.scale.set(0.5, 0.5, 0.5); // ggf. anpassen
+      model.position.set(0, 0, 0);    // sicherstellen, dass es sichtbar ist
+      scene.add(model);
+
+      console.log("✅ Modell geladen:", model);
+      document.getElementById('loader').textContent = "✅ Enterprise bereit.";
+    }, function (xhr) {
+      const percent = xhr.loaded / xhr.total * 100;
+      document.getElementById('loader').textContent = `🚀 Lade Enterprise... ${percent.toFixed(0)}%`;
+    }, function (error) {
+      console.error("❌ Fehler beim Laden:", error);
+      document.getElementById('loader').textContent = "❌ Fehler beim Laden!";
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
-      scene.add(light);
-
-      const loader = new GLTFLoader();
-      loader.load('Assets/downscaled_USS_Enterprise_D.glb', function (gltf) {
-        const model = gltf.scene;
-        model.scale.set(0.5, 0.5, 0.5); // anpassen je nach Modellgröße
-        scene.add(model);
-      }, undefined, function (error) {
-        console.error('Fehler beim Laden der Enterprise:', error);
-      });
-
-      function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-      }
-      animate();
-
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    </script>
-  </body>
+    });
+  </script>
+</body>
 </html>
