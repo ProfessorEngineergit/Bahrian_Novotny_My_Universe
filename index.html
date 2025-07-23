@@ -14,13 +14,17 @@
     </div>
     <div id="joystick-zone"></div>
     <div id="loading-screen">
-        <p>Lade Modell...</p>
+        <div id="loading-text">Lade Modell...</div>
+        <!-- NEU: Ladebalken -->
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
     </div>
 
     <!-- Joystick Bibliothek -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
     
-    <!-- Three.js Logik (als Modul, um Importe zu ermöglichen) -->
+    <!-- Three.js Logik -->
     <script type="module" src="main.js"></script>
 
 </body>
