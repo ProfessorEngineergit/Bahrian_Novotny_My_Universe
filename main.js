@@ -1,5 +1,6 @@
 import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/DRACOLoader.js';
 
 // === Grund-Setup ===
 const scene = new THREE.Scene();
@@ -9,15 +10,16 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
+// === UI Elemente ===
 const loadingScreen = document.getElementById('loading-screen');
+const progressBar = document.getElementById('progress-bar');
 
-// === Verbesserte Beleuchtung ===
-scene.add(new THREE.AmbientLight(0xffffff, 0.2)); // Grundlegendes Licht
+// === Beleuchtung und Sterne ===
+scene.add(new THREE.AmbientLight(0xffffff, 0.2));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
 directionalLight.position.set(5, 10, 7);
 scene.add(directionalLight);
 
-// === Verbesserte Sternenfelder (Parallax-Effekt) ===
 function createStarField(count, size, speed) {
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
@@ -35,7 +37,7 @@ function createStarField(count, size, speed) {
         opacity: Math.random() * 0.5 + 0.3
     });
     const stars = new THREE.Points(geometry, material);
-    stars.userData.speed = speed; // Eigene Eigenschaft für die Geschwindigkeit
+    stars.userData.speed = speed;
     scene.add(stars);
     return stars;
 }
@@ -47,53 +49,60 @@ let ship;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
-// === GLTF Modell-Lader ===
+// === GLTF Modell-Lader mit Draco ===
 const loader = new GLTFLoader();
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+loader.setDRACOLoader(dracoLoader);
+
+// KORREKTUR: Der exakte Pfad zu Ihrem Modell auf GitHub Pages
+const modelURL = 'https://professorengineergit.github.io/Project_Mariner/downscaled_USS_Enterprise_D.glb';
+
 loader.load(
-    'downscaled_USS_Enterprise_D.glb', // Der Dateiname
+    modelURL,
     function (gltf) {
         ship = gltf.scene;
-        ship.scale.set(0.5, 0.5, 0.5); // Modellgröße anpassen falls nötig
+        ship.scale.set(0.5, 0.5, 0.5);
 
-        // Triebwerksglühen hinzufügen
         const engineGlow = new THREE.PointLight(0x00aaff, 3, 20);
-        engineGlow.position.set(0, 0.5, -2); // Position relativ zum Modell
+        engineGlow.position.set(0, 0.5, -2);
         ship.add(engineGlow);
-
         scene.add(ship);
         
-        // Kamera an das geladene Schiff heften
         ship.add(cameraPivot);
         cameraPivot.add(cameraHolder);
         cameraHolder.add(camera);
         camera.position.set(0, 5, -12);
         camera.lookAt(cameraHolder.position);
         
-        // Ladebildschirm ausblenden und Animation starten
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         
-        animate(); // Animation erst jetzt starten!
+        animate();
     },
-    undefined, // onProgress callback (kann leer bleiben)
+    function(xhr) {
+        if (xhr.lengthComputable) {
+            const percentComplete = (xhr.loaded / xhr.total) * 100;
+            progressBar.style.width = percentComplete + '%';
+        }
+    },
     function (error) {
-        console.error(error);
-        loadingScreen.textContent = "Fehler beim Laden des Modells.";
+        console.error('Ein Fehler ist aufgetreten', error);
+        document.getElementById('loading-text').textContent = "Fehler beim Laden des Modells. URL oder Datei prüfen.";
     }
 );
 
 
-// === Steuerungs-Variablen ===
+// === Steuerung und Animation (unverändert) ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
-let zoomDistance = 13; // Manueller Startwert, da `camera.position.length()` erst später korrekt ist
+let zoomDistance = 13;
 const INITIAL_ZOOM = zoomDistance;
 const ZOOM_LIMIT = INITIAL_ZOOM * 0.4;
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
 const DAMPING = 0.92;
 
-// === Joystick und Touch-Handler (unverändert) ===
 nipplejs.create({
     zone: document.getElementById('joystick-zone'),
     mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
@@ -146,16 +155,14 @@ function getPinchDistance(e) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-// === Animations-Schleife ===
 function animate() {
     requestAnimationFrame(animate);
 
-    if (ship) { // Nur ausführen, wenn das Schiff geladen ist
+    if (ship) {
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
     }
 
-    // Sternenfelder bewegen
     stars1.position.z += stars1.userData.speed;
     if (stars1.position.z > 1000) stars1.position.z -= 2000;
     stars2.position.z += stars2.userData.speed;
@@ -181,7 +188,6 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// === Fenster anpassen ===
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
