@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <title>USS Enterprise 3D Flug</title>
     <link rel="stylesheet" href="style.css">
+
+    <!-- ====================================================== -->
+    <!-- NEU: Die Import-Karte für den Browser                  -->
+    <!-- ====================================================== -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
+            }
+        }
+    </script>
+
 </head>
 <body>
 
@@ -15,7 +28,6 @@
     <div id="joystick-zone"></div>
     <div id="loading-screen">
         <div id="loading-text">Lade Modell...</div>
-        <!-- NEU: Ladebalken -->
         <div id="progress-bar-container">
             <div id="progress-bar"></div>
         </div>
