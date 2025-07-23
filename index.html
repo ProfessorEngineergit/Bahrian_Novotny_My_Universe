@@ -5,50 +5,12 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <title>Enterprise D - Galaxy Explorer</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000;
-        }
-        canvas {
-            display: block;
-        }
-        /* Styling für den Joystick und die Info-Anzeige */
-        #info, #joystick-zone {
-            position: absolute;
-            color: white;
-            font-family: monospace;
-            text-shadow: 2px 2px 4px #000000;
-            pointer-events: none;
-        }
-        #info {
-            top: 10px;
-            width: 100%;
-            text-align: center;
-            font-size: 14px;
-        }
-        #joystick-zone {
-            bottom: 30px;
-            left: 30px;
-            width: 150px;
-            height: 150px;
-            pointer-events: all; /* Joystick muss klickbar sein */
-        }
-        /* Styling für den Ladebildschirm */
-        #loading-screen {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-family: monospace;
-            font-size: 20px;
-            z-index: 100;
-            transition: opacity 0.5s;
-        }
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+        #info, #joystick-zone { position: absolute; color: white; font-family: monospace; text-shadow: 2px 2px 4px #000000; pointer-events: none; }
+        #info { top: 10px; width: 100%; text-align: center; font-size: 14px; }
+        #joystick-zone { bottom: 30px; left: 30px; width: 150px; height: 150px; pointer-events: all; }
+        #loading-screen { position: absolute; width: 100%; height: 100%; background-color: #000; display: flex; justify-content: center; align-items: center; color: white; font-family: monospace; font-size: 20px; z-index: 100; transition: opacity 0.5s; }
     </style>
 </head>
 <body>
@@ -72,14 +34,11 @@
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    // === VARIABLEN FÜR STEUERUNG (unverändert) ===
+    // === VARIABLEN (unverändert) ===
     let shipMove = { forward: 0, turn: 0 };
     const ROTATION_LIMIT = Math.PI * 0.3;
-    let zoomDistance; 
-    let INITIAL_ZOOM;
-    let ZOOM_LIMIT;
-    let cameraVelocity = new THREE.Vector2(0, 0);
-    let zoomVelocity = 0;
+    let zoomDistance, INITIAL_ZOOM, ZOOM_LIMIT;
+    let cameraVelocity = new THREE.Vector2(0, 0), zoomVelocity = 0;
     const DAMPING = 0.92;
     let isDragging = false, previousTouch = { x: 0, y: 0 }, initialPinchDistance = 0;
 
@@ -93,27 +52,22 @@
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     document.body.appendChild(renderer.domElement);
 
-    // === Lade-Manager ===
     const loadingManager = new THREE.LoadingManager(() => {
-        // Wird ausgeführt, wenn alle Assets geladen sind
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
-        
-        // Initialen Zoom setzen, NACHDEM die Kamera positioniert ist
         zoomDistance = camera.position.length();
         INITIAL_ZOOM = zoomDistance;
-        ZOOM_LIMIT = INITIAL_ZOOM * 0.3;
+        ZOOM_LIMIT = INITIAL_ZOOM * 0.4; // 40% Zoom
     });
 
     // === BELEUCHTUNG ===
-    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
     dirLight.position.set(10, 20, 5);
     scene.add(dirLight);
 
     // === HINTERGRUND (SKYBOX) ===
-    const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager);
-    const skyboxTexture = cubeTextureLoader.load([
+    const skyboxTexture = new THREE.CubeTextureLoader(loadingManager).load([
         'Assets/skybox/px.jpg', 'Assets/skybox/nx.jpg',
         'Assets/skybox/py.jpg', 'Assets/skybox/ny.jpg',
         'Assets/skybox/pz.jpg', 'Assets/skybox/nz.jpg'
@@ -131,113 +85,96 @@
         const material = new THREE.PointsMaterial({ color: color, size: size, transparent: true, opacity: 0.8 });
         return new THREE.Points(geometry, material);
     }
-    scene.add(createPointField(20000, 0xffffff, 0.15, 2000)); // Weiße Sterne
-    scene.add(createPointField(5000, 0x99ccff, 0.3, 2000));   // Blauer Nebel
+    scene.add(createPointField(20000, 0xffffff, 0.15, 2000));
+    scene.add(createPointField(5000, 0x99ccff, 0.3, 2000));
 
     // === OBJEKT & KAMERA ===
-    let ship; // Variable für das Enterprise-Modell
+    let ship;
     const cameraPivot = new THREE.Object3D();
     const cameraHolder = new THREE.Object3D();
     
-    // GLTF-Modell laden
     const loader = new GLTFLoader(loadingManager);
-    loader.load('Assets/downscaled_USS_Enterprise_D.glb', (gltf) => {
-        ship = gltf.scene;
-        ship.scale.set(0.5, 0.5, 0.5); // Skalierung anpassen, falls nötig
+    loader.load(
+        // Modellpfad
+        'Assets/downscaled_USS_Enterprise_D.glb', 
         
-        scene.add(ship);
+        // onLoad Callback: Wird ausgeführt, wenn das Modell ERFOLGREICH geladen wurde
+        (gltf) => {
+            console.log('Modell erfolgreich geladen!');
+            ship = gltf.scene;
+
+            // --- NEU: Automatisches Zentrieren und Skalieren ---
+            const box = new THREE.Box3().setFromObject(ship);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+
+            // 1. Skalieren: Sorge dafür, dass das Modell eine vernünftige Größe hat
+            const desiredSize = 10; // Das Modell soll ca. 10 Einheiten lang sein
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = desiredSize / maxDim;
+            ship.scale.set(scale, scale, scale);
+
+            // 2. Zentrieren: Verschiebe das Modell, so dass sein Zentrum am Ursprung ist
+            ship.position.sub(center.multiplyScalar(scale));
+
+            scene.add(ship);
+            
+            // Kamera an das jetzt perfekt positionierte Schiff binden
+            ship.add(cameraPivot);
+            cameraPivot.add(cameraHolder);
+            cameraHolder.add(camera);
+            
+            // Setze Kameraposition neu basierend auf der neuen Größe
+            camera.position.set(0, desiredSize * 0.5, -desiredSize * 1.5);
+            camera.lookAt(cameraHolder.position);
+        },
         
-        // Kamera an das geladene Schiff binden
-        ship.add(cameraPivot);
-        cameraPivot.add(cameraHolder);
-        cameraHolder.add(camera);
+        // onProgress Callback (optional)
+        undefined, 
         
-        camera.position.set(0, 5, -12); // Hinten-Oben Ansicht
-        camera.lookAt(cameraHolder.position);
-    });
+        // --- NEU: onError Callback ---
+        // Wird ausgeführt, wenn das Modell NICHT geladen werden kann
+        (error) => {
+            console.error('Fehler beim Laden des Modells:', error);
+            loadingScreen.innerHTML = 'FEHLER: Modelldatei nicht gefunden.<br>Bitte Ordnerstruktur prüfen!';
+        }
+    );
 
     // === STEUERUNG (unverändert) ===
     nipplejs.create({
         zone: document.getElementById('joystick-zone'),
         mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
-    }).on('move', (evt, data) => {
-        if (data.vector) {
-            shipMove.forward = data.vector.y * 0.5;
-            shipMove.turn = -data.vector.x * 0.05;
-        }
-    }).on('end', () => shipMove = { forward: 0, turn: 0 });
-
-    function getPinchDistance(e) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
+    }).on('move', (evt, data) => { if(data.vector) { shipMove.forward = data.vector.y * 0.2; shipMove.turn = -data.vector.x * 0.02; }}).on('end', () => shipMove = { forward: 0, turn: 0 });
+    function getPinchDistance(e) { const dx = e.touches[0].clientX - e.touches[1].clientX, dy = e.touches[0].clientY - e.touches[1].clientY; return Math.sqrt(dx * dx + dy * dy); }
     renderer.domElement.addEventListener('touchstart', (e) => {
         if (e.target.closest('#joystick-zone')) return;
-        if (e.touches.length === 1) {
-            isDragging = true;
-            cameraVelocity.set(0, 0);
-            previousTouch.x = e.touches[0].clientX;
-            previousTouch.y = e.touches[0].clientY;
-        } else if (e.touches.length === 2) {
-            isDragging = false;
-            zoomVelocity = 0; 
-            initialPinchDistance = getPinchDistance(e);
-        }
+        if (e.touches.length === 1) { isDragging = true; cameraVelocity.set(0, 0); previousTouch.x = e.touches[0].clientX; previousTouch.y = e.touches[0].clientY; } 
+        else if (e.touches.length === 2) { isDragging = false; zoomVelocity = 0; initialPinchDistance = getPinchDistance(e); }
     }, { passive: false });
     renderer.domElement.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        if (isDragging && e.touches.length === 1) {
-            const deltaX = e.touches[0].clientX - previousTouch.x;
-            const deltaY = e.touches[0].clientY - previousTouch.y;
-            cameraVelocity.x += deltaY * 0.0002;
-            cameraVelocity.y -= deltaX * 0.0002;
-            previousTouch.x = e.touches[0].clientX;
-            previousTouch.y = e.touches[0].clientY;
-        } else if (e.touches.length === 2) {
-            const currentPinchDistance = getPinchDistance(e);
-            zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.003;
-            initialPinchDistance = currentPinchDistance;
-        }
+        if (isDragging && e.touches.length === 1) { const dx = e.touches[0].clientX - previousTouch.x, dy = e.touches[0].clientY - previousTouch.y; cameraVelocity.x += dy * 0.0002; cameraVelocity.y -= dx * 0.0002; previousTouch.x = e.touches[0].clientX; previousTouch.y = e.touches[0].clientY; } 
+        else if (e.touches.length === 2) { const d = getPinchDistance(e); zoomVelocity -= (d - initialPinchDistance) * 0.003; initialPinchDistance = d; }
     }, { passive: false });
     renderer.domElement.addEventListener('touchend', () => isDragging = false);
     
     // === ANIMATION ===
     function animate() {
         requestAnimationFrame(animate);
-
-        if (ship) { // Nur ausführen, wenn das Schiff geladen ist
-            ship.translateZ(shipMove.forward);
-            ship.rotateY(shipMove.turn);
-        }
-
-        cameraHolder.rotation.x += cameraVelocity.x;
-        cameraPivot.rotation.y += cameraVelocity.y;
-        cameraVelocity.multiplyScalar(DAMPING);
-
-        zoomDistance += zoomVelocity;
-        zoomVelocity *= DAMPING;
-
-        if (INITIAL_ZOOM) { // Nur begrenzen, wenn die Werte initialisiert sind
+        if (ship) { ship.translateZ(shipMove.forward); ship.rotateY(shipMove.turn); }
+        cameraHolder.rotation.x += cameraVelocity.x; cameraPivot.rotation.y += cameraVelocity.y; cameraVelocity.multiplyScalar(DAMPING);
+        zoomDistance += zoomVelocity; zoomVelocity *= DAMPING;
+        if (INITIAL_ZOOM) {
             cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
             cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
             zoomDistance = THREE.MathUtils.clamp(zoomDistance, INITIAL_ZOOM - ZOOM_LIMIT, INITIAL_ZOOM + ZOOM_LIMIT);
-            if (zoomDistance === (INITIAL_ZOOM - ZOOM_LIMIT) || zoomDistance === (INITIAL_ZOOM + ZOOM_LIMIT)) {
-                zoomVelocity = 0;
-            }
+            if (zoomDistance === (INITIAL_ZOOM - ZOOM_LIMIT) || zoomDistance === (INITIAL_ZOOM + ZOOM_LIMIT)) { zoomVelocity = 0; }
             camera.position.normalize().multiplyScalar(zoomDistance);
         }
-        
         renderer.render(scene, camera);
     }
-
-    animate(); // Animation starten
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    animate();
+    window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
 </script>
 
 </body>
