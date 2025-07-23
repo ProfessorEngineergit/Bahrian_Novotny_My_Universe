@@ -1,4 +1,3 @@
-// Wir verwenden jetzt kurze Namen, die die importmap in index.html auflöst
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
@@ -54,7 +53,6 @@ const cameraHolder = new THREE.Object3D();
 // === GLTF Modell-Lader mit Draco ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
-// Der Pfad zum Draco-Decoder wird von der importmap NICHT beeinflusst
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
 
@@ -67,7 +65,9 @@ loader.load(
         loadingText.textContent = 'Modell geladen!';
 
         ship = gltf.scene;
-        ship.scale.set(0.5, 0.5, 0.5);
+
+        // KORREKTUR 1: Das Modell drastisch verkleinern.
+        ship.scale.set(0.01, 0.01, 0.01);
 
         const engineGlow = new THREE.PointLight(0x00aaff, 3, 20);
         engineGlow.position.set(0, 0.5, -2);
@@ -77,7 +77,9 @@ loader.load(
         ship.add(cameraPivot);
         cameraPivot.add(cameraHolder);
         cameraHolder.add(camera);
-        camera.position.set(0, 5, -12);
+
+        // KORREKTUR 2: Die Kamera VIEL weiter weg positionieren.
+        camera.position.set(0, 30, -80);
         camera.lookAt(cameraHolder.position);
         
         setTimeout(() => {
@@ -100,13 +102,14 @@ loader.load(
 );
 
 
-// === Steuerung und Animation (unverändert) ===
-// (Der Rest des Codes ist identisch zur letzten funktionierenden Version)
+// === Steuerung und Animation ===
+
+// KORREKTUR 3: Die Zoom-Parameter an den neuen Abstand anpassen.
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
-let zoomDistance = 13;
+let zoomDistance = Math.sqrt(30*30 + 80*80); // Exakter Startabstand der Kamera
 const INITIAL_ZOOM = zoomDistance;
-const ZOOM_LIMIT = INITIAL_ZOOM * 0.4;
+const ZOOM_LIMIT = INITIAL_ZOOM * 0.5; // Erlaube 50% Zoom
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
 const DAMPING = 0.92;
@@ -150,7 +153,7 @@ renderer.domElement.addEventListener('touchmove', (e) => {
         previousTouch.y = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
         const currentPinchDistance = getPinchDistance(e);
-        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.003;
+        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; // Zoomempfindlichkeit angepasst
         initialPinchDistance = currentPinchDistance;
     }
 }, { passive: false });
@@ -172,9 +175,9 @@ function animate() {
     }
 
     stars1.position.z += stars1.userData.speed;
-    if (stars1.position.z > 1000) stars1.position.z -= 2000;
+    if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
-    if (stars2.position.z > 1000) stars2.position.z -= 2000;
+    if (stars2.position.z > 2000) stars2.position.z -= 4000;
 
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
@@ -187,7 +190,7 @@ function animate() {
     cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, INITIAL_ZOOM - ZOOM_LIMIT, INITIAL_ZOOM + ZOOM_LIMIT);
     
-    if (zoomDistance === (INITIAL_ZOOM - ZOOM_LIMIT) || zoomDistance === (INITIAL_ZOOM + ZOOM_LIMIT)) {
+    if (zoomDistance <= (INITIAL_ZOOM - ZOOM_LIMIT) || zoomDistance >= (INITIAL_ZOOM + ZOOM_LIMIT)) {
         zoomVelocity = 0;
     }
 
