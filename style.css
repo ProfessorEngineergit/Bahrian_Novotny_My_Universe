@@ -33,6 +33,7 @@ canvas {
     z-index: 5;
 }
 
+/* Ladebildschirm Styling */
 #loading-screen {
     position: absolute;
     top: 0;
@@ -41,10 +42,30 @@ canvas {
     height: 100%;
     background-color: #000;
     display: flex;
+    flex-direction: column; /* Damit Elemente untereinander stehen */
     justify-content: center;
     align-items: center;
     color: white;
     font-size: 1.5em;
     z-index: 100;
     transition: opacity 0.5s ease;
+}
+
+#loading-text {
+    margin-bottom: 20px;
+}
+
+/* NEU: Styling für den Ladebalken */
+#progress-bar-container {
+    width: 80%;
+    max-width: 400px;
+    height: 10px;
+    border: 1px solid white;
+}
+
+#progress-bar {
+    width: 0%; /* Startet bei 0% */
+    height: 100%;
+    background-color: #00aaff;
+    transition: width 0.2s ease-out; /* Sanfter Übergang */
 }
