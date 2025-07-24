@@ -18,7 +18,7 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-function createStarField(count, size, speed) { /* ... Code aus voriger Antwort ... */ }
+function createStarField(count, size, speed) { /* ... Code ... */ }
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
@@ -48,94 +48,100 @@ loader.load(modelURL, (gltf) => {
         setTimeout(() => loadingScreen.style.display = 'none', 500);
     }, 300);
     animate();
-}, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = `${(xhr.loaded / xhr.total) * 100}%`; },
-   (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
+}, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
-// NEU: Rotationslimit um ca. 10% erhöht
+// KORREKTUR 1: Rotationslimit um ca. 10% erhöht
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
 const minZoom = 8;
 const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0);
-let zoomVelocity = 0;
+let zoomVelocity = 0; // Wird nicht mehr für die Federung gebraucht, aber für den Ausklang
 const SPRING_STIFFNESS = 0.03;
 const DAMPING = 0.90;
 const LERP_FACTOR = 0.05;
 
-// Joystick (unverändert)
-nipplejs.create({ /* ... */ }).on('move', (evt, data) => { /* ... */ });
+// --- MULTITOUCH-FÄHIGE STEUERUNG ---
+// KORREKTUR 3: Wir verfolgen jetzt einzelne Finger
+let cameraTouch = { id: null, x: 0, y: 0 };
+let pinchInitialDistance = 0;
 
-// --- NEUES, MULTITOUCH-FÄHIGES SYSTEM ---
-let activeCameraTouches = {}; // Verfolgt Finger, die die Kamera steuern
-let initialPinchDistance = 0;
-let isInteractingWithCamera = false; // Wird true, wenn Finger die Kamera bewegen
+nipplejs.create({
+    zone: document.getElementById('joystick-zone'),
+    mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
+}).on('move', (evt, data) => {
+    if (data.vector && ship) {
+        shipMove.forward = data.vector.y * 0.1;
+        shipMove.turn = -data.vector.x * 0.05;
+    }
+}).on('end', () => shipMove = { forward: 0, turn: 0 });
 
 renderer.domElement.addEventListener('touchstart', (e) => {
-    // Gehe durch alle neuen Finger, die den Bildschirm berühren
-    for (let touch of e.changedTouches) {
-        // Ignoriere den Finger, wenn er auf dem Joystick ist
+    // Verhindert, dass der Browser versucht, die Seite zu verschieben
+    e.preventDefault(); 
+    for (const touch of e.changedTouches) {
+        // Ignoriere Touches, die auf dem Joystick starten
         if (touch.target.closest('#joystick-zone')) continue;
         
-        // Füge den Finger zur Liste der aktiven Kamera-Finger hinzu
-        activeCameraTouches[touch.identifier] = { x: touch.clientX, y: touch.clientY };
+        // Der erste Finger, der nicht auf dem Joystick ist, steuert die Kamera
+        if (cameraTouch.id === null) {
+            cameraTouch.id = touch.identifier;
+            cameraTouch.x = touch.clientX;
+            cameraTouch.y = touch.clientY;
+            cameraVelocity.set(0, 0); // Stoppe die Bewegung beim Berühren
+        }
     }
-    isInteractingWithCamera = Object.keys(activeCameraTouches).length > 0;
-    if(isInteractingWithCamera) {
-        cameraVelocity.set(0, 0);
+    // Pinch-Zoom-Logik bleibt separat
+    if (e.touches.length === 2) {
+        pinchInitialDistance = getPinchDistance(e);
         zoomVelocity = 0;
-    }
-    if(Object.keys(activeCameraTouches).length === 2) {
-        const touches = Object.values(activeCameraTouches);
-        initialPinchDistance = getPinchDistance(touches[0], touches[1]);
     }
 }, { passive: false });
 
 renderer.domElement.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    const touchIds = Object.keys(activeCameraTouches);
-    
-    // Fall 1: Ein-Finger-Drag für Rotation
-    if (touchIds.length === 1) {
-        const touchId = touchIds[0];
-        const currentTouch = Array.from(e.touches).find(t => t.identifier == touchId);
-        if(!currentTouch) return;
-
-        const lastPos = activeCameraTouches[touchId];
-        const deltaX = currentTouch.clientX - lastPos.x;
-        const deltaY = currentTouch.clientY - lastPos.y;
-        
-        cameraVelocity.x += deltaY * 0.0002;
-        cameraVelocity.y -= deltaX * 0.0002;
-
-        activeCameraTouches[touchId] = { x: currentTouch.clientX, y: currentTouch.clientY };
-    } 
-    // Fall 2: Zwei-Finger-Pinch für Zoom
-    else if (touchIds.length === 2) {
-        const t1 = Array.from(e.touches).find(t => t.identifier == touchIds[0]);
-        const t2 = Array.from(e.touches).find(t => t.identifier == touchIds[1]);
-        if(!t1 || !t2) return;
-
-        const currentPinchDistance = getPinchDistance(t1, t2);
-        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03;
-        initialPinchDistance = currentPinchDistance;
+    for (const touch of e.changedTouches) {
+        // Finde den Finger, der für die Kamera zuständig ist
+        if (touch.identifier === cameraTouch.id) {
+            const deltaX = touch.clientX - cameraTouch.x;
+            const deltaY = touch.clientY - cameraTouch.y;
+            cameraVelocity.x += deltaY * 0.0002;
+            cameraVelocity.y -= deltaX * 0.0002;
+            cameraTouch.x = touch.clientX;
+            cameraTouch.y = touch.clientY;
+        }
+    }
+    // Pinch-Zoom
+    if (e.touches.length === 2) {
+        const currentPinchDistance = getPinchDistance(e);
+        zoomVelocity -= (currentPinchDistance - pinchInitialDistance) * 0.03;
+        pinchInitialDistance = currentPinchDistance;
     }
 }, { passive: false });
 
 renderer.domElement.addEventListener('touchend', (e) => {
-    for (let touch of e.changedTouches) {
-        delete activeCameraTouches[touch.identifier];
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+        // Wenn der Kamera-Finger losgelassen wird, setze ihn zurück
+        if (touch.identifier === cameraTouch.id) {
+            cameraTouch.id = null;
+        }
     }
-    isInteractingWithCamera = Object.keys(activeCameraTouches).length > 0;
-});
+    // Wenn weniger als 2 Finger da sind, kann kein Pinch mehr stattfinden
+    if (e.touches.length < 2) {
+        pinchInitialDistance = 0;
+    }
+}, { passive: false });
 
-function getPinchDistance(t1, t2) {
-    return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2));
+function getPinchDistance(e) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
 }
 
-
-// --- Animations-Schleife mit angepasster Physik ---
+// --- Die neue Animations-Schleife ---
 function animate() {
     requestAnimationFrame(animate);
 
@@ -145,32 +151,39 @@ function animate() {
     }
     
     // --- KAMERAPHYSIK ---
-    // A. Return-to-Center (nur wenn kein Finger die Kamera berührt)
-    if (!isInteractingWithCamera) {
+    
+    // Wenn kein Finger die Kamera steuert, kehre zur Mitte zurück
+    if (cameraTouch.id === null) {
         cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
     }
 
-    // B. Federung an den Rotations-Grenzen
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
-    else if (cameraHolder.rotation.x < -ROTATION_LIMIT) cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS;
-    if (cameraPivot.rotation.y > ROTATION_LIMIT) cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS;
-    else if (cameraPivot.rotation.y < -ROTATION_LIMIT) cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
+    // Federung an den Rotationsgrenzen
+    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
+        cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
+    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
+        cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS;
+    }
+    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
+        cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS;
+    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
+        cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
+    }
     
-    // C. Geschwindigkeiten anwenden und dämpfen
+    // Geschwindigkeiten anwenden und dämpfen
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
-    zoomDistance += zoomVelocity;
-    
     cameraVelocity.multiplyScalar(DAMPING);
-    zoomVelocity *= DAMPING;
+    
+    zoomDistance += zoomVelocity;
+    zoomVelocity *= DAMPING; // Ausklang für den Zoom behalten
 
-    // NEU: Harter Stopp für den Zoom (keine Federung)
+    // KORREKTUR 2: Harter Stopp für den Zoom mit clamp()
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance <= minZoom || zoomDistance >= maxZoom) {
-        zoomVelocity = 0;
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) {
+        zoomVelocity = 0; // Stoppe die Geschwindigkeit, um "Kleben" zu verhindern
     }
-
+    
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
     // Sternenbewegung
@@ -182,18 +195,8 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// (Restlicher Code wie nipplejs und resize-Handler bleibt gleich, hier zur Übersicht weggelassen)
-nipplejs.create({
-    zone: document.getElementById('joystick-zone'),
-    mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
-}).on('move', (evt, data) => {
-    if (data.vector && ship) {
-        shipMove.forward = data.vector.y * 0.1;
-        shipMove.turn = -data.vector.x * 0.05;
-    }
-}).on('end', () => shipMove = { forward: 0, turn: 0 });
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});
+});```
