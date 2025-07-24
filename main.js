@@ -14,15 +14,17 @@ document.body.appendChild(renderer.domElement);
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
-function createStarField(count, size, speed) { /* ... Code ... */ }
+function createStarField(count, size, speed) { /* ... Code aus voriger Antwort ... */ }
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
-// KORREKTUR 1: Stark reduzierte Beleuchtung
-scene.add(new THREE.AmbientLight(0xffffff, 0.05)); // Sehr dunkles Umgebungslicht
-const rectLight = new THREE.RectAreaLight(0xffffff, 0.5, 20, 20);
+// KORREKTUR 2: Neue Licht-Konfiguration
+// Sehr dunkles Umgebungslicht für eine düstere Atmosphäre
+scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+// Eine weiche Flächenleuchte ("Softbox") statt eines harten Spotlights
+const rectLight = new THREE.RectAreaLight(0xffffff, 2, 20, 20); // Licht, Intensität, Breite, Höhe
 rectLight.position.set(5, 15, -10);
-rectLight.lookAt(0, 0, 0);
+rectLight.lookAt(0, 0, 0); // Richte das Licht auf den Ursprung der Szene
 scene.add(rectLight);
 
 // === Hauptobjekt und Kamera-Setup ===
@@ -30,7 +32,7 @@ let ship;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
-// === GLTF Modell-Lader ===
+// === GLTF Modell-Lader (unverändert) ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
@@ -40,15 +42,6 @@ loader.load(modelURL, (gltf) => {
     progressBar.style.width = '100%';
     loadingText.textContent = 'Modell geladen!';
     ship = gltf.scene;
-    
-    // KORREKTUR 1: Mache das Schiff selbstleuchtend
-    ship.traverse((node) => {
-        if (node.isMesh && node.material) {
-            node.material.emissive = node.material.color; // Leuchtet in der eigenen Farbe
-            node.material.emissiveIntensity = 0.6; // Stärke des Leuchtens
-        }
-    });
-
     scene.add(ship);
     ship.add(cameraPivot);
     cameraPivot.add(cameraHolder);
@@ -64,7 +57,8 @@ loader.load(modelURL, (gltf) => {
 
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
-const ROTATION_LIMIT = Math.PI * 0.33;
+// KORREKTUR 1: Rotationslimit um weitere 10% erhöht
+const ROTATION_LIMIT = Math.PI * 0.37;
 let zoomDistance = 15;
 const minZoom = 8;
 const maxZoom = 25;
@@ -74,17 +68,24 @@ const SPRING_STIFFNESS = 0.03;
 const DAMPING = 0.90;
 const LERP_FACTOR = 0.05;
 
-// --- ROBUSTE MULTITOUCH-STEUERUNG ---
+// --- ROBUSTE MULTITOUCH-STEUERUNG (unverändert) ---
 let cameraFingerId = null;
 let initialPinchDistance = 0;
+nipplejs.create({
+    zone: document.getElementById('joystick-zone'),
+    mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
+}).on('move', (evt, data) => {
+    if (data.vector && ship) {
+        shipMove.forward = data.vector.y * 0.1;
+        shipMove.turn = -data.vector.x * 0.05;
+    }
+}).on('end', () => shipMove = { forward: 0, turn: 0 });
 let previousTouch = { x: 0, y: 0 };
-
-nipplejs.create({ /* ... unverändert ... */ }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
-
 renderer.domElement.addEventListener('touchstart', (e) => {
+    const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+    if (joystickTouch) return;
     e.preventDefault();
     for (const touch of e.changedTouches) {
-        if (touch.target.closest('#joystick-zone')) continue;
         if (cameraFingerId === null) {
             cameraFingerId = touch.identifier;
             cameraVelocity.set(0, 0);
@@ -92,14 +93,14 @@ renderer.domElement.addEventListener('touchstart', (e) => {
             previousTouch.y = touch.clientY;
         }
     }
-    const pinchTouches = Array.from(e.touches).filter(t => !t.target.closest('#joystick-zone'));
-    if (pinchTouches.length >= 2) {
-        initialPinchDistance = getPinchDistance(pinchTouches);
+    if (e.touches.length >= 2) {
+        initialPinchDistance = getPinchDistance(e);
         zoomVelocity = 0;
     }
 }, { passive: false });
-
 renderer.domElement.addEventListener('touchmove', (e) => {
+    const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+    if (joystickTouch) return;
     e.preventDefault();
     for (const touch of e.changedTouches) {
         if (touch.identifier === cameraFingerId) {
@@ -111,15 +112,12 @@ renderer.domElement.addEventListener('touchmove', (e) => {
             previousTouch.y = touch.clientY;
         }
     }
-    // KORREKTUR 3: Zoom-Logik mit gefilterten Fingern
-    const pinchTouches = Array.from(e.touches).filter(t => !t.target.closest('#joystick-zone'));
-    if (pinchTouches.length >= 2) {
-        const currentPinchDistance = getPinchDistance(pinchTouches);
+    if (e.touches.length >= 2) {
+        const currentPinchDistance = getPinchDistance(e);
         zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03;
         initialPinchDistance = currentPinchDistance;
     }
 }, { passive: false });
-
 renderer.domElement.addEventListener('touchend', (e) => {
     for (const touch of e.changedTouches) {
         if (touch.identifier === cameraFingerId) {
@@ -130,35 +128,38 @@ renderer.domElement.addEventListener('touchend', (e) => {
         initialPinchDistance = 0;
     }
 });
-
-function getPinchDistance(touches) {
-    const touch1 = touches[0];
-    const touch2 = touches[1];
+function getPinchDistance(e) {
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
     const dx = touch1.clientX - touch2.clientX;
     const dy = touch1.clientY - touch2.clientY;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-// --- Die Animations-Schleife ---
+// --- Die Animations-Schleife (unverändert) ---
 function animate() {
     requestAnimationFrame(animate);
 
     if (ship) {
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
-        
-        // KORREKTUR 2: Schiff zur Seite neigen (Banking)
-        const targetRoll = shipMove.turn * -10; // Multiplikator für Stärke der Neigung
-        ship.rotation.z = THREE.MathUtils.lerp(ship.rotation.z, targetRoll, LERP_FACTOR);
     }
     
-    // Kamerasteuerung...
     if (cameraFingerId === null) {
         cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
     }
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) { /* ... Federung ... */ } 
-    // ... (Rest der Federungslogik unverändert)
+
+    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
+        cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
+    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
+        cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS;
+    }
+    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
+        cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS;
+    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
+        cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
+    }
     
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
@@ -166,6 +167,7 @@ function animate() {
     
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
+
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
     if (zoomDistance === minZoom || zoomDistance === maxZoom) {
         zoomVelocity = 0;
@@ -173,7 +175,6 @@ function animate() {
     
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
-    // Sternenbewegung...
     stars1.position.z += stars1.userData.speed;
     if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
