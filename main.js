@@ -10,7 +10,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// === UI, Beleuchtung, Sterne (unverändert) ===
+// === UI, Beleuchtung ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
@@ -18,7 +18,33 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-function createStarField(count, size, speed) { /* ... Code aus voriger Antwort ... */ }
+
+// === HILFSFUNKTIONEN (waren vorher fehlerhaft/fehlend) ===
+function createStarField(count, size, speed) {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < count; i++) {
+        vertices.push(
+            (Math.random() - 0.5) * 4000,
+            (Math.random() - 0.5) * 4000,
+            (Math.random() - 0.5) * 4000
+        );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.PointsMaterial({ size, transparent: true, opacity: Math.random() * 0.5 + 0.3 });
+    const stars = new THREE.Points(geometry, material);
+    stars.userData.speed = speed;
+    scene.add(stars);
+    return stars;
+}
+
+function getPinchDistance(e) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// === Sterne erstellen ===
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
@@ -56,22 +82,22 @@ loader.load(
 // === Steuerung und Physik-Parameter ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
-const INITIAL_ZOOM = 15; // Die Ruheposition des Zooms
+const INITIAL_ZOOM = 15;
 let zoomDistance = INITIAL_ZOOM;
 const minZoom = 8;
 const maxZoom = 25;
 
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
-const DAMPING = 0.92; // Ausklang-Stärke
+const DAMPING = 0.92;
 
-// NEUE PHYSIK-KONSTANTEN
-const SPRING_STRENGTH_RETURN = 0.0005; // Kraft, die zur Mitte zurückzieht
-const SPRING_STRENGTH_BOUNDARY = 0.01; // Kraft, die an den Rändern zurückstößt
-const SOFTZONE_THRESHOLD = 0.8; // Bei 80% des Limits startet der "Reverb"
+const SPRING_STRENGTH_RETURN = 0.0005;
+const SPRING_STRENGTH_BOUNDARY = 0.01;
+const SOFTZONE_THRESHOLD = 0.8;
 
 // === Event Listener ===
 let isDragging = false;
+let isPinching = false;
 let previousTouch = { x: 0, y: 0 };
 let initialPinchDistance = 0;
 nipplejs.create({
@@ -88,15 +114,18 @@ renderer.domElement.addEventListener('touchstart', (e) => {
     if (e.target.closest('#joystick-zone')) return;
     if (e.touches.length === 1) {
         isDragging = true;
-        cameraVelocity.set(0, 0); // Stoppe den Ausklang bei neuer Berührung
+        isPinching = false;
+        cameraVelocity.set(0, 0);
         previousTouch.x = e.touches[0].clientX;
         previousTouch.y = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
         isDragging = false;
-        zoomVelocity = 0; // Stoppe Zoom-Ausklang
+        isPinching = true;
+        zoomVelocity = 0;
         initialPinchDistance = getPinchDistance(e);
     }
 }, { passive: false });
+
 renderer.domElement.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (isDragging && e.touches.length === 1) {
@@ -107,76 +136,71 @@ renderer.domElement.addEventListener('touchmove', (e) => {
         previousTouch.x = e.touches[0].clientX;
         previousTouch.y = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
+        isPinching = true;
         const currentPinchDistance = getPinchDistance(e);
-        // KORREKTUR: Zoom-Bewegung ist jetzt langsamer
         zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.01;
         initialPinchDistance = currentPinchDistance;
     }
 }, { passive: false });
-renderer.domElement.addEventListener('touchend', () => {
-    isDragging = false; // Wichtig für die Rückkehr-Logik
-});
-function getPinchDistance(e) { /* ... unverändert ... */ }
 
-// === Animations-Schleife mit neuer Physik ===
+renderer.domElement.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0) {
+        isDragging = false;
+        isPinching = false;
+    } else if (e.touches.length === 1) {
+        isPinching = false;
+        // Wechsel von Pinch zu Drag vorbereiten
+        isDragging = true;
+        cameraVelocity.set(0, 0);
+        previousTouch.x = e.touches[0].clientX;
+        previousTouch.y = e.touches[0].clientY;
+    }
+});
+
+// === Animations-Schleife mit korrekter Physik ===
 function animate() {
     requestAnimationFrame(animate);
 
-    // Schiffsbewegung und Sterne (unverändert)
-    if (ship) ship.translateZ(shipMove.forward);
-    if (ship) ship.rotateY(shipMove.turn);
+    if (ship) {
+        ship.translateZ(shipMove.forward);
+        ship.rotateY(shipMove.turn);
+    }
     stars1.position.z += stars1.userData.speed;
     if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
     if (stars2.position.z > 2000) stars2.position.z -= 4000;
 
-    // --- NEUE FEDER-PHYSIK ---
+    // --- Feder-Physik ---
 
-    // 1. Sanfte Rückkehr zur Mitte, wenn der Nutzer NICHT interagiert
-    if (!isDragging) {
-        // Rotation zur Mitte ziehen
+    // Sanfte Rückkehr, wenn der Nutzer NICHT interagiert
+    if (!isDragging && !isPinching) {
         cameraVelocity.x += (0 - cameraHolder.rotation.x) * SPRING_STRENGTH_RETURN;
         cameraVelocity.y += (0 - cameraPivot.rotation.y) * SPRING_STRENGTH_RETURN;
-        // Zoom zur Mitte ziehen
         zoomVelocity += (INITIAL_ZOOM - zoomDistance) * SPRING_STRENGTH_RETURN;
     }
 
-    // 2. Weiche Grenzen (Reverb/Soft-Zone), die immer aktiv sind
+    // Weiche Grenzen (Reverb/Soft-Zone)
     const softLimitX = ROTATION_LIMIT * SOFTZONE_THRESHOLD;
     if (cameraHolder.rotation.x > softLimitX) {
         cameraVelocity.x -= (cameraHolder.rotation.x - softLimitX) * SPRING_STRENGTH_BOUNDARY;
     } else if (cameraHolder.rotation.x < -softLimitX) {
-        cameraVelocity.x -= (cameraHolder.rotation.x - -softLimitX) * SPRING_STRENGTH_BOUNDARY;
+        cameraVelocity.x -= (cameraHolder.rotation.x + softLimitX) * SPRING_STRENGTH_BOUNDARY;
     }
-    // (Gleiche Logik für die Y-Rotation)
+
     const softLimitY = ROTATION_LIMIT * SOFTZONE_THRESHOLD;
     if (cameraPivot.rotation.y > softLimitY) {
         cameraVelocity.y -= (cameraPivot.rotation.y - softLimitY) * SPRING_STRENGTH_BOUNDARY;
     } else if (cameraPivot.rotation.y < -softLimitY) {
-        cameraVelocity.y -= (cameraPivot.rotation.y - -softLimitY) * SPRING_STRENGTH_BOUNDARY;
+        cameraVelocity.y -= (cameraPivot.rotation.y + softLimitY) * SPRING_STRENGTH_BOUNDARY;
     }
-    // (Gleiche Logik für den Zoom)
+    
+    // Zoom-Grenzen
     if (zoomDistance > maxZoom) {
         zoomVelocity -= (zoomDistance - maxZoom) * SPRING_STRENGTH_BOUNDARY;
     } else if (zoomDistance < minZoom) {
         zoomVelocity -= (zoomDistance - minZoom) * SPRING_STRENGTH_BOUNDARY;
     }
 
-    // 3. Finale Bewegung und Dämpfung anwenden
+    // Finale Bewegung und Dämpfung anwenden
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
-    zoomDistance += zoomVelocity;
-    
-    cameraVelocity.multiplyScalar(DAMPING);
-    zoomVelocity *= DAMPING;
-
-    // 4. Szene rendern
-    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    renderer.render(scene, camera);
-}
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
