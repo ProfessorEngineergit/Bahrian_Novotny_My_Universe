@@ -4,7 +4,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 // === Grund-Setup (unverändert) ===
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 8000); // Sichtweite leicht erhöht
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -16,8 +16,9 @@ const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
 scene.add(new THREE.AmbientLight(0xffffff, 0.2));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-directionalLight.position.set(5, 10, 7);
+directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
+
 function createStarField(count, size, speed) {
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
@@ -47,15 +48,6 @@ let ship;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
-// === Steuerungs-Variablen (werden jetzt im Lader gesetzt) ===
-let shipMove = { forward: 0, turn: 0 };
-const ROTATION_LIMIT = Math.PI * 0.3;
-let zoomDistance;
-let minZoom, maxZoom;
-let cameraVelocity = new THREE.Vector2(0, 0);
-let zoomVelocity = 0;
-const DAMPING = 0.92;
-
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
@@ -71,40 +63,19 @@ loader.load(
         loadingText.textContent = 'Modell geladen!';
 
         ship = gltf.scene;
-        // Die Skalierung bleibt wichtig
+        
+        // Schritt 1: Feste, funktionierende Skalierung
         ship.scale.set(0.01, 0.01, 0.01);
         
         scene.add(ship);
         
-        // --- DYNAMISCHE ANPASSUNG AN DAS MODELL ---
-        const boundingBox = new THREE.Box3().setFromObject(ship);
-        const boundingSphere = new THREE.Sphere();
-        boundingBox.getBoundingSphere(boundingSphere);
-        const modelRadius = boundingSphere.radius;
-
-        // NEU: Schritt 1 - Clipping-Ebenen der Kamera anpassen
-        camera.near = modelRadius / 100; // Mindestfokus = 1% des Radius
-        camera.far = modelRadius * 100; // Sichtweite = 100x der Radius
-        camera.updateProjectionMatrix(); // WICHTIG: Kamera nach Änderung aktualisieren!
-
-        // Schritt 2 - Startposition und Zoom-Grenzen anpassen
-        const initialCameraOffset = modelRadius * 6;
-        camera.position.set(0, modelRadius * 2, -initialCameraOffset);
-        
-        zoomDistance = camera.position.length();
-        minZoom = modelRadius * 1.1; // 110% des Radius, um Clipping zu verhindern
-        maxZoom = zoomDistance * 1.5;
-
-        // Schritt 3 - Kamera anheften
+        // Schritt 2: Feste, funktionierende Kameraposition
         ship.add(cameraPivot);
         cameraPivot.add(cameraHolder);
         cameraHolder.add(camera);
+        camera.position.set(0, 30, -80);
         camera.lookAt(cameraHolder.position);
         
-        // (Optional) NEU: Visuellen Helfer für die Bounding Box hinzufügen
-        const boxHelper = new THREE.Box3Helper(boundingBox, 0xffff00); // Gelbe Box
-        scene.add(boxHelper);
-
         setTimeout(() => {
             loadingScreen.style.opacity = '0';
             setTimeout(() => loadingScreen.style.display = 'none', 500);
@@ -119,16 +90,25 @@ loader.load(
     }
 );
 
-
 // === Steuerung und Animation ===
+
+// Schritt 3: Feste, sichere Zoom-Grenzwerte, die Clipping verhindern
+let shipMove = { forward: 0, turn: 0 };
+const ROTATION_LIMIT = Math.PI * 0.3;
+let zoomDistance = camera.position.length(); // Startabstand berechnen
+const minZoom = 15; // Sicherer Mindestabstand. Vergrößern, falls es noch clippt.
+const maxZoom = 200; // Sicherer Maximalabstand
+let cameraVelocity = new THREE.Vector2(0, 0);
+let zoomVelocity = 0;
+const DAMPING = 0.92;
+
 nipplejs.create({
     zone: document.getElementById('joystick-zone'),
     mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
 }).on('move', (evt, data) => {
     if (data.vector && ship) {
-        // Bewegung an die Schiffsgröße anpassen für ein gutes Gefühl
-        const modelRadius = new THREE.Sphere().setFromObject(ship).radius;
-        shipMove.forward = data.vector.y * modelRadius * 0.05;
+        // Die Bewegung ist nicht mehr von der Modellgröße abhängig, was stabiler ist
+        shipMove.forward = data.vector.y * 0.5;
         shipMove.turn = -data.vector.x * 0.05;
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
@@ -191,15 +171,13 @@ function animate() {
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
 
-    // Diese Logik funktioniert jetzt korrekt, da minZoom und die Kamera-Eigenschaften harmonieren
-    if (minZoom && maxZoom) { // Stelle sicher, dass die Werte gesetzt sind
-        cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
-        cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
-        zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-        
-        if (zoomDistance <= minZoom || zoomDistance >= maxZoom) {
-            zoomVelocity = 0;
-        }
+    // Die Logik funktioniert jetzt mit den sicheren Grenzwerten
+    cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
+    cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    
+    if (zoomDistance <= minZoom || zoomDistance >= maxZoom) {
+        zoomVelocity = 0;
     }
 
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
