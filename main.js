@@ -18,7 +18,27 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-function createStarField(count, size, speed) { /* ... (Code aus voriger Antwort) ... */ }
+function createStarField(count, size, speed) {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < count; i++) {
+        vertices.push(
+            (Math.random() - 0.5) * 4000,
+            (Math.random() - 0.5) * 4000,
+            (Math.random() - 0.5) * 4000
+        );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.PointsMaterial({
+        size: size,
+        transparent: true,
+        opacity: Math.random() * 0.5 + 0.3
+    });
+    const stars = new THREE.Points(geometry, material);
+    stars.userData.speed = speed;
+    scene.add(stars);
+    return stars;
+}
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
@@ -27,12 +47,14 @@ let ship;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
-// === GLTF Modell-Lader ===
+// === GLTF Modell-Lader (unverändert) ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
+
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
+
 loader.load(
     modelURL,
     function (gltf) {
@@ -55,22 +77,26 @@ loader.load(
     (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; }
 );
 
-// === Steuerung und Physik ===
+// === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
+const ROTATION_LIMIT = Math.PI * 0.3;
 let zoomDistance = 15;
 const minZoom = 8;
 const maxZoom = 25;
-const ROTATION_LIMIT = Math.PI * 0.3; // 30% Drehung
 
-// NEU: Physik-Konstanten
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
-const DAMPING = 0.90; // Grund-Dämpfung
-const RETURN_SPRING = 0.02; // Stärke der Feder, die die Drehung zurücksetzt
-const BOUNDARY_SPRING = 0.1; // Stärke der "weichen" Grenzen
 
-// === Joystick und Touch-Handler (unverändert) ===
-nipplejs.create({ /* ... */ }).on('move', (evt, data) => { /* ... */ });
+// NEUE PHYSIK-KONSTANTEN
+const SPRING_STIFFNESS = 0.03; // Wie stark die Feder zurückzieht
+const DAMPING = 0.90; // Wie viel Reibung es gibt (verhindert endloses Wackeln)
+const LERP_FACTOR = 0.05; // Wie schnell die Kamera zur Mitte zurückkehrt
+
+// --- Event Listener (unverändert) ---
+let isDragging = false;
+let previousTouch = { x: 0, y: 0 };
+let initialPinchDistance = 0;
+// ... (Die kompletten Event-Listener für 'nipplejs', 'touchstart', 'touchmove', 'touchend' bleiben exakt gleich wie zuvor)
 nipplejs.create({
     zone: document.getElementById('joystick-zone'),
     mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
@@ -80,14 +106,11 @@ nipplejs.create({
         shipMove.turn = -data.vector.x * 0.05;
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
-let isDragging = false;
-let previousTouch = { x: 0, y: 0 };
-let initialPinchDistance = 0;
 renderer.domElement.addEventListener('touchstart', (e) => {
     if (e.target.closest('#joystick-zone')) return;
     if (e.touches.length === 1) {
         isDragging = true;
-        cameraVelocity.set(0, 0); // Stoppt die alte Bewegung bei neuer Berührung
+        cameraVelocity.set(0, 0);
         previousTouch.x = e.touches[0].clientX;
         previousTouch.y = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
@@ -119,87 +142,81 @@ function getPinchDistance(e) {
 }
 
 
-// === Animations-Schleife (KOMPLETT NEUE LOGIK) ===
+// --- Die neue Animations-Schleife mit der Physik-Logik ---
 function animate() {
     requestAnimationFrame(animate);
 
-    // Schiffsbewegung bleibt gleich
+    // 1. Schiffsbewegung bleibt gleich
     if (ship) {
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
     }
+    
+    // --- NEUE KAMERAPHYSIK ---
 
-    // --- NEUE KAMERA-PHYSIK ---
+    // A. LOGIK FÜR DIE KAMERA-ROTATION
+    if (!isDragging) {
+        // Wenn nicht berührt, kehre sanft zur Mitte zurück (Interpolation)
+        cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+    }
 
-    // 1. Position/Rotation basierend auf Geschwindigkeit aktualisieren
+    // B. LOGIK FÜR DIE FEDERUNG AN DEN GRENZEN
+    // Rotation X (Hoch/Runter)
+    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
+        const overshoot = cameraHolder.rotation.x - ROTATION_LIMIT;
+        cameraVelocity.x -= overshoot * SPRING_STIFFNESS;
+    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
+        const overshoot = cameraHolder.rotation.x + ROTATION_LIMIT;
+        cameraVelocity.x -= overshoot * SPRING_STIFFNESS;
+    }
+
+    // Rotation Y (Links/Rechts)
+    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
+        const overshoot = cameraPivot.rotation.y - ROTATION_LIMIT;
+        cameraVelocity.y -= overshoot * SPRING_STIFFNESS;
+    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
+        const overshoot = cameraPivot.rotation.y + ROTATION_LIMIT;
+        cameraVelocity.y -= overshoot * SPRING_STIFFNESS;
+    }
+    
+    // Zoom
+    if (zoomDistance < minZoom) {
+        const overshoot = zoomDistance - minZoom;
+        zoomVelocity -= overshoot * SPRING_STIFFNESS;
+    } else if (zoomDistance > maxZoom) {
+        const overshoot = zoomDistance - maxZoom;
+        zoomVelocity -= overshoot * SPRING_STIFFNESS;
+    }
+
+    // C. WENDE GESCHWINDIGKEITEN AN UND DÄMPFE SIE
+    // Rotation: Wende die durch Nutzereingabe & Federung erzeugte Geschwindigkeit an
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
+    // Zoom: Wende die durch Nutzereingabe & Federung erzeugte Geschwindigkeit an
     zoomDistance += zoomVelocity;
     
-    // 2. Geschwindigkeit mit Dämpfung reduzieren
+    // Dämpfe alle Geschwindigkeiten, um einen sanften Stopp zu erzeugen
     cameraVelocity.multiplyScalar(DAMPING);
     zoomVelocity *= DAMPING;
 
-    // 3. Rückstellkraft für die Rotation anwenden (nur wenn nicht gezogen wird)
-    if (!isDragging) {
-        cameraVelocity.x -= cameraHolder.rotation.x * RETURN_SPRING;
-        cameraVelocity.y -= cameraPivot.rotation.y * RETURN_SPRING;
-    }
+    // --- PHYSIK-ENDE ---
 
-    // 4. Weiche Grenzen (Soft Boundaries) für die Rotation
-    // Wenn die Rotation über das Limit hinausgeht, wende eine starke Federkraft an
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * BOUNDARY_SPRING;
-    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * BOUNDARY_SPRING;
-    }
-    // (Dasselbe für die Links/Rechts-Drehung)
-    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * BOUNDARY_SPRING;
-    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * BOUNDARY_SPRING;
-    }
-
-    // 5. Weiche Grenzen für den Zoom (KEINE Rückstellkraft zur Mitte)
-    if (zoomDistance > maxZoom) {
-        zoomVelocity -= (zoomDistance - maxZoom) * BOUNDARY_SPRING;
-    } else if (zoomDistance < minZoom) {
-        zoomVelocity -= (zoomDistance - minZoom) * BOUNDARY_SPRING;
-    }
-
-    // Die `clamp()`-Funktionen sind jetzt überflüssig. Die Physik regelt die Grenzen.
-
-    // Kamera-Position aktualisieren und rendern
+    // Position der Kamera basierend auf dem (permanenten) Zoom setzen
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+    
+    // Sternenbewegung
+    stars1.position.z += stars1.userData.speed;
+    if (stars1.position.z > 2000) stars1.position.z -= 4000;
+    stars2.position.z += stars2.userData.speed;
+    if (stars2.position.z > 2000) stars2.position.z -= 4000;
+
     renderer.render(scene, camera);
 }
 
-
-// === Fenster anpassen und Sternenfeld-Funktion (unverändert) ===
+// (Resize-Handler unverändert)
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-function createStarField(count, size, speed) {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    for (let i = 0; i < count; i++) {
-        vertices.push(
-            (Math.random() - 0.5) * 4000,
-            (Math.random() - 0.5) * 4000,
-            (Math.random() - 0.5) * 4000
-        );
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({
-        size: size,
-        transparent: true,
-        opacity: Math.random() * 0.5 + 0.3
-    });
-    const stars = new THREE.Points(geometry, material);
-    stars.userData.speed = speed;
-    scene.add(stars);
-    return stars;
-}```
