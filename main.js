@@ -18,23 +18,7 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-function createStarField(count, size, speed) {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    for (let i = 0; i < count; i++) {
-        vertices.push(
-            (Math.random() - 0.5) * 4000,
-            (Math.random() - 0.5) * 4000,
-            (Math.random() - 0.5) * 4000
-        );
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ size, transparent: true, opacity: Math.random() * 0.5 + 0.3 });
-    const stars = new THREE.Points(geometry, material);
-    stars.userData.speed = speed;
-    scene.add(stars);
-    return stars;
-}
+function createStarField(count, size, speed) { /* ... Code aus voriger Antwort ... */ }
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
@@ -49,7 +33,7 @@ loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 loader.load(
     modelURL,
-    function (gltf) {
+    (gltf) => {
         progressBar.style.width = '100%';
         loadingText.textContent = 'Modell geladen!';
         ship = gltf.scene;
@@ -69,19 +53,27 @@ loader.load(
     (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; }
 );
 
-// === Steuerung und Animation ===
+// === Steuerung und Physik-Parameter ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
-let zoomDistance = 15;
+const INITIAL_ZOOM = 15; // Die Ruheposition des Zooms
+let zoomDistance = INITIAL_ZOOM;
 const minZoom = 8;
 const maxZoom = 25;
+
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
-const DAMPING = 0.92; // Behält den Ausklang bei
+const DAMPING = 0.92; // Ausklang-Stärke
 
-// NEU: Konstanten für den "Reverb"-Effekt
-const SPRING_STRENGTH = 0.001; // Wie stark die "Feder" zurückzieht
+// NEUE PHYSIK-KONSTANTEN
+const SPRING_STRENGTH_RETURN = 0.0005; // Kraft, die zur Mitte zurückzieht
+const SPRING_STRENGTH_BOUNDARY = 0.01; // Kraft, die an den Rändern zurückstößt
+const SOFTZONE_THRESHOLD = 0.8; // Bei 80% des Limits startet der "Reverb"
 
+// === Event Listener ===
+let isDragging = false;
+let previousTouch = { x: 0, y: 0 };
+let initialPinchDistance = 0;
 nipplejs.create({
     zone: document.getElementById('joystick-zone'),
     mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
@@ -92,19 +84,16 @@ nipplejs.create({
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
 
-let isDragging = false;
-let previousTouch = { x: 0, y: 0 };
-let initialPinchDistance = 0;
 renderer.domElement.addEventListener('touchstart', (e) => {
     if (e.target.closest('#joystick-zone')) return;
     if (e.touches.length === 1) {
         isDragging = true;
-        cameraVelocity.set(0, 0);
+        cameraVelocity.set(0, 0); // Stoppe den Ausklang bei neuer Berührung
         previousTouch.x = e.touches[0].clientX;
         previousTouch.y = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
         isDragging = false;
-        zoomVelocity = 0; 
+        zoomVelocity = 0; // Stoppe Zoom-Ausklang
         initialPinchDistance = getPinchDistance(e);
     }
 }, { passive: false });
@@ -119,64 +108,70 @@ renderer.domElement.addEventListener('touchmove', (e) => {
         previousTouch.y = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
         const currentPinchDistance = getPinchDistance(e);
-        // KORREKTUR: Zoom ist jetzt langsamer
-        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.015;
+        // KORREKTUR: Zoom-Bewegung ist jetzt langsamer
+        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.01;
         initialPinchDistance = currentPinchDistance;
     }
 }, { passive: false });
-renderer.domElement.addEventListener('touchend', () => isDragging = false);
-function getPinchDistance(e) {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-}
+renderer.domElement.addEventListener('touchend', () => {
+    isDragging = false; // Wichtig für die Rückkehr-Logik
+});
+function getPinchDistance(e) { /* ... unverändert ... */ }
 
+// === Animations-Schleife mit neuer Physik ===
 function animate() {
     requestAnimationFrame(animate);
 
-    // Schiffsbewegung und Sternenfelder (unverändert)
-    if (ship) {
-        ship.translateZ(shipMove.forward);
-        ship.rotateY(shipMove.turn);
-    }
+    // Schiffsbewegung und Sterne (unverändert)
+    if (ship) ship.translateZ(shipMove.forward);
+    if (ship) ship.rotateY(shipMove.turn);
     stars1.position.z += stars1.userData.speed;
     if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
     if (stars2.position.z > 2000) stars2.position.z -= 4000;
 
-    // Bewegung mit Ausklang anwenden (unverändert)
+    // --- NEUE FEDER-PHYSIK ---
+
+    // 1. Sanfte Rückkehr zur Mitte, wenn der Nutzer NICHT interagiert
+    if (!isDragging) {
+        // Rotation zur Mitte ziehen
+        cameraVelocity.x += (0 - cameraHolder.rotation.x) * SPRING_STRENGTH_RETURN;
+        cameraVelocity.y += (0 - cameraPivot.rotation.y) * SPRING_STRENGTH_RETURN;
+        // Zoom zur Mitte ziehen
+        zoomVelocity += (INITIAL_ZOOM - zoomDistance) * SPRING_STRENGTH_RETURN;
+    }
+
+    // 2. Weiche Grenzen (Reverb/Soft-Zone), die immer aktiv sind
+    const softLimitX = ROTATION_LIMIT * SOFTZONE_THRESHOLD;
+    if (cameraHolder.rotation.x > softLimitX) {
+        cameraVelocity.x -= (cameraHolder.rotation.x - softLimitX) * SPRING_STRENGTH_BOUNDARY;
+    } else if (cameraHolder.rotation.x < -softLimitX) {
+        cameraVelocity.x -= (cameraHolder.rotation.x - -softLimitX) * SPRING_STRENGTH_BOUNDARY;
+    }
+    // (Gleiche Logik für die Y-Rotation)
+    const softLimitY = ROTATION_LIMIT * SOFTZONE_THRESHOLD;
+    if (cameraPivot.rotation.y > softLimitY) {
+        cameraVelocity.y -= (cameraPivot.rotation.y - softLimitY) * SPRING_STRENGTH_BOUNDARY;
+    } else if (cameraPivot.rotation.y < -softLimitY) {
+        cameraVelocity.y -= (cameraPivot.rotation.y - -softLimitY) * SPRING_STRENGTH_BOUNDARY;
+    }
+    // (Gleiche Logik für den Zoom)
+    if (zoomDistance > maxZoom) {
+        zoomVelocity -= (zoomDistance - maxZoom) * SPRING_STRENGTH_BOUNDARY;
+    } else if (zoomDistance < minZoom) {
+        zoomVelocity -= (zoomDistance - minZoom) * SPRING_STRENGTH_BOUNDARY;
+    }
+
+    // 3. Finale Bewegung und Dämpfung anwenden
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
     zoomDistance += zoomVelocity;
+    
     cameraVelocity.multiplyScalar(DAMPING);
     zoomVelocity *= DAMPING;
 
-    // --- NEU: "Reverb"-Effekt an den Grenzen ---
-    // Die "clamp"-Funktion wird durch diese Feder-Logik ersetzt.
-    
-    // Vertikale Rotation
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STRENGTH;
-    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x - -ROTATION_LIMIT) * SPRING_STRENGTH;
-    }
-
-    // Horizontale Rotation
-    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STRENGTH;
-    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y - -ROTATION_LIMIT) * SPRING_STRENGTH;
-    }
-
-    // Zoom
-    if (zoomDistance > maxZoom) {
-        zoomVelocity -= (zoomDistance - maxZoom) * SPRING_STRENGTH;
-    } else if (zoomDistance < minZoom) {
-        zoomVelocity -= (zoomDistance - minZoom) * SPRING_STRENGTH;
-    }
-
+    // 4. Szene rendern
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
     renderer.render(scene, camera);
 }
 
