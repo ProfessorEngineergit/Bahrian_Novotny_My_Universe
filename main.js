@@ -19,7 +19,7 @@ const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
 // KORREKTUR 1: Neue, sehr dunkle Licht-Konfiguration
-scene.add(new THREE.AmbientLight(0xffffff, 0.05)); // Extrem dunkles Umgebungslicht
+scene.add(new THREE.AmbientLight(0xffffff, 0.5)); // Extrem dunkles Umgebungslicht
 const rectLight = new THREE.RectAreaLight(0xddddff, 1, 30, 30); // Schwache, bläuliche Softbox
 rectLight.position.set(5, 15, -10);
 rectLight.lookAt(0, 0, 0);
