@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-// === Grund-Setup ===
+// === Grund-Setup (unverändert) ===
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -10,7 +10,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// === UI, Beleuchtung, Sterne ===
+// === UI, Beleuchtung, Sterne (unverändert) ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
@@ -18,7 +18,6 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-
 function createStarField(count, size, speed) {
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
@@ -54,7 +53,6 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
 
-// HIER IST DIE ÄNDERUNG: Neuer Dateiname im Pfad
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 
 loader.load(
@@ -63,8 +61,6 @@ loader.load(
         progressBar.style.width = '100%';
         loadingText.textContent = 'Modell geladen!';
         ship = gltf.scene;
-        
-        // Keine Skalierung im Code, da das Modell in Blender skaliert wurde.
         
         scene.add(ship);
         
@@ -89,8 +85,11 @@ loader.load(
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
 let zoomDistance = 15;
-const minZoom = 2;
-const maxZoom = 40;
+
+// HIER IST DIE ÄNDERUNG: Engere Zoom-Grenzwerte
+const minZoom = 8;   // Vorher: 2. Weniger nah ran zoomen.
+const maxZoom = 25;  // Vorher: 40. Weniger weit weg zoomen.
+
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
 const DAMPING = 0.92;
