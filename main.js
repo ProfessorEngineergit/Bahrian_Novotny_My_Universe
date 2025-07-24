@@ -18,9 +18,11 @@ function createStarField(count, size, speed) { /* ... Code ... */ }
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
-// KORREKTUR 1: Neue, sehr dunkle Licht-Konfiguration
-scene.add(new THREE.AmbientLight(0xffffff, 10.0)); // Extrem dunkles Umgebungslicht
-const rectLight = new THREE.RectAreaLight(0xddddff, 1, 30, 30); // Schwache, bläuliche Softbox
+// KORREKTUR: Funktionierende, dunkle Licht-Konfiguration
+// Ein schwaches Umgebungslicht, damit das Schiff nicht komplett verschwindet
+scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+// Die Softbox bleibt, sorgt für sanfte Highlights
+const rectLight = new THREE.RectAreaLight(0xddddff, 1, 30, 30);
 rectLight.position.set(5, 15, -10);
 rectLight.lookAt(0, 0, 0);
 scene.add(rectLight);
@@ -41,11 +43,12 @@ loader.load(modelURL, (gltf) => {
     loadingText.textContent = 'Modell geladen!';
     ship = gltf.scene;
 
-    // KORREKTUR 1 (Teil 2): Schiffsmaterial anpassen, damit es selbst leuchtet
+    // KORREKTUR: Stärkeres Eigenglühen, damit das Schiff sichtbar ist
     ship.traverse((node) => {
         if (node.isMesh && node.material) {
-            node.material.emissive = new THREE.Color(0x222222); // Ein dunkles Grau als Eigenglühen
-            node.material.emissiveIntensity = 1.0;
+            // Ein helleres Grau als Eigenglühen. Dies ist der entscheidende Wert.
+            node.material.emissive = new THREE.Color(0x888888);
+            node.material.emissiveIntensity = 0.5; // Intensität leicht reduziert für mehr Kontrast
         }
     });
 
@@ -74,7 +77,7 @@ const SPRING_STIFFNESS = 0.03;
 const DAMPING = 0.90;
 const LERP_FACTOR = 0.05;
 
-// --- ROBUSTE MULTITOUCH-STEUERUNG ---
+// --- ROBUSTE MULTITOUCH-STEUERUNG (unverändert) ---
 let cameraFingerId = null;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
@@ -91,8 +94,9 @@ nipplejs.create({
 
 renderer.domElement.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+    if (joystickTouch) return;
     for (const touch of e.changedTouches) {
-        if (touch.target.closest('#joystick-zone')) continue;
         if (cameraFingerId === null) {
             cameraFingerId = touch.identifier;
             cameraVelocity.set(0, 0);
@@ -100,7 +104,6 @@ renderer.domElement.addEventListener('touchstart', (e) => {
             previousTouch.y = touch.clientY;
         }
     }
-    // KORREKTUR 3: Robuste Pinch-Logik
     const nonJoystickTouches = Array.from(e.touches).filter(t => !t.target.closest('#joystick-zone'));
     if (nonJoystickTouches.length >= 2) {
         initialPinchDistance = getPinchDistance(nonJoystickTouches);
@@ -110,6 +113,8 @@ renderer.domElement.addEventListener('touchstart', (e) => {
 
 renderer.domElement.addEventListener('touchmove', (e) => {
     e.preventDefault();
+    const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+    if (joystickTouch) return;
     for (const touch of e.changedTouches) {
         if (touch.identifier === cameraFingerId) {
             const deltaX = touch.clientX - previousTouch.x;
@@ -120,7 +125,6 @@ renderer.domElement.addEventListener('touchmove', (e) => {
             previousTouch.y = touch.clientY;
         }
     }
-    // KORREKTUR 3: Robuste Pinch-Logik
     const nonJoystickTouches = Array.from(e.touches).filter(t => !t.target.closest('#joystick-zone'));
     if (nonJoystickTouches.length >= 2) {
         const currentPinchDistance = getPinchDistance(nonJoystickTouches);
@@ -140,7 +144,6 @@ renderer.domElement.addEventListener('touchend', (e) => {
     }
 });
 
-// Nimmt jetzt ein Array von Touches entgegen
 function getPinchDistance(touches) {
     const touch1 = touches[0];
     const touch2 = touches[1];
@@ -154,16 +157,12 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (ship) {
-        // Schiffsbewegung
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
-
-        // KORREKTUR 2: Schiff neigt sich beim Drehen (Banking/Rolling)
-        const targetRoll = -shipMove.turn * 1.5; // Multiplikator für die Stärke der Neigung
+        const targetRoll = -shipMove.turn * 1.5;
         ship.rotation.z = THREE.MathUtils.lerp(ship.rotation.z, targetRoll, LERP_FACTOR);
     }
     
-    // Kamera-Physik
     if (cameraFingerId === null) {
         cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
@@ -192,7 +191,6 @@ function animate() {
     
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
-    // Sternenbewegung
     stars1.position.z += stars1.userData.speed;
     if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
