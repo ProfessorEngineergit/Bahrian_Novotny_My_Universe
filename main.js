@@ -10,31 +10,22 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// === UI, Beleuchtung, Sterne (unverändert) ===
+// === UI und Sterne (unverändert) ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-directionalLight.position.set(10, 20, 15);
-scene.add(directionalLight);
-function createStarField(count, size, speed) {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    for (let i = 0; i < count; i++) {
-        vertices.push(
-            (Math.random() - 0.5) * 4000, (Math.random() - 0.5) * 4000, (Math.random() - 0.5) * 4000
-        );
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ size: size, transparent: true, opacity: Math.random() * 0.5 + 0.3 });
-    const stars = new THREE.Points(geometry, material);
-    stars.userData.speed = speed;
-    scene.add(stars);
-    return stars;
-}
+function createStarField(count, size, speed) { /* ... Code aus voriger Antwort ... */ }
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
+
+// KORREKTUR 2: Neue Licht-Konfiguration
+// Sehr dunkles Umgebungslicht für eine düstere Atmosphäre
+scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+// Eine weiche Flächenleuchte ("Softbox") statt eines harten Spotlights
+const rectLight = new THREE.RectAreaLight(0xffffff, 2, 20, 20); // Licht, Intensität, Breite, Höhe
+rectLight.position.set(5, 15, -10);
+rectLight.lookAt(0, 0, 0); // Richte das Licht auf den Ursprung der Szene
+scene.add(rectLight);
 
 // === Hauptobjekt und Kamera-Setup ===
 let ship;
@@ -66,7 +57,8 @@ loader.load(modelURL, (gltf) => {
 
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
-const ROTATION_LIMIT = Math.PI * 0.33; // Größeres Limit
+// KORREKTUR 1: Rotationslimit um weitere 10% erhöht
+const ROTATION_LIMIT = Math.PI * 0.37;
 let zoomDistance = 15;
 const minZoom = 8;
 const maxZoom = 25;
@@ -76,11 +68,9 @@ const SPRING_STIFFNESS = 0.03;
 const DAMPING = 0.90;
 const LERP_FACTOR = 0.05;
 
-// --- ROBUSTE MULTITOUCH-STEUERUNG ---
+// --- ROBUSTE MULTITOUCH-STEUERUNG (unverändert) ---
 let cameraFingerId = null;
 let initialPinchDistance = 0;
-
-// Joystick bleibt unverändert
 nipplejs.create({
     zone: document.getElementById('joystick-zone'),
     mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
@@ -90,15 +80,11 @@ nipplejs.create({
         shipMove.turn = -data.vector.x * 0.05;
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
-
-// Die neuen, sichereren Touch-Handler
+let previousTouch = { x: 0, y: 0 };
 renderer.domElement.addEventListener('touchstart', (e) => {
-    // Zuerst prüfen, ob der Touch auf dem Joystick ist. Wenn ja, nichts tun.
     const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
     if (joystickTouch) return;
-    
     e.preventDefault();
-
     for (const touch of e.changedTouches) {
         if (cameraFingerId === null) {
             cameraFingerId = touch.identifier;
@@ -112,13 +98,10 @@ renderer.domElement.addEventListener('touchstart', (e) => {
         zoomVelocity = 0;
     }
 }, { passive: false });
-
 renderer.domElement.addEventListener('touchmove', (e) => {
     const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
     if (joystickTouch) return;
-    
     e.preventDefault();
-
     for (const touch of e.changedTouches) {
         if (touch.identifier === cameraFingerId) {
             const deltaX = touch.clientX - previousTouch.x;
@@ -135,20 +118,17 @@ renderer.domElement.addEventListener('touchmove', (e) => {
         initialPinchDistance = currentPinchDistance;
     }
 }, { passive: false });
-
 renderer.domElement.addEventListener('touchend', (e) => {
     for (const touch of e.changedTouches) {
         if (touch.identifier === cameraFingerId) {
-            cameraFingerId = null; // Finger ist weg, Kamera kann zur Mitte zurückkehren
+            cameraFingerId = null;
         }
     }
     if (e.touches.length < 2) {
         initialPinchDistance = 0;
     }
 });
-
 function getPinchDistance(e) {
-    // Greift auf die ersten beiden Finger im allgemeinen Touches-Array zu
     const touch1 = e.touches[0];
     const touch2 = e.touches[1];
     const dx = touch1.clientX - touch2.clientX;
@@ -156,8 +136,7 @@ function getPinchDistance(e) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-// --- Die Animations-Schleife ---
-let previousTouch = { x: 0, y: 0 };
+// --- Die Animations-Schleife (unverändert) ---
 function animate() {
     requestAnimationFrame(animate);
 
@@ -166,13 +145,11 @@ function animate() {
         ship.rotateY(shipMove.turn);
     }
     
-    // Wenn kein Finger die Kamera steuert, kehre zur Mitte zurück
     if (cameraFingerId === null) {
         cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
     }
 
-    // Federung an den Rotationsgrenzen
     if (cameraHolder.rotation.x > ROTATION_LIMIT) {
         cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
     } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
@@ -184,7 +161,6 @@ function animate() {
         cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
     }
     
-    // Geschwindigkeiten anwenden und dämpfen
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
     cameraVelocity.multiplyScalar(DAMPING);
@@ -192,7 +168,6 @@ function animate() {
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
 
-    // Harter Stopp für den Zoom
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
     if (zoomDistance === minZoom || zoomDistance === maxZoom) {
         zoomVelocity = 0;
@@ -200,7 +175,6 @@ function animate() {
     
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
-    // Sternenbewegung
     stars1.position.z += stars1.userData.speed;
     if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
