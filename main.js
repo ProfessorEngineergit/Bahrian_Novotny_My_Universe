@@ -29,7 +29,11 @@ function createStarField(count, size, speed) {
         );
     }
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ size, transparent: true, opacity: Math.random() * 0.5 + 0.3 });
+    const material = new THREE.PointsMaterial({
+        size: size,
+        transparent: true,
+        opacity: Math.random() * 0.5 + 0.3
+    });
     const stars = new THREE.Points(geometry, material);
     stars.userData.speed = speed;
     scene.add(stars);
@@ -42,27 +46,35 @@ const stars2 = createStarField(12000, 0.2, 0.05);
 let ship;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
+
+// === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
+
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
+
 loader.load(
     modelURL,
     function (gltf) {
         progressBar.style.width = '100%';
         loadingText.textContent = 'Modell geladen!';
         ship = gltf.scene;
+        
         scene.add(ship);
+        
         ship.add(cameraPivot);
         cameraPivot.add(cameraHolder);
         cameraHolder.add(camera);
         camera.position.set(0, 4, -15);
         camera.lookAt(cameraHolder.position);
+        
         setTimeout(() => {
             loadingScreen.style.opacity = '0';
             setTimeout(() => loadingScreen.style.display = 'none', 500);
         }, 300);
+        
         animate();
     },
     (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; },
@@ -73,14 +85,14 @@ loader.load(
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
 let zoomDistance = 15;
-const minZoom = 8;
-const maxZoom = 25;
+
+// HIER IST DIE ÄNDERUNG: Engere Zoom-Grenzwerte
+const minZoom = 8;   // Vorher: 2. Weniger nah ran zoomen.
+const maxZoom = 25;  // Vorher: 40. Weniger weit weg zoomen.
+
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
-const DAMPING = 0.92; // Behält den Ausklang bei
-
-// NEU: Konstanten für den "Reverb"-Effekt
-const SPRING_STRENGTH = 0.001; // Wie stark die "Feder" zurückzieht
+const DAMPING = 0.92;
 
 nipplejs.create({
     zone: document.getElementById('joystick-zone'),
@@ -119,8 +131,7 @@ renderer.domElement.addEventListener('touchmove', (e) => {
         previousTouch.y = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
         const currentPinchDistance = getPinchDistance(e);
-        // KORREKTUR: Zoom ist jetzt langsamer
-        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.015;
+        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03;
         initialPinchDistance = currentPinchDistance;
     }
 }, { passive: false });
@@ -133,8 +144,6 @@ function getPinchDistance(e) {
 
 function animate() {
     requestAnimationFrame(animate);
-
-    // Schiffsbewegung und Sternenfelder (unverändert)
     if (ship) {
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
@@ -143,40 +152,18 @@ function animate() {
     if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
     if (stars2.position.z > 2000) stars2.position.z -= 4000;
-
-    // Bewegung mit Ausklang anwenden (unverändert)
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
-    zoomDistance += zoomVelocity;
     cameraVelocity.multiplyScalar(DAMPING);
+    zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
-
-    // --- NEU: "Reverb"-Effekt an den Grenzen ---
-    // Die "clamp"-Funktion wird durch diese Feder-Logik ersetzt.
-    
-    // Vertikale Rotation
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STRENGTH;
-    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x - -ROTATION_LIMIT) * SPRING_STRENGTH;
+    cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
+    cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    if (zoomDistance <= minZoom || zoomDistance >= maxZoom) {
+        zoomVelocity = 0;
     }
-
-    // Horizontale Rotation
-    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STRENGTH;
-    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y - -ROTATION_LIMIT) * SPRING_STRENGTH;
-    }
-
-    // Zoom
-    if (zoomDistance > maxZoom) {
-        zoomVelocity -= (zoomDistance - maxZoom) * SPRING_STRENGTH;
-    } else if (zoomDistance < minZoom) {
-        zoomVelocity -= (zoomDistance - minZoom) * SPRING_STRENGTH;
-    }
-
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
     renderer.render(scene, camera);
 }
 
