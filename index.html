@@ -3,177 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>Enterprise D - Galaxy Explorer (Final)</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
-        canvas { display: block; }
-        #info, #joystick-zone { position: absolute; color: white; font-family: monospace; text-shadow: 2px 2px 4px #000000; pointer-events: none; }
-        #info { top: 10px; width: 100%; text-align: center; font-size: 14px; }
-        #joystick-zone { bottom: 30px; left: 30px; width: 150px; height: 150px; pointer-events: all; }
-        #loading-screen { position: absolute; width: 100%; height: 100%; background-color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: monospace; font-size: 20px; z-index: 100; transition: opacity 0.5s; text-align: center; }
-    </style>
+    <title>USS Enterprise 3D Flug</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- ====================================================== -->
+    <!-- NEU: Die Import-Karte für den Browser                  -->
+    <!-- ====================================================== -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
+            }
+        }
+    </script>
+
 </head>
 <body>
 
-<div id="loading-screen">Lade Enterprise und Galaxie...</div>
-<div id="info">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
-<div id="joystick-zone"></div>
+    <!-- UI Elemente -->
+    <div id="info">
+        Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch
+    </div>
+    <div id="joystick-zone"></div>
+    <div id="loading-screen">
+        <div id="loading-text">Lade Modell...</div>
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+    </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
-
-<script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
-        }
-    }
-</script>
-
-<script type="module">
-    import * as THREE from 'three';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-    // === VARIABLEN ===
-    let shipMove = { forward: 0, turn: 0 };
-    const ROTATION_LIMIT = Math.PI * 0.3;
-    let cameraVelocity = new THREE.Vector2(0, 0), zoomVelocity = 0;
-    const DAMPING = 0.92;
-    let isDragging = false, previousTouch = { x: 0, y: 0 }, initialPinchDistance = 0;
-
-    // === NEU: DYNAMISCHE ZOOM-LIMITS ===
-    let zoomDistance;
-    let minZoom, maxZoom;
-
-    // === SETUP ===
-    const loadingScreen = document.getElementById('loading-screen');
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    document.body.appendChild(renderer.domElement);
-
-    const loadingManager = new THREE.LoadingManager(() => {
-        loadingScreen.style.opacity = '0';
-        setTimeout(() => loadingScreen.style.display = 'none', 500);
-    });
-
-    // === BELEUCHTUNG & SZENE ===
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
-    dirLight.position.set(10, 20, 5);
-    scene.add(dirLight);
-
-    const repoPath = '/Project_Mariner/';
-    const skyboxTexture = new THREE.CubeTextureLoader(loadingManager).load([
-        `${repoPath}Assets/skybox/px.jpg`, `${repoPath}Assets/skybox/nx.jpg`,
-        `${repoPath}Assets/skybox/py.jpg`, `${repoPath}Assets/skybox/ny.jpg`,
-        `${repoPath}Assets/skybox/pz.jpg`, `${repoPath}Assets/skybox/nz.jpg`
-    ]);
-    scene.background = skyboxTexture;
-
-    function createPointField(count, color, size, range) {
-        const vertices = [];
-        for (let i = 0; i < count; i++) {
-            vertices.push((Math.random() - 0.5) * range, (Math.random() - 0.5) * range, (Math.random() - 0.5) * range);
-        }
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        const material = new THREE.PointsMaterial({ color: color, size: size, transparent: true, opacity: 0.8 });
-        return new THREE.Points(geometry, material);
-    }
-    scene.add(createPointField(20000, 0xffffff, 0.15, 2000));
-    scene.add(createPointFiel(5000, 0x99ccff, 0.3, 2000));
-
-    // === OBJEKT & KAMERA ===
-    let ship;
-    const cameraPivot = new THREE.Object3D();
-    const cameraHolder = new THREE.Object3D();
+    <!-- Joystick Bibliothek -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
     
-    const loader = new GLTFLoader(loadingManager);
-    loader.load(
-        `${repoPath}Assets/downscaled_USS_Enterprise_D.glb`, 
-        (gltf) => {
-            ship = gltf.scene;
-            
-            // --- MODELL-ANALYSE & ZOOM-SETUP ---
-            const box = new THREE.Box3().setFromObject(ship);
-            const size = box.getSize(new THREE.Vector3());
-            const center = box.getCenter(new THREE.Vector3());
-
-            // Skalieren & Zentrieren (wie zuvor)
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 10 / maxDim; // Zielgröße 10 Einheiten
-            ship.scale.set(scale, scale, scale);
-            ship.position.sub(center.multiplyScalar(scale));
-
-            // NEU: Bounding Sphere berechnen und Zoom-Grenzen setzen
-            const newBox = new THREE.Box3().setFromObject(ship);
-            const sphere = new THREE.Sphere();
-            newBox.getBoundingSphere(sphere);
-            
-            minZoom = sphere.radius * 1.1; // 10% Puffer
-            maxZoom = minZoom * 4;
-            zoomDistance = maxZoom; // Starte bei der maximalen Entfernung
-
-            scene.add(ship);
-            ship.add(cameraPivot);
-            cameraPivot.add(cameraHolder);
-            cameraHolder.add(camera);
-            
-            // Setze die Kameraposition initial auf maxZoom
-            camera.position.set(0, minZoom * 0.5, -zoomDistance);
-            camera.lookAt(cameraHolder.position);
-        },
-        undefined, 
-        (error) => {
-            console.error('Fehler beim Laden des Modells:', error);
-            loadingScreen.innerHTML = `FEHLER: Modelldatei nicht gefunden.<br>Pfad "${repoPath}Assets/..." geprüft.`;
-        }
-    );
-
-    // === STEUERUNG (unverändert) ===
-    nipplejs.create({
-        zone: document.getElementById('joystick-zone'),
-        mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
-    }).on('move', (evt, data) => { if(data.vector) { shipMove.forward = data.vector.y * 0.2; shipMove.turn = -data.vector.x * 0.02; }}).on('end', () => shipMove = { forward: 0, turn: 0 });
-    function getPinchDistance(e) { const dx = e.touches[0].clientX - e.touches[1].clientX, dy = e.touches[0].clientY - e.touches[1].clientY; return Math.sqrt(dx * dx + dy * dy); }
-    renderer.domElement.addEventListener('touchstart', (e) => {
-        if (e.target.closest('#joystick-zone')) return;
-        if (e.touches.length === 1) { isDragging = true; cameraVelocity.set(0, 0); previousTouch.x = e.touches[0].clientX; previousTouch.y = e.touches[0].clientY; } 
-        else if (e.touches.length === 2) { isDragging = false; zoomVelocity = 0; initialPinchDistance = getPinchDistance(e); }
-    }, { passive: false });
-    renderer.domElement.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (isDragging && e.touches.length === 1) { const dx = e.touches[0].clientX - previousTouch.x, dy = e.touches[0].clientY - previousTouch.y; cameraVelocity.x += dy * 0.0002; cameraVelocity.y -= dx * 0.0002; previousTouch.x = e.touches[0].clientX; previousTouch.y = e.touches[0].clientY; } 
-        else if (e.touches.length === 2) { const d = getPinchDistance(e); zoomVelocity -= (d - initialPinchDistance) * 0.003; initialPinchDistance = d; }
-    }, { passive: false });
-    renderer.domElement.addEventListener('touchend', () => isDragging = false);
-    
-    // === ANIMATION ===
-    function animate() {
-        requestAnimationFrame(animate);
-        if (ship) { ship.translateZ(shipMove.forward); ship.rotateY(shipMove.turn); }
-        cameraHolder.rotation.x += cameraVelocity.x; cameraPivot.rotation.y += cameraVelocity.y; cameraVelocity.multiplyScalar(DAMPING);
-        zoomDistance += zoomVelocity; zoomVelocity *= DAMPING;
-
-        if (minZoom) { // Nur ausführen, wenn die Zoom-Grenzen gesetzt sind
-            cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
-            cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
-            
-            // NEU: Clamp mit dynamischen Werten
-            zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-            
-            if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
-            camera.position.normalize().multiplyScalar(zoomDistance);
-        }
-        renderer.render(scene, camera);
-    }
-    animate();
-    window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-</script>
+    <!-- Three.js Logik -->
+    <script type="module" src="main.js"></script>
 
 </body>
 </html>
