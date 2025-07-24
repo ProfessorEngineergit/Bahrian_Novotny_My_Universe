@@ -18,7 +18,21 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-function createStarField(count, size, speed) { /* ... Code ... */ }
+function createStarField(count, size, speed) {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < count; i++) {
+        vertices.push(
+            (Math.random() - 0.5) * 4000, (Math.random() - 0.5) * 4000, (Math.random() - 0.5) * 4000
+        );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.PointsMaterial({ size: size, transparent: true, opacity: Math.random() * 0.5 + 0.3 });
+    const stars = new THREE.Points(geometry, material);
+    stars.userData.speed = speed;
+    scene.add(stars);
+    return stars;
+}
 const stars1 = createStarField(10000, 0.1, 0.1);
 const stars2 = createStarField(12000, 0.2, 0.05);
 
@@ -52,22 +66,21 @@ loader.load(modelURL, (gltf) => {
 
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
-// KORREKTUR 1: Rotationslimit um ca. 10% erhöht
-const ROTATION_LIMIT = Math.PI * 0.33;
+const ROTATION_LIMIT = Math.PI * 0.33; // Größeres Limit
 let zoomDistance = 15;
 const minZoom = 8;
 const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0);
-let zoomVelocity = 0; // Wird nicht mehr für die Federung gebraucht, aber für den Ausklang
+let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03;
 const DAMPING = 0.90;
 const LERP_FACTOR = 0.05;
 
-// --- MULTITOUCH-FÄHIGE STEUERUNG ---
-// KORREKTUR 3: Wir verfolgen jetzt einzelne Finger
-let cameraTouch = { id: null, x: 0, y: 0 };
-let pinchInitialDistance = 0;
+// --- ROBUSTE MULTITOUCH-STEUERUNG ---
+let cameraFingerId = null;
+let initialPinchDistance = 0;
 
+// Joystick bleibt unverändert
 nipplejs.create({
     zone: document.getElementById('joystick-zone'),
     mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
@@ -78,70 +91,73 @@ nipplejs.create({
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
 
+// Die neuen, sichereren Touch-Handler
 renderer.domElement.addEventListener('touchstart', (e) => {
-    // Verhindert, dass der Browser versucht, die Seite zu verschieben
-    e.preventDefault(); 
+    // Zuerst prüfen, ob der Touch auf dem Joystick ist. Wenn ja, nichts tun.
+    const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+    if (joystickTouch) return;
+    
+    e.preventDefault();
+
     for (const touch of e.changedTouches) {
-        // Ignoriere Touches, die auf dem Joystick starten
-        if (touch.target.closest('#joystick-zone')) continue;
-        
-        // Der erste Finger, der nicht auf dem Joystick ist, steuert die Kamera
-        if (cameraTouch.id === null) {
-            cameraTouch.id = touch.identifier;
-            cameraTouch.x = touch.clientX;
-            cameraTouch.y = touch.clientY;
-            cameraVelocity.set(0, 0); // Stoppe die Bewegung beim Berühren
+        if (cameraFingerId === null) {
+            cameraFingerId = touch.identifier;
+            cameraVelocity.set(0, 0);
+            previousTouch.x = touch.clientX;
+            previousTouch.y = touch.clientY;
         }
     }
-    // Pinch-Zoom-Logik bleibt separat
-    if (e.touches.length === 2) {
-        pinchInitialDistance = getPinchDistance(e);
+    if (e.touches.length >= 2) {
+        initialPinchDistance = getPinchDistance(e);
         zoomVelocity = 0;
     }
 }, { passive: false });
 
 renderer.domElement.addEventListener('touchmove', (e) => {
+    const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+    if (joystickTouch) return;
+    
     e.preventDefault();
+
     for (const touch of e.changedTouches) {
-        // Finde den Finger, der für die Kamera zuständig ist
-        if (touch.identifier === cameraTouch.id) {
-            const deltaX = touch.clientX - cameraTouch.x;
-            const deltaY = touch.clientY - cameraTouch.y;
+        if (touch.identifier === cameraFingerId) {
+            const deltaX = touch.clientX - previousTouch.x;
+            const deltaY = touch.clientY - previousTouch.y;
             cameraVelocity.x += deltaY * 0.0002;
             cameraVelocity.y -= deltaX * 0.0002;
-            cameraTouch.x = touch.clientX;
-            cameraTouch.y = touch.clientY;
+            previousTouch.x = touch.clientX;
+            previousTouch.y = touch.clientY;
         }
     }
-    // Pinch-Zoom
-    if (e.touches.length === 2) {
+    if (e.touches.length >= 2) {
         const currentPinchDistance = getPinchDistance(e);
-        zoomVelocity -= (currentPinchDistance - pinchInitialDistance) * 0.03;
-        pinchInitialDistance = currentPinchDistance;
+        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03;
+        initialPinchDistance = currentPinchDistance;
     }
 }, { passive: false });
 
 renderer.domElement.addEventListener('touchend', (e) => {
-    e.preventDefault();
     for (const touch of e.changedTouches) {
-        // Wenn der Kamera-Finger losgelassen wird, setze ihn zurück
-        if (touch.identifier === cameraTouch.id) {
-            cameraTouch.id = null;
+        if (touch.identifier === cameraFingerId) {
+            cameraFingerId = null; // Finger ist weg, Kamera kann zur Mitte zurückkehren
         }
     }
-    // Wenn weniger als 2 Finger da sind, kann kein Pinch mehr stattfinden
     if (e.touches.length < 2) {
-        pinchInitialDistance = 0;
+        initialPinchDistance = 0;
     }
-}, { passive: false });
+});
 
 function getPinchDistance(e) {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    // Greift auf die ersten beiden Finger im allgemeinen Touches-Array zu
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-// --- Die neue Animations-Schleife ---
+// --- Die Animations-Schleife ---
+let previousTouch = { x: 0, y: 0 };
 function animate() {
     requestAnimationFrame(animate);
 
@@ -150,10 +166,8 @@ function animate() {
         ship.rotateY(shipMove.turn);
     }
     
-    // --- KAMERAPHYSIK ---
-    
     // Wenn kein Finger die Kamera steuert, kehre zur Mitte zurück
-    if (cameraTouch.id === null) {
+    if (cameraFingerId === null) {
         cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
     }
@@ -176,12 +190,12 @@ function animate() {
     cameraVelocity.multiplyScalar(DAMPING);
     
     zoomDistance += zoomVelocity;
-    zoomVelocity *= DAMPING; // Ausklang für den Zoom behalten
+    zoomVelocity *= DAMPING;
 
-    // KORREKTUR 2: Harter Stopp für den Zoom mit clamp()
+    // Harter Stopp für den Zoom
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
     if (zoomDistance === minZoom || zoomDistance === maxZoom) {
-        zoomVelocity = 0; // Stoppe die Geschwindigkeit, um "Kleben" zu verhindern
+        zoomVelocity = 0;
     }
     
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
@@ -199,4 +213,4 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});```
+});
