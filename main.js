@@ -18,9 +18,29 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.2));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
 directionalLight.position.set(5, 10, 7);
 scene.add(directionalLight);
-function createStarField(count, size, speed) { /* ... Code ... */ }
-const stars1 = createStarField(6000, 0.5, 0.1);
-const stars2 = createStarField(8000, 0.8, 0.05);
+function createStarField(count, size, speed) {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < count; i++) {
+        vertices.push(
+            (Math.random() - 0.5) * 8000,
+            (Math.random() - 0.5) * 8000,
+            (Math.random() - 0.5) * 8000
+        );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.PointsMaterial({
+        size: size,
+        transparent: true,
+        opacity: Math.random() * 0.5 + 0.3
+    });
+    const stars = new THREE.Points(geometry, material);
+    stars.userData.speed = speed;
+    scene.add(stars);
+    return stars;
+}
+const stars1 = createStarField(10000, 1, 0.1);
+const stars2 = createStarField(12000, 1.5, 0.05);
 
 // === Hauptobjekt und Kamera-Setup ===
 let ship;
@@ -31,7 +51,7 @@ const cameraHolder = new THREE.Object3D();
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
 let zoomDistance;
-let minZoom, maxZoom; // Werden dynamisch gesetzt
+let minZoom, maxZoom;
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
 const DAMPING = 0.92;
@@ -51,35 +71,39 @@ loader.load(
         loadingText.textContent = 'Modell geladen!';
 
         ship = gltf.scene;
+        // Die Skalierung bleibt wichtig
         ship.scale.set(0.01, 0.01, 0.01);
         
         scene.add(ship);
         
-        // KORREKTUR: Dynamische Zoom-Grenzen basierend auf dem Modell berechnen
-        // 1. Erstelle eine "Box", die das Modell umschließt, um die Größe zu messen.
+        // --- DYNAMISCHE ANPASSUNG AN DAS MODELL ---
         const boundingBox = new THREE.Box3().setFromObject(ship);
         const boundingSphere = new THREE.Sphere();
         boundingBox.getBoundingSphere(boundingSphere);
         const modelRadius = boundingSphere.radius;
 
-        // 2. Setze die Kamera basierend auf dieser Größe auf eine gute Startposition.
-        const initialCameraOffset = modelRadius * 6; // Startabstand = 6x der Modellradius
+        // NEU: Schritt 1 - Clipping-Ebenen der Kamera anpassen
+        camera.near = modelRadius / 100; // Mindestfokus = 1% des Radius
+        camera.far = modelRadius * 100; // Sichtweite = 100x der Radius
+        camera.updateProjectionMatrix(); // WICHTIG: Kamera nach Änderung aktualisieren!
+
+        // Schritt 2 - Startposition und Zoom-Grenzen anpassen
+        const initialCameraOffset = modelRadius * 6;
         camera.position.set(0, modelRadius * 2, -initialCameraOffset);
         
-        // 3. Setze die dynamischen Zoom-Grenzwerte
         zoomDistance = camera.position.length();
-        minZoom = modelRadius * 1.1; // Minimaler Abstand: 110% des Radius (verhindert Clipping)
-        maxZoom = zoomDistance * 1.5; // Maximaler Abstand
+        minZoom = modelRadius * 1.1; // 110% des Radius, um Clipping zu verhindern
+        maxZoom = zoomDistance * 1.5;
 
-        // Kamera-Setup
+        // Schritt 3 - Kamera anheften
         ship.add(cameraPivot);
         cameraPivot.add(cameraHolder);
         cameraHolder.add(camera);
         camera.lookAt(cameraHolder.position);
         
-        const engineGlow = new THREE.PointLight(0x00aaff, modelRadius, modelRadius * 2);
-        engineGlow.position.set(0, 0.5, -2); // Position anpassen falls nötig
-        ship.add(engineGlow);
+        // (Optional) NEU: Visuellen Helfer für die Bounding Box hinzufügen
+        const boxHelper = new THREE.Box3Helper(boundingBox, 0xffff00); // Gelbe Box
+        scene.add(boxHelper);
 
         setTimeout(() => {
             loadingScreen.style.opacity = '0';
@@ -88,28 +112,64 @@ loader.load(
         
         animate();
     },
-    function(xhr) { /* ... unverändert ... */ },
-    function (error) { /* ... unverändert ... */ }
+    (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; },
+    (error) => {
+        console.error('Ein Fehler ist aufgetreten', error);
+        loadingText.textContent = "Fehler! Prüfe die Browser-Konsole (F12).";
+    }
 );
 
 
 // === Steuerung und Animation ===
-nipplejs.create({ /* ... unverändert ... */ }).on('move', (evt, data) => {
-    if (data.vector) {
-        shipMove.forward = data.vector.y * modelRadius * 0.05; // Bewegung an Modellgröße anpassen
+nipplejs.create({
+    zone: document.getElementById('joystick-zone'),
+    mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
+}).on('move', (evt, data) => {
+    if (data.vector && ship) {
+        // Bewegung an die Schiffsgröße anpassen für ein gutes Gefühl
+        const modelRadius = new THREE.Sphere().setFromObject(ship).radius;
+        shipMove.forward = data.vector.y * modelRadius * 0.05;
         shipMove.turn = -data.vector.x * 0.05;
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
 
-// (Touch-Event-Listener sind unverändert)
 let isDragging = false;
 let previousTouch = { x: 0, y: 0 };
 let initialPinchDistance = 0;
-renderer.domElement.addEventListener('touchstart', (e) => { /* ... unverändert ... */ });
-renderer.domElement.addEventListener('touchmove', (e) => { /* ... unverändert ... */ });
+renderer.domElement.addEventListener('touchstart', (e) => {
+    if (e.target.closest('#joystick-zone')) return;
+    if (e.touches.length === 1) {
+        isDragging = true;
+        cameraVelocity.set(0, 0);
+        previousTouch.x = e.touches[0].clientX;
+        previousTouch.y = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        isDragging = false;
+        zoomVelocity = 0; 
+        initialPinchDistance = getPinchDistance(e);
+    }
+}, { passive: false });
+renderer.domElement.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (isDragging && e.touches.length === 1) {
+        const deltaX = e.touches[0].clientX - previousTouch.x;
+        const deltaY = e.touches[0].clientY - previousTouch.y;
+        cameraVelocity.x += deltaY * 0.0002;
+        cameraVelocity.y -= deltaX * 0.0002;
+        previousTouch.x = e.touches[0].clientX;
+        previousTouch.y = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        const currentPinchDistance = getPinchDistance(e);
+        zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03;
+        initialPinchDistance = currentPinchDistance;
+    }
+}, { passive: false });
 renderer.domElement.addEventListener('touchend', () => isDragging = false);
-function getPinchDistance(e) { /* ... unverändert ... */ }
-
+function getPinchDistance(e) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -119,35 +179,36 @@ function animate() {
         ship.rotateY(shipMove.turn);
     }
 
-    // (Sternenbewegung unverändert)
     stars1.position.z += stars1.userData.speed;
-    if (stars1.position.z > 2000) stars1.position.z -= 4000;
+    if (stars1.position.z > 4000) stars1.position.z -= 8000;
     stars2.position.z += stars2.userData.speed;
-    if (stars2.position.z > 2000) stars2.position.z -= 4000;
+    if (stars2.position.z > 4000) stars2.position.z -= 8000;
 
-    // (Kameradrehung mit Ausklang unverändert)
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
     cameraVelocity.multiplyScalar(DAMPING);
 
-    // (Zoom mit Ausklang unverändert)
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
 
-    // KORREKTUR: Wende die neuen, dynamischen Zoom-Grenzen an
-    cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
-    cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
-    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    
-    // Stoppe die Zoom-Geschwindigkeit an den Grenzen
-    if (zoomDistance <= minZoom || zoomDistance >= maxZoom) {
-        zoomVelocity = 0;
+    // Diese Logik funktioniert jetzt korrekt, da minZoom und die Kamera-Eigenschaften harmonieren
+    if (minZoom && maxZoom) { // Stelle sicher, dass die Werte gesetzt sind
+        cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
+        cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
+        zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+        
+        if (zoomDistance <= minZoom || zoomDistance >= maxZoom) {
+            zoomVelocity = 0;
+        }
     }
 
-    camera.position.normalize().multiplyScalar(zoomDistance);
+    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
     renderer.render(scene, camera);
 }
 
-// (Resize-Handler unverändert)
-window.addEventListener('resize', () => { /* ... unverändert ... */ });
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
