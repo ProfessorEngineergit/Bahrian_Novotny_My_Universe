@@ -2,20 +2,20 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-// === Grund-Setup (unverändert) ===
+// === Grund-Setup ===
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 8000); // Sichtweite leicht erhöht
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// === UI, Beleuchtung, Sterne (unverändert) ===
+// === UI, Beleuchtung, Sterne ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
-scene.add(new THREE.AmbientLight(0xffffff, 0.2));
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
@@ -24,9 +24,9 @@ function createStarField(count, size, speed) {
     const vertices = [];
     for (let i = 0; i < count; i++) {
         vertices.push(
-            (Math.random() - 0.5) * 8000,
-            (Math.random() - 0.5) * 8000,
-            (Math.random() - 0.5) * 8000
+            (Math.random() - 0.5) * 4000,
+            (Math.random() - 0.5) * 4000,
+            (Math.random() - 0.5) * 4000
         );
     }
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
@@ -40,8 +40,8 @@ function createStarField(count, size, speed) {
     scene.add(stars);
     return stars;
 }
-const stars1 = createStarField(10000, 1, 0.1);
-const stars2 = createStarField(12000, 1.5, 0.05);
+const stars1 = createStarField(10000, 0.1, 0.1);
+const stars2 = createStarField(12000, 0.2, 0.05);
 
 // === Hauptobjekt und Kamera-Setup ===
 let ship;
@@ -54,26 +54,24 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
 
-const modelURL = 'https://professorengineergit.github.io/Project_Mariner/downscaled_USS_Enterprise_D.glb';
+// HIER IST DIE ÄNDERUNG: Neuer Dateiname im Pfad
+const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 
 loader.load(
     modelURL,
     function (gltf) {
         progressBar.style.width = '100%';
         loadingText.textContent = 'Modell geladen!';
-
         ship = gltf.scene;
         
-        // Schritt 1: Feste, funktionierende Skalierung
-        ship.scale.set(0.01, 0.01, 0.01);
+        // Keine Skalierung im Code, da das Modell in Blender skaliert wurde.
         
         scene.add(ship);
         
-        // Schritt 2: Feste, funktionierende Kameraposition
         ship.add(cameraPivot);
         cameraPivot.add(cameraHolder);
         cameraHolder.add(camera);
-        camera.position.set(0, 30, -80);
+        camera.position.set(0, 4, -15);
         camera.lookAt(cameraHolder.position);
         
         setTimeout(() => {
@@ -84,20 +82,15 @@ loader.load(
         animate();
     },
     (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; },
-    (error) => {
-        console.error('Ein Fehler ist aufgetreten', error);
-        loadingText.textContent = "Fehler! Prüfe die Browser-Konsole (F12).";
-    }
+    (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; }
 );
 
 // === Steuerung und Animation ===
-
-// Schritt 3: Feste, sichere Zoom-Grenzwerte, die Clipping verhindern
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.3;
-let zoomDistance = camera.position.length(); // Startabstand berechnen
-const minZoom = 15; // Sicherer Mindestabstand. Vergrößern, falls es noch clippt.
-const maxZoom = 200; // Sicherer Maximalabstand
+let zoomDistance = 15;
+const minZoom = 2;
+const maxZoom = 40;
 let cameraVelocity = new THREE.Vector2(0, 0);
 let zoomVelocity = 0;
 const DAMPING = 0.92;
@@ -107,8 +100,7 @@ nipplejs.create({
     mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120
 }).on('move', (evt, data) => {
     if (data.vector && ship) {
-        // Die Bewegung ist nicht mehr von der Modellgröße abhängig, was stabiler ist
-        shipMove.forward = data.vector.y * 0.5;
+        shipMove.forward = data.vector.y * 0.1;
         shipMove.turn = -data.vector.x * 0.05;
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
@@ -153,35 +145,26 @@ function getPinchDistance(e) {
 
 function animate() {
     requestAnimationFrame(animate);
-
     if (ship) {
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
     }
-
     stars1.position.z += stars1.userData.speed;
-    if (stars1.position.z > 4000) stars1.position.z -= 8000;
+    if (stars1.position.z > 2000) stars1.position.z -= 4000;
     stars2.position.z += stars2.userData.speed;
-    if (stars2.position.z > 4000) stars2.position.z -= 8000;
-
+    if (stars2.position.z > 2000) stars2.position.z -= 4000;
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
     cameraVelocity.multiplyScalar(DAMPING);
-
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
-
-    // Die Logik funktioniert jetzt mit den sicheren Grenzwerten
     cameraHolder.rotation.x = THREE.MathUtils.clamp(cameraHolder.rotation.x, -ROTATION_LIMIT, ROTATION_LIMIT);
     cameraPivot.rotation.y = THREE.MathUtils.clamp(cameraPivot.rotation.y, -ROTATION_LIMIT, ROTATION_LIMIT);
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    
     if (zoomDistance <= minZoom || zoomDistance >= maxZoom) {
         zoomVelocity = 0;
     }
-
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
     renderer.render(scene, camera);
 }
 
