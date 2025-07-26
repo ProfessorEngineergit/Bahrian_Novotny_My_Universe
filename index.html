@@ -6,9 +6,6 @@
     <title>USS Enterprise 3D Flug</title>
     <link rel="stylesheet" href="style.css">
 
-    <!-- ====================================================== -->
-    <!-- NEU: Die Import-Karte für den Browser                  -->
-    <!-- ====================================================== -->
     <script type="importmap">
         {
             "imports": {
@@ -17,7 +14,6 @@
             }
         }
     </script>
-
 </head>
 <body>
 
@@ -32,6 +28,13 @@
             <div id="progress-bar"></div>
         </div>
     </div>
+
+    <!-- NEU: Der Media Player -->
+    <audio id="media-player" controls loop>
+        <source src="https://professorengineergit.github.io/Project_Mariner/Arcadia.wav" type="audio/wav">
+        Ihr Browser unterstützt das Audio-Element nicht.
+    </audio>
+
 
     <!-- Joystick Bibliothek -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
