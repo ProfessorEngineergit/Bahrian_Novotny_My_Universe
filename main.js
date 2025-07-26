@@ -19,28 +19,34 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
+// === NEU: Hilfsfunktion zur Erstellung einer runden Textur ===
 function createCircleTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 64; canvas.height = 64;
+    canvas.width = 64;
+    canvas.height = 64;
     const context = canvas.getContext('2d');
+    
+    // Erzeugt einen weichen, kreisförmigen Gradienten
     const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
     gradient.addColorStop(0, 'rgba(255,255,255,1)');
     gradient.addColorStop(0.2, 'rgba(255,255,255,1)');
     gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)');
     gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    
     context.fillStyle = gradient;
     context.fillRect(0, 0, 64, 64);
+    
     return new THREE.CanvasTexture(canvas);
 }
 
-// === Galaxie-Erstellung (zurück zur stabilen Version) ===
+// === Die Funktion zum Erstellen der Galaxie ===
 function createGalaxy() {
     const parameters = {
-        count: 150000,
-        size: 0.15,
+        count: 100000,
+        size: 0.1, // Größe etwas erhöht, um den Effekt zu sehen
         radius: 100,
         arms: 3,
-        spin: 0.7,
+        spin: 1.5,
         randomness: 0.5,
         randomnessPower: 3,
         insideColor: '#ffac89',
@@ -54,7 +60,6 @@ function createGalaxy() {
     const colorOutside = new THREE.Color(parameters.outsideColor);
 
     for (let i = 0; i < parameters.count; i++) {
-        // (Code für die Partikelpositionen ist unverändert)
         const i3 = i * 3;
         const radius = Math.random() * parameters.radius;
         const spinAngle = radius * parameters.spin;
@@ -67,13 +72,15 @@ function createGalaxy() {
         positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
         const mixedColor = colorInside.clone();
         mixedColor.lerp(colorOutside, radius / parameters.radius);
-        colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b;
+        colors[i3] = mixedColor.r;
+        colors[i3 + 1] = mixedColor.g;
+        colors[i3 + 2] = mixedColor.b;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // Wir verwenden wieder das stabile PointsMaterial
+    // KORREKTUR: Das Material verwendet jetzt die runde Textur
     const particleTexture = createCircleTexture();
     const material = new THREE.PointsMaterial({
         size: parameters.size,
@@ -81,8 +88,9 @@ function createGalaxy() {
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         vertexColors: true,
+        // Hinzugefügte Eigenschaften:
         map: particleTexture,
-        transparent: true
+        transparent: true // Wichtig für die Textur-Transparenz
     });
 
     const points = new THREE.Points(geometry, material);
@@ -90,12 +98,6 @@ function createGalaxy() {
 }
 
 createGalaxy();
-
-// Galaxie-Kern (Schwarzes Loch)
-const blackHoleGeometry = new THREE.SphereGeometry(1.5, 32, 32);
-const blackHoleMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
-scene.add(blackHole);
 
 
 // === Hauptobjekt und Kamera-Setup (unverändert) ===
@@ -118,7 +120,7 @@ loader.load(modelURL, (gltf) => {
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
 
-// === Steuerung und Animation ===
+// === Steuerung und Animation (unverändert) ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
@@ -132,37 +134,14 @@ const LERP_FACTOR = 0.05;
 let cameraFingerId = null;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
-// (Joystick- und Touch-Handler sind unverändert)
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
 function getPinchDistance(e) { const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
-
-
 function animate() {
     requestAnimationFrame(animate);
-
-    if (ship) {
-        // Schritt 1: Schiffsbewegung durch Benutzer
-        ship.translateZ(shipMove.forward);
-        ship.rotateY(shipMove.turn);
-
-        // NEU: Schritt 2 - Kollision mit dem Schwarzen Loch
-        const distanceToBlackHole = ship.position.distanceTo(blackHole.position);
-        const safeDistance = 5.0; // Sicherheitsabstand, größer als der Radius des Lochs (1.5)
-
-        if (distanceToBlackHole < safeDistance) {
-            // Berechne, wie tief das Schiff im Sicherheitsbereich ist
-            const penetrationDepth = safeDistance - distanceToBlackHole;
-            // Finde die Richtung vom schwarzen Loch weg
-            const repulsionVector = new THREE.Vector3().subVectors(ship.position, blackHole.position).normalize();
-            // Stoße das Schiff um die Eindringtiefe zurück
-            ship.position.add(repulsionVector.multiplyScalar(penetrationDepth));
-        }
-    }
-    
-    // (Restliche Kamera-Physik und -Steuerung bleibt unverändert)
+    if (ship) { ship.translateZ(shipMove.forward); ship.rotateY(shipMove.turn); }
     if (cameraFingerId === null) { cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR); cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR); }
     if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
     if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
@@ -171,7 +150,6 @@ function animate() {
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
     if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
     renderer.render(scene, camera);
 }
-window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });```
+window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
