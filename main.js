@@ -20,74 +20,77 @@ directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
 
-// === Galaxie-Funktion mit KORREKTUR für runde Punkte ===
+// === NEU: Die Funktion zum Erstellen der Galaxie ===
 function createGalaxy() {
     const parameters = {
-        count: 100000, size: 0.08, radius: 100, arms: 3, spin: 1.5,
-        randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff'
+        count: 100000, // Anzahl der Sterne
+        size: 0.08,    // Größe der einzelnen Sterne
+        radius: 100,   // Radius der Galaxie
+        arms: 3,       // Anzahl der Spiralarme
+        spin: 1.5,     // Wie stark sich die Arme winden
+        randomness: 0.5, // Wie stark die Sterne von den Armen abweichen
+        randomnessPower: 3, // Exponent für die zufällige Verteilung
+        insideColor: '#ffac89', // Farbe im Zentrum
+        outsideColor: '#54a1ff'  // Farbe an den Rändern
     };
 
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(parameters.count * 3);
     const colors = new Float32Array(parameters.count * 3);
+
     const colorInside = new THREE.Color(parameters.insideColor);
     const colorOutside = new THREE.Color(parameters.outsideColor);
 
     for (let i = 0; i < parameters.count; i++) {
         const i3 = i * 3;
+
+        // Position
         const radius = Math.random() * parameters.radius;
         const spinAngle = radius * parameters.spin;
         const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2;
+
         const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
-        const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1;
+        const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; // Flachere Galaxie
         const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
-        positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
+
+        positions[i3    ] = Math.cos(branchAngle + spinAngle) * radius + randomX;
         positions[i3 + 1] = randomY;
         positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
+
+        // Farbe
         const mixedColor = colorInside.clone();
         mixedColor.lerp(colorOutside, radius / parameters.radius);
-        colors[i3] = mixedColor.r;
+
+        colors[i3    ] = mixedColor.r;
         colors[i3 + 1] = mixedColor.g;
         colors[i3 + 2] = mixedColor.b;
     }
+
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // NEU: Erzeuge eine runde Textur zur Laufzeit
-    const circleTexture = (() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 32;
-        canvas.height = 32;
-        const context = canvas.getContext('2d');
-        context.beginPath();
-        context.arc(16, 16, 16, 0, 2 * Math.PI);
-        context.fillStyle = 'white';
-        context.fill();
-        return new THREE.CanvasTexture(canvas);
-    })();
-
-    // NEU: Wende die runde Textur auf das Material an
     const material = new THREE.PointsMaterial({
         size: parameters.size,
         sizeAttenuation: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
-        vertexColors: true,
-        map: circleTexture, // Hier wird die Textur zugewiesen
-        transparent: true   // Wichtig, damit der transparente Teil der Textur wirkt
+        vertexColors: true
     });
 
     const points = new THREE.Points(geometry, material);
     scene.add(points);
 }
 
+// Ersetze die alten Sternenfelder durch die neue Galaxie
 createGalaxy();
 
 
-// === Hauptobjekt und Kamera-Setup (unverändert) ===
+// === Hauptobjekt und Kamera-Setup ===
 let ship;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
+
+// === GLTF Modell-Lader (unverändert) ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
@@ -105,6 +108,8 @@ loader.load(modelURL, (gltf) => {
 
 
 // === Steuerung und Animation (unverändert) ===
+// Der Rest des Codes (Steuerungsvariablen, Joystick, Touch-Handler, Animations-Schleife)
+// bleibt exakt gleich wie in der letzten funktionierenden Version.
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
@@ -117,8 +122,8 @@ const DAMPING = 0.90;
 const LERP_FACTOR = 0.05;
 let cameraFingerId = null;
 let initialPinchDistance = 0;
-let previousTouch = { x: 0, y: 0 };
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
+let previousTouch = { x: 0, y: 0 };
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
@@ -137,4 +142,4 @@ function animate() {
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     renderer.render(scene, camera);
 }
-window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });```
+window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
