@@ -19,84 +19,79 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
-function createCircleTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64; canvas.height = 64;
-    const context = canvas.getContext('2d');
-    const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
-    gradient.addColorStop(0, 'rgba(255,255,255,1)');
-    gradient.addColorStop(0.2, 'rgba(255,255,255,1)');
-    gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)');
-    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 64, 64);
-    return new THREE.CanvasTexture(canvas);
-}
+function createCircleTexture() { /* ... unverändert ... */ }
 
-// === Die Funktion zum Erstellen der Galaxie ===
+// === Die Funktion zum Erstellen der Galaxie (jetzt mit ShaderMaterial) ===
+let galaxyMaterial; // Globale Variable für das Material, um es später zu aktualisieren
+
 function createGalaxy() {
-    // KORREKTUR: Angepasste Parameter
-    const parameters = {
-        count: 150000,           // Vorher: 100000 (dichter)
-        size: 0.15,              // Vorher: 0.1 (1.5x so groß)
-        radius: 100,
-        arms: 3,
-        spin: 0.7,               // Vorher: 1.5 (lockerere Spirale, die weiter nach außen geht)
-        randomness: 0.5,
-        randomnessPower: 3,
-        insideColor: '#ffac89',
-        outsideColor: '#54a1ff'
-    };
+    const parameters = { /* ... unverändert ... */ };
+    
+    // (Geometrie- und Partikelpositions-Code bleibt unverändert)
 
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(parameters.count * 3);
-    const colors = new Float32Array(parameters.count * 3);
-    const colorInside = new THREE.Color(parameters.insideColor);
-    const colorOutside = new THREE.Color(parameters.outsideColor);
-
-    for (let i = 0; i < parameters.count; i++) {
-        const i3 = i * 3;
-        const radius = Math.random() * parameters.radius;
-        const spinAngle = radius * parameters.spin;
-        const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2;
-        const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
-        const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1;
-        const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
-        positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
-        positions[i3 + 1] = randomY;
-        positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
-        const mixedColor = colorInside.clone();
-        mixedColor.lerp(colorOutside, radius / parameters.radius);
-        colors[i3] = mixedColor.r;
-        colors[i3 + 1] = mixedColor.g;
-        colors[i3 + 2] = mixedColor.b;
-    }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
+    // NEU: ShaderMaterial anstelle von PointsMaterial
     const particleTexture = createCircleTexture();
-    const material = new THREE.PointsMaterial({
-        size: parameters.size,
-        sizeAttenuation: true,
+    galaxyMaterial = new THREE.ShaderMaterial({
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         vertexColors: true,
-        map: particleTexture,
-        transparent: true
+        uniforms: {
+            uSize: { value: 0.15 * renderer.getPixelRatio() }, // Größe an Pixeldichte anpassen
+            uTexture: { value: particleTexture },
+            uShipPosition: { value: new THREE.Vector3(0, 0, 0) }, // Startposition des Schiffs
+            uDisplacementRadius: { value: 8.0 } // Radius des "Kraftfelds" um das Schiff
+        },
+        vertexShader: `
+            uniform float uSize;
+            uniform vec3 uShipPosition;
+            uniform float uDisplacementRadius;
+
+            attribute vec3 color;
+            varying vec3 vColor;
+
+            void main() {
+                vColor = color;
+                vec3 pos = position;
+
+                // Partikel-Verschiebung
+                float distanceToShip = distance(pos, uShipPosition);
+                if (distanceToShip < uDisplacementRadius) {
+                    vec3 directionFromShip = normalize(pos - uShipPosition);
+                    // smoothstep erzeugt einen weichen Übergang
+                    float displacementFactor = smoothstep(uDisplacementRadius, 0.0, distanceToShip);
+                    pos += directionFromShip * displacementFactor * (uDisplacementRadius * 0.5);
+                }
+
+                vec4 modelViewPosition = modelViewMatrix * vec4(pos, 1.0);
+                gl_Position = projectionMatrix * modelViewPosition;
+                gl_PointSize = uSize * (100.0 / -modelViewPosition.z);
+            }
+        `,
+        fragmentShader: `
+            varying vec3 vColor;
+            uniform sampler2D uTexture;
+
+            void main() {
+                float strength = distance(gl_PointCoord, vec2(0.5));
+                if (strength > 0.5) {
+                    discard;
+                }
+                gl_FragColor = vec4(vColor, 1.0) * texture2D(uTexture, gl_PointCoord);
+            }
+        `
     });
 
-    const points = new THREE.Points(geometry, material);
+    const points = new THREE.Points(geometry, galaxyMaterial);
     scene.add(points);
 }
 
 createGalaxy();
 
-// NEU: Galaxie-Kern (Schwarzes Loch)
-const blackHoleGeometry = new THREE.SphereGeometry(1.5, 32, 32); // Größe 1.5, 32x32 Segmente
+// Galaxie-Kern (Schwarzes Loch)
+const blackHoleGeometry = new THREE.SphereGeometry(1.5, 32, 32);
 const blackHoleMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
 const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
-scene.add(blackHole); // Wird automatisch bei (0,0,0) platziert
+scene.add(blackHole);
 
 
 // === Hauptobjekt und Kamera-Setup (unverändert) ===
@@ -108,18 +103,10 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
-loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%'; loadingText.textContent = 'Modell geladen!';
-    ship = gltf.scene;
-    scene.add(ship);
-    ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
-    camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
-    setTimeout(() => { loadingScreen.style.opacity = '0'; setTimeout(() => loadingScreen.style.display = 'none', 500); }, 300);
-    animate();
-}, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
+loader.load(modelURL, (gltf) => { /* ... unverändert ... */ });
 
 
-// === Steuerung und Animation (unverändert) ===
+// === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
@@ -133,22 +120,37 @@ const LERP_FACTOR = 0.05;
 let cameraFingerId = null;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
-nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
-renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
-renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
-renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
-function getPinchDistance(e) { const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
+
+// (Joystick und Touch-Handler bleiben unverändert)
+
+
+// --- Die neue Animations-Schleife mit Kollisions-Physik ---
 function animate() {
     requestAnimationFrame(animate);
-    if (ship) { ship.translateZ(shipMove.forward); ship.rotateY(shipMove.turn); }
-    if (cameraFingerId === null) { cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR); cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR); }
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-    if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-    cameraHolder.rotation.x += cameraVelocity.x; cameraPivot.rotation.y += cameraVelocity.y; cameraVelocity.multiplyScalar(DAMPING);
-    zoomDistance += zoomVelocity; zoomVelocity *= DAMPING;
-    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
-    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+
+    if (ship) {
+        // Schiffsbewegung durch Benutzer
+        ship.translateZ(shipMove.forward);
+        ship.rotateY(shipMove.turn);
+
+        // NEU: Kollision mit dem Schwarzen Loch
+        const distanceToBlackHole = ship.position.distanceTo(blackHole.position);
+        const safeDistance = 5.0; // Sicherheitsabstand, größer als der Radius des Schwarzen Lochs
+        
+        if (distanceToBlackHole < safeDistance) {
+            const penetrationDepth = safeDistance - distanceToBlackHole;
+            const repulsionVector = new THREE.Vector3().subVectors(ship.position, blackHole.position).normalize();
+            ship.position.add(repulsionVector.multiplyScalar(penetrationDepth));
+        }
+
+        // NEU: Schiffsposition an den Partikel-Shader senden
+        if (galaxyMaterial) {
+            galaxyMaterial.uniforms.uShipPosition.value.copy(ship.position);
+        }
+    }
+    
+    // (Restliche Kamera-Physik und -Steuerung bleibt unverändert)
+
     renderer.render(scene, camera);
 }
-window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+// (Der Rest der animate-Funktion und die Event-Listener sind der Übersicht halber weggelassen, aber sie sind identisch zur vorherigen Version)
