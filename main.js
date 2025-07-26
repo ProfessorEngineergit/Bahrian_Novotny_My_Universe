@@ -19,34 +19,29 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
-// === NEU: Hilfsfunktion zur Erstellung einer runden Textur ===
 function createCircleTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
+    canvas.width = 64; canvas.height = 64;
     const context = canvas.getContext('2d');
-    
-    // Erzeugt einen weichen, kreisförmigen Gradienten
     const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
     gradient.addColorStop(0, 'rgba(255,255,255,1)');
     gradient.addColorStop(0.2, 'rgba(255,255,255,1)');
     gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)');
     gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    
     context.fillStyle = gradient;
     context.fillRect(0, 0, 64, 64);
-    
     return new THREE.CanvasTexture(canvas);
 }
 
 // === Die Funktion zum Erstellen der Galaxie ===
 function createGalaxy() {
+    // KORREKTUR: Angepasste Parameter
     const parameters = {
-        count: 100000,
-        size: 0.1, // Größe etwas erhöht, um den Effekt zu sehen
+        count: 150000,           // Vorher: 100000 (dichter)
+        size: 0.15,              // Vorher: 0.1 (1.5x so groß)
         radius: 100,
         arms: 3,
-        spin: 1.5,
+        spin: 0.7,               // Vorher: 1.5 (lockerere Spirale, die weiter nach außen geht)
         randomness: 0.5,
         randomnessPower: 3,
         insideColor: '#ffac89',
@@ -80,7 +75,6 @@ function createGalaxy() {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // KORREKTUR: Das Material verwendet jetzt die runde Textur
     const particleTexture = createCircleTexture();
     const material = new THREE.PointsMaterial({
         size: parameters.size,
@@ -88,9 +82,8 @@ function createGalaxy() {
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         vertexColors: true,
-        // Hinzugefügte Eigenschaften:
         map: particleTexture,
-        transparent: true // Wichtig für die Textur-Transparenz
+        transparent: true
     });
 
     const points = new THREE.Points(geometry, material);
@@ -98,6 +91,12 @@ function createGalaxy() {
 }
 
 createGalaxy();
+
+// NEU: Galaxie-Kern (Schwarzes Loch)
+const blackHoleGeometry = new THREE.SphereGeometry(1.5, 32, 32); // Größe 1.5, 32x32 Segmente
+const blackHoleMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
+scene.add(blackHole); // Wird automatisch bei (0,0,0) platziert
 
 
 // === Hauptobjekt und Kamera-Setup (unverändert) ===
