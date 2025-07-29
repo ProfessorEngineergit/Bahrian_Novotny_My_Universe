@@ -73,7 +73,7 @@ loader.load(modelURL, (gltf) => {
     loadingText.textContent = 'Modell geladen!';
     ship = gltf.scene;
     scene.add(ship);
-    ship.position.set(10,0,0)
+    ship.position.set(0,10,0)
     const shipBox = new THREE.Box3().setFromObject(ship);
     shipBox.getBoundingSphere(shipBoundingSphere);
     shipRadius = shipBoundingSphere.radius;
