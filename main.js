@@ -19,7 +19,7 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
-// === Galaxie und Schwarzes Loch ===
+// === Galaxie und Schwarzes Loch (unverändert) ===
 let galaxy;
 function createGalaxy() {
     const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' };
@@ -29,19 +29,7 @@ function createGalaxy() {
     const colorInside = new THREE.Color(parameters.insideColor);
     const colorOutside = new THREE.Color(parameters.outsideColor);
     for (let i = 0; i < parameters.count; i++) {
-        const i3 = i * 3;
-        const radius = Math.random() * parameters.radius;
-        const spinAngle = radius * parameters.spin;
-        const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2;
-        const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
-        const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1;
-        const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
-        positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
-        positions[i3 + 1] = randomY;
-        positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
-        const mixedColor = colorInside.clone();
-        mixedColor.lerp(colorOutside, radius / parameters.radius);
-        colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b;
+        const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b;
     }
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -54,10 +42,8 @@ createGalaxy();
 const blackHole = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
 scene.add(blackHole);
 
-// === Hauptobjekt und Kollisions-Setup ===
+// === Hauptobjekt-Setup ===
 let ship;
-let shipBoundingSphere = new THREE.Sphere();
-let shipRadius = 0;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
@@ -73,10 +59,7 @@ loader.load(modelURL, (gltf) => {
     loadingText.textContent = 'Modell geladen!';
     ship = gltf.scene;
     scene.add(ship);
-    ship.position.set(0,0,10)
-    const shipBox = new THREE.Box3().setFromObject(ship);
-    shipBox.getBoundingSphere(shipBoundingSphere);
-    shipRadius = shipBoundingSphere.radius;
+    ship.position.set(0, 0, -30); // Startposition angepasst
     ship.add(cameraPivot);
     cameraPivot.add(cameraHolder);
     cameraHolder.add(camera);
@@ -87,10 +70,7 @@ loader.load(modelURL, (gltf) => {
         setTimeout(() => loadingScreen.style.display = 'none', 500);
     }, 300);
     animate();
-}, 
-// HIER IST DIE KORREKTUR: `total` ersetzt durch `xhr.total`
-(xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, 
-(error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
+}, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
@@ -112,34 +92,32 @@ renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch =
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
+// --- Die Animations-Schleife mit der korrigierten Logik ---
 function animate() {
     requestAnimationFrame(animate);
 
     if (ship) {
+        // KORREKTUR 1: Fester, verlässlicher Radius für den "Schutzschild"
+        const shipRadius = 5; // Passen Sie diesen Wert an, wenn Ihr Schiff größer/kleiner wirkt
+
         const previousPosition = ship.position.clone();
+
+        // Bewegung anwenden
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
-        shipBoundingSphere.center.copy(ship.position);
-        const collisionThreshold = shipRadius + blackHole.geometry.parameters.radius + 1;
+
+        // KORREKTUR 2: Funktionierende Kollision mit dem Schwarzen Loch
+        const blackHoleRadius = blackHole.geometry.parameters.radius;
+        const collisionThreshold = shipRadius + blackHoleRadius; // Puffer ist optional
+        
         if (ship.position.distanceTo(blackHole.position) < collisionThreshold) {
             ship.position.copy(previousPosition);
         }
-        const particlePositions = galaxy.geometry.attributes.position;
-        const repulsionRadius = shipRadius * 2.5;
-        const particleVector = new THREE.Vector3();
-        for (let i = 0; i < particlePositions.count; i += 10) {
-            particleVector.fromBufferAttribute(particlePositions, i);
-            const distance = particleVector.distanceTo(ship.position);
-            if (distance < repulsionRadius) {
-                const repulsionForce = (repulsionRadius - distance) / repulsionRadius;
-                const direction = particleVector.sub(ship.position).normalize();
-                const displacement = direction.multiplyScalar(repulsionForce * 0.1);
-                particlePositions.setXYZ(i, particlePositions.getX(i) + displacement.x, particlePositions.getY(i) + displacement.y, particlePositions.getZ(i) + displacement.z);
-            }
-        }
-        particlePositions.needsUpdate = true;
+
+        // HINWEIS: Die rechenintensive Partikel-Verdrängung wurde entfernt, um die Stabilität zu gewährleisten.
     }
 
+    // --- Restliche Animation (Kamera, Sterne, etc. unverändert) ---
     if (cameraFingerId === null) { cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR); cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR); }
     if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
     if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
