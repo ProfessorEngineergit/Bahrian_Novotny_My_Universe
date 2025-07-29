@@ -16,7 +16,7 @@ const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-directionalLight.position.set(10, 20, 15);
+directionalLight.position.set(0, 0, 0);
 scene.add(directionalLight);
 
 // === NEUE SHADER FÜR DIE PARTIKEL-INTERAKTION ===
@@ -70,7 +70,7 @@ const fragmentShader = `
 let galaxyMaterial; // Material global machen, um es im Loop upzudaten
 function createGalaxy() {
     const parameters = {
-        count: 150000, size: 0.15, radius: 100, arms: 3,
+        count: 150000, size: 0.7, radius: 100, arms: 3,
         spin: 0.7, randomness: 0.5, randomnessPower: 3,
         insideColor: '#ffac89', outsideColor: '#54a1ff'
     };
@@ -120,7 +120,7 @@ const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
-loader.load(modelURL, (gltf) => { progressBar.style.width = '100%'; loadingText.textContent = 'Modell geladen!'; ship = gltf.scene; scene.add(ship); ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera); camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position); setTimeout(() => { loadingScreen.style.opacity = '0'; setTimeout(() => loadingScreen.style.display = 'none', 500); }, 300); animate(); }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
+loader.load(modelURL, (gltf) => { progressBar.style.width = '100%'; loadingText.textContent = 'Modell geladen!'; ship = gltf.scene; scene.add(ship); ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera); camera.position.set(0, 4, -100); camera.lookAt(cameraHolder.position); setTimeout(() => { loadingScreen.style.opacity = '0'; setTimeout(() => loadingScreen.style.display = 'none', 500); }, 300); animate(); }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
 
 // === Steuerung und Animation ===
