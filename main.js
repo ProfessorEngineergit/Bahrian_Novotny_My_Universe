@@ -19,7 +19,7 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
-// === Galaxie und Schwarzes Loch (unverändert) ===
+// === Galaxie und Schwarzes Loch ===
 let galaxy;
 function createGalaxy() {
     const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' };
@@ -59,36 +59,37 @@ const accretionDisk = createAccretionDisk();
 
 // === Hauptobjekt-Setup ===
 let ship;
-let forcefield, forcefieldSpotlight; // NEU
+let forcefield; // NEU
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
-// === NEU: Verbesserte Forcefield-Funktion ===
+// === NEU: Funktion zur Erstellung des Forcefield-Effekts ===
 function createForcefield(radius) {
-    const textureLoader = new THREE.TextureLoader();
-    // Eine nahtlose Hexagon-Textur für einen hochwertigen Look
-    const hexTexture = textureLoader.load('https://i.imgur.com/v1hG2Y8.png');
-    hexTexture.wrapS = hexTexture.wrapT = THREE.RepeatWrapping;
-    hexTexture.repeat.set(4, 2);
-
-    // Erzeugt nur einen 30%-Ausschnitt einer Kugel
-    const geometry = new THREE.SphereGeometry(radius, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.3);
-    
-    // Material reagiert jetzt auf Licht
-    const material = new THREE.MeshStandardMaterial({
-        map: hexTexture,
-        color: 0x55aaff, // Helle Zyan-Farbe
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const context = canvas.getContext('2d');
+    context.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+    context.lineWidth = 3;
+    for (let i = 0; i < 8; i++) {
+        const x = i * 18;
+        context.beginPath();
+        context.moveTo(x, 0); context.lineTo(x, 128);
+        context.stroke();
+        const y = i * 18;
+        context.beginPath();
+        context.moveTo(0, y); context.lineTo(128, y);
+        context.stroke();
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
         transparent: true,
-        opacity: 0,
         blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
-        metalness: 0.5,
-        roughness: 0.2
+        opacity: 0,
+        side: THREE.DoubleSide
     });
-
     const ff = new THREE.Mesh(geometry, material);
-    // Positioniere den Schild leicht nach unten
-    ff.position.y = -1;
     ff.visible = false;
     return ff;
 }
@@ -107,14 +108,9 @@ loader.load(modelURL, (gltf) => {
     scene.add(ship);
     ship.position.set(0, 0, -30);
 
-    // Erstelle den Forcefield und den Scheinwerfer
-    forcefield = createForcefield(5.5);
+    // NEU: Erstelle den Forcefield und hefte ihn an das Schiff
+    forcefield = createForcefield(5.1); // Etwas größer als der Kollisionsradius
     ship.add(forcefield);
-    
-    forcefieldSpotlight = new THREE.SpotLight(0x88ccff, 0, 20, Math.PI / 4, 1);
-    forcefieldSpotlight.position.set(0, 1, 5); // Position vor dem Schiff
-    forcefieldSpotlight.target = forcefield; // Der Scheinwerfer zielt auf den Schild
-    ship.add(forcefieldSpotlight);
     
     ship.add(cameraPivot);
     cameraPivot.add(cameraHolder);
@@ -166,23 +162,23 @@ function animate() {
         if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
             ship.position.copy(previousPosition);
             
+            // NEU: Aktiviere den Forcefield-Effekt
             if (forcefield) {
                 forcefield.visible = true;
                 forcefield.material.opacity = 1.0;
-                forcefield.lookAt(blackHoleCore.position); 
-                forcefieldSpotlight.intensity = 50;
             }
         }
     }
     
-    if (forcefield && forcefield.material.opacity > 0) {
-        forcefield.material.opacity -= 0.05;
-        forcefieldSpotlight.intensity -= 2.5;
+    // NEU: Lasse den Forcefield ausblenden
+    if (forcefield && forcefield.visible) {
+        forcefield.material.opacity -= 0.04;
         if (forcefield.material.opacity <= 0) {
             forcefield.visible = false;
         }
     }
 
+    // Kamera-Physik
     if (cameraFingerId === null) {
         cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
@@ -208,6 +204,7 @@ function animate() {
     }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
 
+    // Gravitationslinsen-Update
     lensingSphere.visible = false;
     blackHoleCore.visible = false;
     accretionDisk.visible = false;
@@ -223,4 +220,4 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});```
+});
