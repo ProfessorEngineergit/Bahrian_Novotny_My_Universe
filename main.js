@@ -65,7 +65,6 @@ function createAccretionDisk() {
     return disk;
 }
 const accretionDisk = createAccretionDisk();
-opacity: 0.5,
 // === Ende des neuen Schwarzes Loch Codes ===
 
 
