@@ -58,7 +58,7 @@ scene.add(lensingSphere);
 function createAccretionDisk() {
     const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas);
     const geometry = new THREE.RingGeometry(2.5, 5, 64);
-    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending });
+    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.5 });
     const disk = new THREE.Mesh(geometry, material);
     disk.rotation.x = Math.PI / 2;
     scene.add(disk);
