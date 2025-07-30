@@ -17,7 +17,7 @@ const loadingText = document.getElementById('loading-text');
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
-scene.add(directionalLight);
+scene.add(softLight);
 
 // === Galaxie (unverändert) ===
 let galaxy;
