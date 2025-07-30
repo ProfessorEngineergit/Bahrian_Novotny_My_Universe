@@ -19,7 +19,7 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
-// === Galaxie und Schwarzes Loch (unverändert) ===
+// === Galaxie (unverändert) ===
 let galaxy;
 function createGalaxy() {
     const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' };
@@ -39,15 +39,41 @@ function createGalaxy() {
     scene.add(galaxy);
 }
 createGalaxy();
-const blackHole = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-scene.add(blackHole);
+
+// === NEU: Realistisches Schwarzes Loch ===
+// Der alte `blackHole` Mesh wird ersetzt durch diese drei Komponenten:
+const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+scene.add(blackHoleCore);
+
+// Teil 1: Die Gravitationslinse
+const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
+scene.add(cubeCamera);
+const lensingSphereGeometry = new THREE.SphereGeometry(2.5, 64, 64);
+const lensingSphereMaterial = new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff });
+const lensingSphere = new THREE.Mesh(lensingSphereGeometry, lensingSphereMaterial);
+scene.add(lensingSphere);
+
+// Teil 2: Die Akkretionsscheibe
+function createAccretionDisk() {
+    const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas);
+    const geometry = new THREE.RingGeometry(2.5, 5, 64);
+    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending });
+    const disk = new THREE.Mesh(geometry, material);
+    disk.rotation.x = Math.PI / 2;
+    scene.add(disk);
+    return disk;
+}
+const accretionDisk = createAccretionDisk();
+// === Ende des neuen Schwarzes Loch Codes ===
+
 
 // === Hauptobjekt-Setup ===
 let ship;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
-// === GLTF Modell-Lader ===
+// === GLTF Modell-Lader (unverändert) ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
@@ -72,7 +98,7 @@ loader.load(modelURL, (gltf) => {
     animate();
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
-// === Steuerung und Animation ===
+// === Steuerung und Animation (unverändert) ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
@@ -92,32 +118,29 @@ renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch =
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
-// --- Die Animations-Schleife mit der korrigierten Logik ---
+
 function animate() {
     requestAnimationFrame(animate);
 
+    // NEU: Update für das Schwarze Loch
+    accretionDisk.rotation.z += 0.005;
+
     if (ship) {
-        // KORREKTUR 1: Fester, verlässlicher Radius für den "Schutzschild"
-        const shipRadius = 5; // Passen Sie diesen Wert an, wenn Ihr Schiff größer/kleiner wirkt
-
+        const shipRadius = 5;
         const previousPosition = ship.position.clone();
-
-        // Bewegung anwenden
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
 
-        // KORREKTUR 2: Funktionierende Kollision mit dem Schwarzen Loch
-        const blackHoleRadius = blackHole.geometry.parameters.radius;
-        const collisionThreshold = shipRadius + blackHoleRadius; // Puffer ist optional
+        // KORREKTUR: Kollisionsprüfung mit dem `blackHoleCore`
+        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const collisionThreshold = shipRadius + blackHoleRadius;
         
-        if (ship.position.distanceTo(blackHole.position) < collisionThreshold) {
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
             ship.position.copy(previousPosition);
         }
-
-        // HINWEIS: Die rechenintensive Partikel-Verdrängung wurde entfernt, um die Stabilität zu gewährleisten.
     }
 
-    // --- Restliche Animation (Kamera, Sterne, etc. unverändert) ---
+    // --- Restliche Animation ---
     if (cameraFingerId === null) { cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR); cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR); }
     if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
     if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
@@ -131,6 +154,16 @@ function animate() {
         zoomVelocity = 0;
     }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+
+    // NEU: Update für die Gravitationslinse vor dem finalen Rendern
+    lensingSphere.visible = false;
+    blackHoleCore.visible = false;
+    accretionDisk.visible = false;
+    cubeCamera.update(renderer, scene);
+    lensingSphere.visible = true;
+    blackHoleCore.visible = true;
+    accretionDisk.visible = true;
+
     renderer.render(scene, camera);
 }
 window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
