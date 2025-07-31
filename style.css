@@ -70,13 +70,7 @@ canvas {
 
 /* NEU: Styling für den Media Player */
 #media-player {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    max-width: 250px; /* Verhindert, dass er auf kleinen Bildschirmen zu breit wird */
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-    z-index: 20; /* Stellt sicher, dass er über dem Canvas, aber unter Menüs liegt */
+    display: none;
 }
 
 #media-player:hover {
