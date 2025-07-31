@@ -10,7 +10,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// === UI, Beleuchtung, Sterne, Schwarzes Loch, Forcefield (alles unverändert) ===
+// === UI, Beleuchtung, Sterne, Schwarzes Loch, Forcefield (unverändert) ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
@@ -18,24 +18,7 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-let galaxy;
-function createGalaxy() {
-    const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' };
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(parameters.count * 3);
-    const colors = new Float32Array(parameters.count * 3);
-    const colorInside = new THREE.Color(parameters.insideColor);
-    const colorOutside = new THREE.Color(parameters.outsideColor);
-    for (let i = 0; i < parameters.count; i++) {
-        const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b;
-    }
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32); gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(255,255,255,1)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 64, 64); const particleTexture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true });
-    galaxy = new THREE.Points(geometry, material);
-    scene.add(galaxy);
-}
+let galaxy; function createGalaxy() { const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' }; const geometry = new THREE.BufferGeometry(); const positions = new Float32Array(parameters.count * 3); const colors = new Float32Array(parameters.count * 3); const colorInside = new THREE.Color(parameters.insideColor); const colorOutside = new THREE.Color(parameters.outsideColor); for (let i = 0; i < parameters.count; i++) { const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b; } geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32); gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(255,255,255,1)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 64, 64); const particleTexture = new THREE.CanvasTexture(canvas); const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true }); galaxy = new THREE.Points(geometry, material); scene.add(galaxy); }
 createGalaxy();
 const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
 scene.add(blackHoleCore);
@@ -44,28 +27,13 @@ const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
 scene.add(cubeCamera);
 const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
 scene.add(lensingSphere);
-function createAccretionDisk() {
-    const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas);
-    const geometry = new THREE.RingGeometry(2.5, 5, 64);
-    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending });
-    const disk = new THREE.Mesh(geometry, material);
-    disk.rotation.x = Math.PI / 2;
-    scene.add(disk);
-    return disk;
-}
+function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
 const accretionDisk = createAccretionDisk();
 let ship;
 let forcefield;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) {
-    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas);
-    const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide });
-    const ff = new THREE.Mesh(geometry, material);
-    ff.visible = false;
-    return ff;
-}
+function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
@@ -88,7 +56,7 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
 
-    // KORREKTUR: Robuste Autoplay-Logik für iOS
+    // KORREKTUR: Die neue, robuste Autoplay-Logik
     initAudioInteraction();
 
     setTimeout(() => {
@@ -99,33 +67,25 @@ loader.load(modelURL, (gltf) => {
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
 
-// === NEU: Robuste Autoplay-Funktion ===
+// === NEU: Finale Autoplay-Funktion ===
 function initAudioInteraction() {
     const audio = document.getElementById('media-player');
     
+    // Die Funktion, die das Audio freischaltet.
     const unlockAudio = () => {
-        // Versuche, die Wiedergabe zu starten
-        audio.play().then(() => {
-            // Erfolg! Entferne die Listener, sie werden nicht mehr gebraucht.
-            document.body.removeEventListener('touchstart', unlockAudio);
-            document.body.removeEventListener('click', unlockAudio);
-            console.log("Audio erfolgreich durch Benutzerinteraktion gestartet.");
-        }).catch(error => {
-            // Fehler (z.B. wenn die Seite noch nicht "im Fokus" ist).
-            // Der Listener bleibt aktiv für den nächsten Versuch.
-            console.error("Audio-Wiedergabe fehlgeschlagen:", error);
-        });
+        console.log("Benutzerinteraktion erkannt! Versuche Audio zu starten...");
+        audio.play().catch(e => console.error("Wiedergabe nach Interaktion fehlgeschlagen:", e));
     };
 
-    // Erster Versuch direkt nach dem Laden
+    // Erster Wiedergabeversuch
     audio.play().catch(error => {
-        // Autoplay blockiert. Richte die einmaligen Listener ein.
-        console.log("Autoplay blockiert. Warte auf erste Benutzerinteraktion, um Audio freizuschalten.");
-        document.body.addEventListener('touchstart', unlockAudio);
-        document.body.addEventListener('click', unlockAudio);
+        // Autoplay blockiert. Warte auf die ERSTE Berührung/Klick auf dem Canvas.
+        console.log("Autoplay blockiert. Warte auf Benutzerinteraktion zum Freischalten.");
+        // Die { once: true } Option sorgt dafür, dass dieser Listener nach der ersten Ausführung automatisch entfernt wird.
+        renderer.domElement.addEventListener('touchstart', unlockAudio, { once: true });
+        renderer.domElement.addEventListener('click', unlockAudio, { once: true });
     });
 }
-
 
 // === Steuerung und Animation (unverändert) ===
 let shipMove = { forward: 0, turn: 0 };
