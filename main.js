@@ -59,11 +59,10 @@ const accretionDisk = createAccretionDisk();
 
 // === Hauptobjekt-Setup ===
 let ship;
-let forcefield; // NEU
+let forcefield;
 const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
-// === NEU: Funktion zur Erstellung des Forcefield-Effekts ===
 function createForcefield(radius) {
     const canvas = document.createElement('canvas');
     canvas.width = 128; canvas.height = 128;
@@ -107,16 +106,32 @@ loader.load(modelURL, (gltf) => {
     ship = gltf.scene;
     scene.add(ship);
     ship.position.set(0, 0, -30);
-
-    // NEU: Erstelle den Forcefield und hefte ihn an das Schiff
-    forcefield = createForcefield(5.1); // Etwas größer als der Kollisionsradius
+    forcefield = createForcefield(5.1);
     ship.add(forcefield);
-    
     ship.add(cameraPivot);
     cameraPivot.add(cameraHolder);
     cameraHolder.add(camera);
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
+
+    // NEU: Autoplay-Logik
+    const audio = document.getElementById('media-player');
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            // Autoplay wurde verhindert. Richte einen Listener für die erste Interaktion ein.
+            console.log("Autoplay blockiert. Warte auf Benutzerinteraktion.");
+            const startAudioOnInteraction = () => {
+                audio.play();
+                // Entferne den Listener, damit er nur einmal ausgelöst wird.
+                window.removeEventListener('touchstart', startAudioOnInteraction);
+                window.removeEventListener('click', startAudioOnInteraction);
+            };
+            window.addEventListener('touchstart', startAudioOnInteraction);
+            window.addEventListener('click', startAudioOnInteraction);
+        });
+    }
+
     setTimeout(() => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
@@ -147,38 +162,28 @@ function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 
 
 function animate() {
     requestAnimationFrame(animate);
-
     accretionDisk.rotation.z += 0.005;
-
     if (ship) {
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
-        
         const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
         const collisionThreshold = shipRadius + blackHoleRadius;
-        
         if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
             ship.position.copy(previousPosition);
-            
-            // NEU: Aktiviere den Forcefield-Effekt
             if (forcefield) {
                 forcefield.visible = true;
                 forcefield.material.opacity = 1.0;
             }
         }
     }
-    
-    // NEU: Lasse den Forcefield ausblenden
     if (forcefield && forcefield.visible) {
         forcefield.material.opacity -= 0.04;
         if (forcefield.material.opacity <= 0) {
             forcefield.visible = false;
         }
     }
-
-    // Kamera-Physik
     if (cameraFingerId === null) {
         cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
@@ -203,8 +208,6 @@ function animate() {
         zoomVelocity = 0;
     }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-
-    // Gravitationslinsen-Update
     lensingSphere.visible = false;
     blackHoleCore.visible = false;
     accretionDisk.visible = false;
@@ -212,7 +215,6 @@ function animate() {
     lensingSphere.visible = true;
     blackHoleCore.visible = true;
     accretionDisk.visible = true;
-
     renderer.render(scene, camera);
 }
 
