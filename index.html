@@ -29,17 +29,15 @@
         </div>
     </div>
 
-    <!-- KORREKTUR: Der Media Player ist jetzt für Autoplay konfiguriert -->
-    <audio id="media-player" loop autoplay>
+    <!-- KORREKTUR: Das `autoplay`-Attribut wird entfernt. -->
+    <audio id="media-player" loop>
         <source src="https://professorengineergit.github.io/Project_Mariner/Arcadia.wav" type="audio/wav">
         Ihr Browser unterstützt das Audio-Element nicht.
     </audio>
 
 
-    <!-- Joystick Bibliothek -->
+    <!-- Bibliotheken -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
-    
-    <!-- Three.js Logik -->
     <script type="module" src="main.js"></script>
 
 </body>
