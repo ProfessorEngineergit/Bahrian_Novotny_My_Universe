@@ -41,52 +41,60 @@ function createGalaxy() {
 createGalaxy();
 
 
-// === NEU: Realistisches Schwarzes Loch V2.0 ===
-const blackHoleGroup = new THREE.Group(); // Ein Container für alle Teile
+// === NEU: Funktion zur Erstellung des fortschrittlichen Schwarzen Lochs ===
+function createAdvancedBlackHole() {
+    const blackHoleGroup = new THREE.Group();
 
-// Teil 1: Die Akkretionsscheibe (flacher Ring)
-const diskGeometry = new THREE.RingGeometry(2.0, 4.0, 128);
-const diskCanvas = document.createElement('canvas');
-diskCanvas.width = 256; diskCanvas.height = 256;
-const diskContext = diskCanvas.getContext('2d');
-const diskGradient = diskContext.createRadialGradient(128, 128, 70, 128, 128, 128);
-diskGradient.addColorStop(0.0, 'rgba(255, 255, 220, 1)'); // Heißes, weiß-gelbes Zentrum
-diskGradient.addColorStop(0.4, 'rgba(255, 180, 50, 1)');
-diskGradient.addColorStop(0.6, 'rgba(200, 80, 20, 0.8)');
-diskGradient.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
-diskContext.fillStyle = diskGradient;
-diskContext.fillRect(0, 0, 256, 256);
-const diskTexture = new THREE.CanvasTexture(diskCanvas);
-const diskMaterial = new THREE.MeshBasicMaterial({
-    map: diskTexture,
-    side: THREE.DoubleSide,
-    transparent: true,
-    blending: THREE.AdditiveBlending
-});
-const accretionDisk = new THREE.Mesh(diskGeometry, diskMaterial);
-accretionDisk.rotation.x = Math.PI / 2; // Flach legen
-blackHoleGroup.add(accretionDisk);
+    // Teil 1: Der Kern
+    const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 64, 64), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    blackHoleGroup.add(blackHoleCore);
 
-// Teil 2: Die Gravitationslinse (vertikaler Ring)
-const lensingGeometry = new THREE.RingGeometry(2.0, 2.8, 128);
-const lensingMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffffff, // Helle Farbe für den Linseneffekt
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-    opacity: 0.8,
-    transparent: true
-});
-const lensingRing = new THREE.Mesh(lensingGeometry, lensingMaterial);
-// Diese bleibt vertikal zur Kamera, um den Halo-Effekt zu erzeugen.
-blackHoleGroup.add(lensingRing);
+    // Teil 2: Die Gravitationslinse
+    const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+    const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
+    const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
+    blackHoleGroup.add(lensingSphere);
 
+    // Teil 3: Die neue Akkretionsscheibe
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const context = canvas.getContext('2d');
+    const gradient = context.createRadialGradient(128, 128, 60, 128, 128, 128);
+    gradient.addColorStop(0.4, 'rgba(255, 190, 100, 1)');
+    gradient.addColorStop(0.6, 'rgba(255, 120, 0, 0.8)');
+    gradient.addColorStop(1, 'rgba(255, 60, 0, 0)');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 50; i++) {
+        context.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.1})`;
+        context.beginPath();
+        context.arc(Math.random() * 256, Math.random() * 256, Math.random() * 3, 0, Math.PI * 2);
+        context.fill();
+    }
+    const diskTexture = new THREE.CanvasTexture(canvas);
 
-// Teil 3: Der Kern (Schatten)
-const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(2.0, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-blackHoleCore.position.z = 0.01; // Leicht nach vorne, damit sie die Scheibe korrekt verdeckt
-blackHoleGroup.add(blackHoleCore);
+    const diskMaterial = new THREE.MeshBasicMaterial({
+        map: diskTexture,
+        side: THREE.DoubleSide,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        opacity: 0.8
+    });
 
-scene.add(blackHoleGroup);
+    const flatDisk = new THREE.Mesh(new THREE.RingGeometry(2.0, 6, 64), diskMaterial);
+    flatDisk.rotation.x = Math.PI / 2;
+    blackHoleGroup.add(flatDisk);
+
+    const verticalTorus = new THREE.Mesh(new THREE.TorusGeometry(4, 1.0, 16, 100), diskMaterial);
+    verticalTorus.rotation.x = Math.PI / 1.7;
+    blackHoleGroup.add(verticalTorus);
+
+    scene.add(blackHoleGroup);
+    
+    return { group: blackHoleGroup, lensingSphere, cubeCamera, core: blackHoleCore };
+}
+
+const advancedBlackHole = createAdvancedBlackHole();
 
 
 // === Hauptobjekt-Setup ===
@@ -96,9 +104,30 @@ const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
 function createForcefield(radius) {
-    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas);
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const context = canvas.getContext('2d');
+    context.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+    context.lineWidth = 3;
+    for (let i = 0; i < 8; i++) {
+        const x = i * 18;
+        context.beginPath();
+        context.moveTo(x, 0); context.lineTo(x, 128);
+        context.stroke();
+        const y = i * 18;
+        context.beginPath();
+        context.moveTo(0, y); context.lineTo(128, y);
+        context.stroke();
+    }
+    const texture = new THREE.CanvasTexture(canvas);
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide });
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        opacity: 0,
+        side: THREE.DoubleSide
+    });
     const ff = new THREE.Mesh(geometry, material);
     ff.visible = false;
     return ff;
@@ -112,21 +141,27 @@ loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 
 loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%'; loadingText.textContent = 'Modell geladen!';
+    progressBar.style.width = '100%';
+    loadingText.textContent = 'Modell geladen!';
     ship = gltf.scene;
     scene.add(ship);
     ship.position.set(0, 0, -30);
     forcefield = createForcefield(5.1);
     ship.add(forcefield);
-    ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
+    ship.add(cameraPivot);
+    cameraPivot.add(cameraHolder);
+    cameraHolder.add(camera);
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
-    setTimeout(() => { loadingScreen.style.opacity = '0'; setTimeout(() => loadingScreen.style.display = 'none', 500); }, 300);
+    setTimeout(() => {
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => loadingScreen.style.display = 'none', 500);
+    }, 300);
     animate();
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
 
-// === Steuerung und Animation (unverändert) ===
+// === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
@@ -149,9 +184,8 @@ function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 
 function animate() {
     requestAnimationFrame(animate);
 
-    // NEU: Die gesamte Schwarzes-Loch-Gruppe animieren
-    blackHoleGroup.rotation.y += 0.001; // Langsame Rotation für einen dynamischen Effekt
-    blackHoleGroup.rotation.x += 0.0005;
+    advancedBlackHole.group.rotation.y += 0.001;
+    advancedBlackHole.group.rotation.z += 0.0005;
 
     if (ship) {
         const shipRadius = 5;
@@ -159,34 +193,59 @@ function animate() {
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
         
-        // Kollisionsprüfung mit dem Kern
-        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const blackHoleRadius = advancedBlackHole.core.geometry.parameters.radius;
         const collisionThreshold = shipRadius + blackHoleRadius;
         
-        if (ship.position.distanceTo(blackHoleGroup.position) < collisionThreshold) {
+        if (ship.position.distanceTo(advancedBlackHole.group.position) < collisionThreshold) {
             ship.position.copy(previousPosition);
-            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+            if (forcefield) {
+                forcefield.visible = true;
+                forcefield.material.opacity = 1.0;
+            }
         }
     }
     
     if (forcefield && forcefield.visible) {
         forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
+        if (forcefield.material.opacity <= 0) {
+            forcefield.visible = false;
+        }
     }
 
-    // Kamera-Physik (unverändert)
-    if (cameraFingerId === null) { cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR); cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR); }
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-    if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+    if (cameraFingerId === null) {
+        cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+    }
+    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
+        cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
+    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
+        cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS;
+    }
+    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
+        cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS;
+    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
+        cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
+    }
     cameraHolder.rotation.x += cameraVelocity.x;
     cameraPivot.rotation.y += cameraVelocity.y;
     cameraVelocity.multiplyScalar(DAMPING);
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) {
+        zoomVelocity = 0;
+    }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
+
+    advancedBlackHole.group.visible = false;
+    advancedBlackHole.cubeCamera.update(renderer, scene);
+    advancedBlackHole.group.visible = true;
+
     renderer.render(scene, camera);
 }
-window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
