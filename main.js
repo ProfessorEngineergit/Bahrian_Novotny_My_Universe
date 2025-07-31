@@ -10,7 +10,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// === UI, Beleuchtung, Sterne, Schwarzes Loch, Forcefield (unverändert) ===
+// === UI, Beleuchtung, Sterne, Schwarzes Loch, Forcefield (alles unverändert) ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
@@ -43,8 +43,10 @@ loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 
 loader.load(modelURL, (gltf) => {
+    // MODELL IST GELADEN, BEREITE DEN STARTBILDSCHIRM VOR
     progressBar.style.width = '100%';
-    loadingText.textContent = 'Modell geladen!';
+    loadingText.textContent = 'Tippen zum Starten'; // Text ändern
+    
     ship = gltf.scene;
     scene.add(ship);
     ship.position.set(0, 0, -30);
@@ -56,36 +58,21 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
 
-    // KORREKTUR: Die neue, robuste Autoplay-Logik
-    initAudioInteraction();
-
-    setTimeout(() => {
+    // KORREKTUR: Warte auf den Klick auf den Startbildschirm
+    loadingScreen.addEventListener('click', () => {
+        // 1. Blende den Startbildschirm aus
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
-    }, 300);
-    animate();
+
+        // 2. Starte die Musik (dies wird jetzt von iOS erlaubt)
+        const audio = document.getElementById('media-player');
+        audio.play();
+
+        // 3. Starte die Animation
+        animate();
+    }, { once: true }); // { once: true } sorgt dafür, dass dieser Listener sich selbst entfernt
+
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
-
-
-// === NEU: Finale Autoplay-Funktion ===
-function initAudioInteraction() {
-    const audio = document.getElementById('media-player');
-    
-    // Die Funktion, die das Audio freischaltet.
-    const unlockAudio = () => {
-        console.log("Benutzerinteraktion erkannt! Versuche Audio zu starten...");
-        audio.play().catch(e => console.error("Wiedergabe nach Interaktion fehlgeschlagen:", e));
-    };
-
-    // Erster Wiedergabeversuch
-    audio.play().catch(error => {
-        // Autoplay blockiert. Warte auf die ERSTE Berührung/Klick auf dem Canvas.
-        console.log("Autoplay blockiert. Warte auf Benutzerinteraktion zum Freischalten.");
-        // Die { once: true } Option sorgt dafür, dass dieser Listener nach der ersten Ausführung automatisch entfernt wird.
-        renderer.domElement.addEventListener('touchstart', unlockAudio, { once: true });
-        renderer.domElement.addEventListener('click', unlockAudio, { once: true });
-    });
-}
 
 // === Steuerung und Animation (unverändert) ===
 let shipMove = { forward: 0, turn: 0 };
