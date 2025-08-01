@@ -9,6 +9,10 @@ canvas {
     display: block;
 }
 
+#info, #joystick-zone, #mute-button {
+    display: none; /* UI wird nach der Intro eingeblendet */
+}
+
 #info {
     position: absolute;
     top: 10px;
@@ -33,6 +37,52 @@ canvas {
     z-index: 5;
 }
 
+/* NEU: Styling für den Stummschalter */
+#mute-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 20;
+    transition: background-color 0.2s ease;
+}
+
+#mute-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#mute-button svg {
+    width: 100%;
+    height: 100%;
+}
+
+#mute-button #speaker-icon {
+    fill: white;
+}
+
+#mute-button #mute-slash {
+    fill: none;
+    stroke: white;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    /* Animations-Setup */
+    opacity: 0;
+    transform-origin: center;
+    transform: scale(0.8);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#mute-button.muted #mute-slash {
+    opacity: 1;
+    transform: scale(1);
+}
+
 #loading-screen {
     position: absolute;
     top: 0;
@@ -48,6 +98,7 @@ canvas {
     font-size: 1.5em;
     z-index: 100;
     transition: opacity 0.5s ease;
+    cursor: pointer;
 }
 
 #loading-text {
@@ -68,11 +119,6 @@ canvas {
     transition: width 0.2s ease-out;
 }
 
-/* NEU: Styling für den Media Player */
 #media-player {
     display: none;
-}
-
-#media-player:hover {
-    opacity: 1.0;
 }
