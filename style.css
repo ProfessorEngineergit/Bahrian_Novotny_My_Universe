@@ -1,130 +1,89 @@
-body {
-    margin: 0;
+:root {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --accent-red: #E53935;
+    --text-color: #e0e0e0;
+    --text-muted-color: #888888;
+    --border-color: #333;
+}
+
+body { font-family: 'Exo 2', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; }
+.app-header { background-color: var(--surface-color); text-align: center; padding: 1rem; border-bottom: 1px solid var(--border-color); font-size: 1.2rem; font-weight: 700; }
+.app-header h1 i { color: var(--primary-color); }
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+#upload-container.hidden { display: none; }
+#drop-zone { border: 3px dashed var(--border-color); border-radius: 12px; background-color: var(--surface-color); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; }
+#drop-zone.drag-over { background-color: #2a2a2a; border-color: var(--primary-color); }
+.drop-icon { font-size: 3rem; color: var(--primary-color); }
+.global-actions-bar { padding: 1rem; margin: 2rem 0; background-color: var(--surface-color); border-radius: 8px; text-align: center; display: flex; justify-content: center; gap: 1rem; }
+
+/* Kompaktere Karten */
+#image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+
+.image-card {
+    background-color: var(--surface-color);
+    border-radius: 12px;
     overflow: hidden;
-    background-color: #000;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border: 2px solid transparent; /* Platz für den Auswahl-Rahmen */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    animation: fadeIn 0.5s ease-out;
+    position: relative;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-canvas {
-    display: block;
+/* Neuer Auswahlmodus-Stil */
+.selection-active .image-card { cursor: pointer; }
+.selection-active .image-card.selectable {
+    border-color: rgba(255, 255, 255, 0.5);
+    /* Der "Apple Intelligence" Bleeding-Effekt */
+    box-shadow: 0 0 0 2px var(--surface-color), 0 0 12px 3px rgba(255, 255, 255, 0.2), inset 0 0 8px 2px rgba(255, 255, 255, 0.1);
 }
 
-/* KORREKTUR: UI-Elemente starten unsichtbar für den Fade-In */
-#info, #joystick-zone, #mute-button {
-    opacity: 0;
-    pointer-events: none; /* Verhindert Klicks auf unsichtbare Elemente */
-    transition: opacity 1s ease-out; /* Sanfter Fade-In über 1 Sekunde */
-}
-
-/* NEU: Klasse, die die UI sichtbar macht */
-#info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-#info {
+/* Auswahl-Haken */
+.selection-overlay {
     position: absolute;
-    top: 10px;
-    width: 100%;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 14px;
-    text-shadow: 2px 2px 4px #000000;
-    z-index: 10;
-}
-
-#joystick-zone {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    width: 160px;
-    height: 160px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
     border-radius: 50%;
-    z-index: 5;
-}
-
-#mute-button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 44px;
-    height: 44px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    cursor: pointer;
-    padding: 10px;
-    z-index: 20;
-    transition: background-color 0.2s ease, opacity 1s ease-out;
-}
-
-#mute-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-#mute-button svg {
-    width: 100%;
-    height: 100%;
-}
-
-#mute-button #speaker-icon {
-    fill: white;
-}
-
-#mute-button #mute-slash {
-    fill: none;
-    stroke: white;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    opacity: 0;
-    transform-origin: center;
-    transform: scale(0.8);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-#mute-button.muted #mute-slash {
-    opacity: 1;
-    transform: scale(1);
-}
-
-#loading-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #000;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    color: white;
-    font-size: 1.5em;
-    z-index: 100;
-    transition: opacity 0.5s ease;
-    cursor: pointer;
+    font-size: 1.2rem;
+    border: 2px solid white;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.3s ease-in-out;
 }
+.image-card.selected .selection-overlay { opacity: 1; transform: scale(1); }
 
-#loading-text {
-    margin-bottom: 20px;
+/* Letterboxing-Stil für Canvas */
+.canvas-container {
+    width: 100%;
+    height: 220px; /* Feste Höhe für einheitliches Layout */
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+.canvas-container canvas { max-width: 100%; max-height: 100%; }
 
-#progress-bar-container {
-    width: 80%;
-    max-width: 400px;
-    height: 10px;
-    border: 1px solid white;
-}
+.controls { padding: 1rem; }
+.control-group { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.control-group label { font-size: 0.9rem; }
+.slider { -webkit-appearance: none; width: 100%; height: 8px; background: #444; outline: none; border-radius: 4px; }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--primary-color); cursor: pointer; border-radius: 50%; }
 
-#progress-bar {
-    width: 0%;
-    height: 100%;
-    background-color: #00aaff;
-    transition: width 0.2s ease-out;
-}
+.card-actions { display: flex; gap: 0.5rem; justify-content: center; border-top: 1px solid var(--border-color); padding-top: 1rem; }
+.button { background: #444; color: var(--text-color); border: none; padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Exo 2', sans-serif; transition: background-color 0.2s; white-space: nowrap; }
+.button:hover:not(:disabled) { background-color: #555; }
+.button.button-primary { background-color: var(--primary-color); }
+.button.button-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+.button:disabled { background-color: #2a2a2a; color: #555; cursor: not-allowed; }
 
-#media-player {
-    display: none;
-}
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
