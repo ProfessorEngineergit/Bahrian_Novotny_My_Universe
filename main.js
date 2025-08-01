@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-// === Grund-Setup (unverändert) ===
+// === Grund-Setup ===
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -10,10 +10,16 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// === UI, Beleuchtung, Sterne, Schwarzes Loch, Forcefield (alles unverändert) ===
+// === UI Elemente ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
+const infoElement = document.getElementById('info');
+const joystickZone = document.getElementById('joystick-zone');
+const muteButton = document.getElementById('mute-button'); // NEU
+const audio = document.getElementById('media-player');   // NEU
+
+// === Szenerie-Setup ===
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
@@ -35,6 +41,8 @@ const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
+let isIntroAnimationPlaying = false;
+
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
@@ -43,10 +51,8 @@ loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 
 loader.load(modelURL, (gltf) => {
-    // MODELL IST GELADEN, BEREITE DEN STARTBILDSCHIRM VOR
     progressBar.style.width = '100%';
-    loadingText.textContent = 'Tippen zum Starten'; // Text ändern
-    
+    loadingText.textContent = 'Tippen zum Starten';
     ship = gltf.scene;
     scene.add(ship);
     ship.position.set(0, 0, -30);
@@ -57,24 +63,19 @@ loader.load(modelURL, (gltf) => {
     cameraHolder.add(camera);
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
+    cameraPivot.rotation.y = Math.PI;
 
-    // KORREKTUR: Warte auf den Klick auf den Startbildschirm
+    // Startbildschirm-Logik
     loadingScreen.addEventListener('click', () => {
-        // 1. Blende den Startbildschirm aus
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
-
-        // 2. Starte die Musik (dies wird jetzt von iOS erlaubt)
-        const audio = document.getElementById('media-player');
         audio.play();
-
-        // 3. Starte die Animation
+        isIntroAnimationPlaying = true;
         animate();
-    }, { once: true }); // { once: true } sorgt dafür, dass dieser Listener sich selbst entfernt
-
+    }, { once: true });
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
-// === Steuerung und Animation (unverändert) ===
+// === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
@@ -88,6 +89,13 @@ const LERP_FACTOR = 0.05;
 let cameraFingerId = null;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
+
+// Stummschalter-Logik
+muteButton.addEventListener('click', () => {
+    audio.muted = !audio.muted;
+    muteButton.classList.toggle('muted');
+});
+
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
@@ -96,52 +104,52 @@ function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 
 
 function animate() {
     requestAnimationFrame(animate);
-    accretionDisk.rotation.z += 0.005;
-    if (ship) {
-        const shipRadius = 5;
-        const previousPosition = ship.position.clone();
-        ship.translateZ(shipMove.forward);
-        ship.rotateY(shipMove.turn);
-        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-        const collisionThreshold = shipRadius + blackHoleRadius;
-        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
-            ship.position.copy(previousPosition);
-            if (forcefield) {
-                forcefield.visible = true;
-                forcefield.material.opacity = 1.0;
+
+    if (isIntroAnimationPlaying) {
+        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
+        if (Math.abs(cameraPivot.rotation.y) < 0.01) {
+            cameraPivot.rotation.y = 0;
+            isIntroAnimationPlaying = false;
+            infoElement.style.display = 'block';
+            joystickZone.style.display = 'block';
+            muteButton.style.display = 'block'; // UI einblenden
+        }
+    } else {
+        if (ship) {
+            const shipRadius = 5;
+            const previousPosition = ship.position.clone();
+            ship.translateZ(shipMove.forward);
+            ship.rotateY(shipMove.turn);
+            const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+            const collisionThreshold = shipRadius + blackHoleRadius;
+            if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+                ship.position.copy(previousPosition);
+                if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
             }
         }
+        if (cameraFingerId === null) {
+            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+        }
+        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        cameraHolder.rotation.x += cameraVelocity.x;
+        cameraPivot.rotation.y += cameraVelocity.y;
+        cameraVelocity.multiplyScalar(DAMPING);
+        zoomDistance += zoomVelocity;
+        zoomVelocity *= DAMPING;
+        zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+        if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+        if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     }
+    
+    accretionDisk.rotation.z += 0.005;
+
     if (forcefield && forcefield.visible) {
         forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) {
-            forcefield.visible = false;
-        }
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
     }
-    if (cameraFingerId === null) {
-        cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
-        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
-    }
-    if (cameraHolder.rotation.x > ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
-    } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
-        cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS;
-    }
-    if (cameraPivot.rotation.y > ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS;
-    } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
-        cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
-    }
-    cameraHolder.rotation.x += cameraVelocity.x;
-    cameraPivot.rotation.y += cameraVelocity.y;
-    cameraVelocity.multiplyScalar(DAMPING);
-    zoomDistance += zoomVelocity;
-    zoomVelocity *= DAMPING;
-    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) {
-        zoomVelocity = 0;
-    }
-    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+
     lensingSphere.visible = false;
     blackHoleCore.visible = false;
     accretionDisk.visible = false;
@@ -149,6 +157,7 @@ function animate() {
     lensingSphere.visible = true;
     blackHoleCore.visible = true;
     accretionDisk.visible = true;
+
     renderer.render(scene, camera);
 }
 
