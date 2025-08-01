@@ -1,178 +1,213 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+'use strict';
 
-// === Grund-Setup ===
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.body.appendChild(renderer.domElement);
+// --- Globale Variablen und UI-Elemente ---
+const appContainer = document.getElementById('app-container');
+const uploadContainer = document.getElementById('upload-container');
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const gallery = document.getElementById('image-gallery');
+const globalActions = document.getElementById('global-actions');
+const selectionModeBtn = document.getElementById('selection-mode-btn');
+const downloadSelectedBtn = document.getElementById('download-selected-btn');
 
-// === UI Elemente ===
-const loadingScreen = document.getElementById('loading-screen');
-const progressBar = document.getElementById('progress-bar');
-const loadingText = document.getElementById('loading-text');
-const infoElement = document.getElementById('info');
-const joystickZone = document.getElementById('joystick-zone');
-const muteButton = document.getElementById('mute-button');
-const audio = document.getElementById('media-player');
+let imageCollection = [];
+let isSelectionModeActive = false;
+let copiedStyle = null;
 
-// === Szenerie-Setup ===
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-directionalLight.position.set(10, 20, 15);
-scene.add(directionalLight);
-let galaxy; function createGalaxy() { const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' }; const geometry = new THREE.BufferGeometry(); const positions = new Float32Array(parameters.count * 3); const colors = new Float32Array(parameters.count * 3); const colorInside = new THREE.Color(parameters.insideColor); const colorOutside = new THREE.Color(parameters.outsideColor); for (let i = 0; i < parameters.count; i++) { const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b; } geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32); gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(255,255,255,1)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 64, 64); const particleTexture = new THREE.CanvasTexture(canvas); const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true }); galaxy = new THREE.Points(geometry, material); scene.add(galaxy); }
-createGalaxy();
-const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-scene.add(blackHoleCore);
-const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
-const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
-scene.add(cubeCamera);
-const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
-scene.add(lensingSphere);
-function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
-const accretionDisk = createAccretionDisk();
-let ship;
-let forcefield;
-const cameraPivot = new THREE.Object3D();
-const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
+// --- Event Listeners ---
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
 
-let isIntroAnimationPlaying = false;
-
-// === GLTF Modell-Lader ===
-const loader = new GLTFLoader();
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-loader.setDRACOLoader(dracoLoader);
-const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
-
-loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%';
-    loadingText.textContent = 'Tippen zum Starten';
-    ship = gltf.scene;
-    scene.add(ship);
-    ship.position.set(0, 0, -30);
-    forcefield = createForcefield(5.1);
-    ship.add(forcefield);
-    ship.add(cameraPivot);
-    cameraPivot.add(cameraHolder);
-    cameraHolder.add(camera);
-    camera.position.set(0, 4, -15);
-    camera.lookAt(cameraHolder.position);
-    cameraPivot.rotation.y = Math.PI;
-
-    loadingScreen.addEventListener('click', () => {
-        loadingScreen.style.opacity = '0';
-        setTimeout(() => loadingScreen.style.display = 'none', 500);
-        audio.play();
-        isIntroAnimationPlaying = true;
-        
-        // KORREKTUR: UI sofort einblenden
-        infoElement.classList.add('ui-visible');
-        joystickZone.classList.add('ui-visible');
-        muteButton.classList.add('ui-visible');
-
-        animate();
-    }, { once: true });
-}, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
-
-
-// === Steuerung und Animation ===
-let shipMove = { forward: 0, turn: 0 };
-const ROTATION_LIMIT = Math.PI * 0.33;
-let zoomDistance = 15;
-const minZoom = 8;
-const maxZoom = 25;
-let cameraVelocity = new THREE.Vector2(0, 0);
-let zoomVelocity = 0;
-const SPRING_STIFFNESS = 0.03;
-const DAMPING = 0.90;
-const LERP_FACTOR = 0.05;
-let cameraFingerId = null;
-let initialPinchDistance = 0;
-let previousTouch = { x: 0, y: 0 };
-
-muteButton.addEventListener('click', () => {
-    audio.muted = !audio.muted;
-    muteButton.classList.toggle('muted');
+selectionModeBtn.addEventListener('click', toggleSelectionMode);
+downloadSelectedBtn.addEventListener('click', () => {
+    const selected = imageCollection.filter(img => img.isSelected);
+    downloadImages(selected);
+    toggleSelectionMode(true); // Auswahlmodus nach Download beenden
 });
 
-nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
-renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
-renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
-renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
-function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
+// --- Kernlogik ---
 
-function animate() {
-    requestAnimationFrame(animate);
-
-    // --- KORREKTUR: Die Logik wurde restrukturiert ---
-
-    // 1. Logik, die immer läuft (sobald das Schiff existiert)
-    if (ship) {
-        const shipRadius = 5;
-        const previousPosition = ship.position.clone();
-        ship.translateZ(shipMove.forward);
-        ship.rotateY(shipMove.turn);
-        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-        const collisionThreshold = shipRadius + blackHoleRadius;
-        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
-            ship.position.copy(previousPosition);
-            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+function handleFiles(files) {
+    if (files.length === 0) return;
+    uploadContainer.classList.add('hidden');
+    globalActions.style.display = 'flex';
+    for (const file of files) {
+        if (file.type === 'image/jpeg') {
+            createImageCard(file);
         }
     }
-
-    // 2. Kamera-Steuerungslogik (Intro vs. Spiel)
-    if (isIntroAnimationPlaying) {
-        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
-        if (Math.abs(cameraPivot.rotation.y) < 0.01) {
-            cameraPivot.rotation.y = 0;
-            isIntroAnimationPlaying = false;
-        }
-    } else {
-        // User-gesteuerte Kamera-Physik (nur nach der Intro)
-        if (cameraFingerId === null) {
-            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
-            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
-        }
-        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-        cameraHolder.rotation.x += cameraVelocity.x;
-        cameraPivot.rotation.y += cameraVelocity.y;
-    }
-
-    // 3. Logik, die immer läuft
-    cameraVelocity.multiplyScalar(DAMPING);
-    zoomDistance += zoomVelocity;
-    zoomVelocity *= DAMPING;
-    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
-    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
-    accretionDisk.rotation.z += 0.005;
-
-    if (forcefield && forcefield.visible) {
-        forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
-    }
-
-    lensingSphere.visible = false;
-    blackHoleCore.visible = false;
-    accretionDisk.visible = false;
-    cubeCamera.update(renderer, scene);
-    lensingSphere.visible = true;
-    blackHoleCore.visible = true;
-    accretionDisk.visible = true;
-
-    renderer.render(scene, camera);
 }
 
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
+function createImageCard(file) {
+    const randomSuffix = Math.floor(Math.random() * 1000000);
+    const imageId = `img-${Date.now()}-${randomSuffix}`;
+    const card = document.createElement('div');
+    card.className = 'image-card';
+    card.id = imageId;
+    card.innerHTML = `
+        <div class="selection-overlay"><i class="fa-solid fa-check"></i></div>
+        <div class="canvas-container"><canvas></canvas></div>
+        <div class="controls">
+            <div class="control-group">
+                <i class="fa-solid fa-text-height"></i>
+                <input type="range" class="slider font-size-slider" min="10" max="100" value="40">
+            </div>
+            <div class="control-group">
+                <i class="fa-solid fa-eye-dropper"></i>
+                <input type="range" class="slider transparency-slider" min="0" max="100" value="90">
+            </div>
+            <div class="card-actions">
+                <button class="button copy-style-btn"><i class="fa-solid fa-copy"></i> Stil kopieren</button>
+                <button class="button paste-style-btn"><i class="fa-solid fa-paste"></i> Einsetzen</button>
+                <button class="button apply-all-btn"><i class="fa-solid fa-share-nodes"></i> Auf alle</button>
+            </div>
+        </div>`;
+    gallery.appendChild(card);
+
+    const imageState = {
+        id: imageId,
+        file: file,
+        isSelected: false,
+        cardElement: card,
+        canvas: card.querySelector('canvas'),
+        metadata: [],
+        settings: { fontSize: 40, alpha: 0.9 },
+        ui: {
+            fontSizeSlider: card.querySelector('.font-size-slider'),
+            transparencySlider: card.querySelector('.transparency-slider'),
+            copyBtn: card.querySelector('.copy-style-btn'),
+            pasteBtn: card.querySelector('.paste-style-btn'),
+            applyAllBtn: card.querySelector('.apply-all-btn'),
+        }
+    };
+    imageCollection.push(imageState);
+
+    // Event Listeners für die Karte
+    card.addEventListener('click', () => {
+        if (isSelectionModeActive) {
+            imageState.isSelected = !imageState.isSelected;
+            card.classList.toggle('selected', imageState.isSelected);
+            updateGlobalButtonState();
+        }
+    });
+
+    imageState.ui.fontSizeSlider.addEventListener('input', (e) => { imageState.settings.fontSize = parseInt(e.target.value); redrawCanvas(imageState); });
+    imageState.ui.transparencySlider.addEventListener('input', (e) => { imageState.settings.alpha = parseInt(e.target.value) / 100; redrawCanvas(imageState); });
+    imageState.ui.copyBtn.addEventListener('click', (e) => { e.stopPropagation(); copiedStyle = { ...imageState.settings }; });
+    imageState.ui.pasteBtn.addEventListener('click', (e) => { e.stopPropagation(); if (copiedStyle) { imageState.settings = { ...copiedStyle }; updateControls(imageState); redrawCanvas(imageState); } });
+    imageState.ui.applyAllBtn.addEventListener('click', (e) => { e.stopPropagation(); imageCollection.forEach(img => { if (img.id !== imageState.id) { img.settings = { ...imageState.settings }; updateControls(img); redrawCanvas(img); } }); });
+
+    processImage(imageState);
+}
+
+function processImage(imageState) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const image = new Image();
+        image.onload = () => {
+            imageState.originalImage = image;
+            EXIF.getData(image, function() {
+                imageState.metadata = getFormattedMetadata(this);
+                redrawCanvas(imageState);
+            });
+        };
+        image.src = e.target.result;
+    };
+    reader.readAsDataURL(imageState.file);
+}
+
+function redrawCanvas(imageState) {
+    const { canvas, originalImage, metadata, settings } = imageState;
+    if (!originalImage) return;
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = originalImage.width;
+    canvas.height = originalImage.height;
+
+    // Letterboxing-Logik
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const hRatio = canvas.width / originalImage.width;
+    const vRatio = canvas.height / originalImage.height;
+    const ratio = Math.min(hRatio, vRatio);
+    const centerShift_x = (canvas.width - originalImage.width * ratio) / 2;
+    const centerShift_y = (canvas.height - originalImage.height * ratio) / 2;
+    ctx.drawImage(originalImage, 0, 0, originalImage.width, originalImage.height, centerShift_x, centerShift_y, originalImage.width * ratio, originalImage.height * ratio);
+    
+    // Textzeichnen
+    if (metadata.length === 0) return;
+
+    const fontSize = canvas.width * (settings.fontSize / 1500); // Feinere Skalierung
+    const padding = fontSize * 1.5;
+    const lineHeight = fontSize * 1.2;
+    ctx.font = `700 ${fontSize}px 'Exo 2', sans-serif`;
+    ctx.textBaseline = 'bottom';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = fontSize / 3;
+
+    let y = canvas.height - padding;
+    metadata.slice().reverse().forEach(line => {
+        ctx.fillStyle = line.color === 'red' ? `rgba(229, 57, 53, ${settings.alpha})` : `rgba(255, 255, 255, ${settings.alpha})`;
+        ctx.fillText(line.text, padding, y, canvas.width - (padding * 2));
+        y -= lineHeight;
+    });
+}
+
+function getFormattedMetadata(exifData) {
+    const tags = EXIF.getAllTags(exifData);
+    let lines = [];
+    let modelString = tags.Model || 'Unbekannte Kamera';
+    // Rote Farbe für die erste Zeile
+    lines.push({ text: modelString, color: 'red' });
+    if (tags.LensModel) { lines.push({ text: tags.LensModel, color: 'white' }); }
+    
+    let settings = [];
+    if (tags.FocalLength) settings.push(`${tags.FocalLength}mm`);
+    if (tags.FNumber) settings.push(`f/${tags.FNumber}`);
+    if (tags.ExposureTime) { const et = tags.ExposureTime; settings.push(et < 1 ? `1/${Math.round(1/et)}s` : `${et}s`); }
+    if (tags.ISOSpeedRatings) settings.push(`ISO ${tags.ISOSpeedRatings}`);
+    if (settings.length > 0) lines.push({ text: settings.join('  ·  '), color: 'white' });
+
+    return lines;
+}
+
+function updateControls(imageState) {
+    imageState.ui.fontSizeSlider.value = imageState.settings.fontSize;
+    imageState.ui.transparencySlider.value = imageState.settings.alpha * 100;
+}
+
+function toggleSelectionMode(forceOff = false) {
+    isSelectionModeActive = forceOff ? false : !isSelectionModeActive;
+    appContainer.classList.toggle('selection-active', isSelectionModeActive);
+    
+    // Alle Karten als auswählbar markieren/demarkieren
+    imageCollection.forEach(img => img.cardElement.classList.toggle('selectable', isSelectionModeActive));
+    
+    if (!isSelectionModeActive) {
+        // Auswahl zurücksetzen, wenn der Modus beendet wird
+        imageCollection.forEach(img => {
+            img.isSelected = false;
+            img.cardElement.classList.remove('selected');
+        });
+    }
+    updateGlobalButtonState();
+}
+
+function updateGlobalButtonState() {
+    const selectedCount = imageCollection.filter(img => img.isSelected).length;
+    downloadSelectedBtn.disabled = selectedCount === 0;
+    downloadSelectedBtn.textContent = selectedCount > 0 ? `Auswahl (${selectedCount}) herunterladen` : 'Auswahl herunterladen';
+}
+
+function downloadImages(imagesToDownload) {
+    if (imagesToDownload.length === 0) return;
+    imagesToDownload.forEach((state, i) => {
+        const a = document.createElement('a');
+        a.href = state.canvas.toDataURL('image/jpeg', 0.95);
+        a.download = state.file.name.replace(/\.jpeg$|\.jpg$/i, '-OpenImageLabel.jpg');
+        setTimeout(() => a.click(), i * 200);
+    });
+}
