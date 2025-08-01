@@ -16,8 +16,8 @@ const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
 const infoElement = document.getElementById('info');
 const joystickZone = document.getElementById('joystick-zone');
-const muteButton = document.getElementById('mute-button'); // NEU
-const audio = document.getElementById('media-player');   // NEU
+const muteButton = document.getElementById('mute-button');
+const audio = document.getElementById('media-player');
 
 // === Szenerie-Setup ===
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
@@ -65,15 +65,21 @@ loader.load(modelURL, (gltf) => {
     camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
 
-    // Startbildschirm-Logik
     loadingScreen.addEventListener('click', () => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
         isIntroAnimationPlaying = true;
+        
+        // KORREKTUR: UI sofort einblenden
+        infoElement.classList.add('ui-visible');
+        joystickZone.classList.add('ui-visible');
+        muteButton.classList.add('ui-visible');
+
         animate();
     }, { once: true });
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
+
 
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
@@ -90,7 +96,6 @@ let cameraFingerId = null;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
-// Stummschalter-Logik
 muteButton.addEventListener('click', () => {
     audio.muted = !audio.muted;
     muteButton.classList.toggle('muted');
@@ -105,28 +110,31 @@ function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 
 function animate() {
     requestAnimationFrame(animate);
 
+    // --- KORREKTUR: Die Logik wurde restrukturiert ---
+
+    // 1. Logik, die immer läuft (sobald das Schiff existiert)
+    if (ship) {
+        const shipRadius = 5;
+        const previousPosition = ship.position.clone();
+        ship.translateZ(shipMove.forward);
+        ship.rotateY(shipMove.turn);
+        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const collisionThreshold = shipRadius + blackHoleRadius;
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+            ship.position.copy(previousPosition);
+            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+        }
+    }
+
+    // 2. Kamera-Steuerungslogik (Intro vs. Spiel)
     if (isIntroAnimationPlaying) {
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
         if (Math.abs(cameraPivot.rotation.y) < 0.01) {
             cameraPivot.rotation.y = 0;
             isIntroAnimationPlaying = false;
-            infoElement.style.display = 'block';
-            joystickZone.style.display = 'block';
-            muteButton.style.display = 'block'; // UI einblenden
         }
     } else {
-        if (ship) {
-            const shipRadius = 5;
-            const previousPosition = ship.position.clone();
-            ship.translateZ(shipMove.forward);
-            ship.rotateY(shipMove.turn);
-            const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-            const collisionThreshold = shipRadius + blackHoleRadius;
-            if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
-                ship.position.copy(previousPosition);
-                if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
-            }
-        }
+        // User-gesteuerte Kamera-Physik (nur nach der Intro)
         if (cameraFingerId === null) {
             cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
             cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
@@ -135,13 +143,15 @@ function animate() {
         if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
         cameraHolder.rotation.x += cameraVelocity.x;
         cameraPivot.rotation.y += cameraVelocity.y;
-        cameraVelocity.multiplyScalar(DAMPING);
-        zoomDistance += zoomVelocity;
-        zoomVelocity *= DAMPING;
-        zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-        if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
-        if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     }
+
+    // 3. Logik, die immer läuft
+    cameraVelocity.multiplyScalar(DAMPING);
+    zoomDistance += zoomVelocity;
+    zoomVelocity *= DAMPING;
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
     accretionDisk.rotation.z += 0.005;
 
