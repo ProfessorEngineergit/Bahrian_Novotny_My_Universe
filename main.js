@@ -30,91 +30,110 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
-function createGalaxy() { /* ... unverändert ... */ } createGalaxy();
+let galaxy; function createGalaxy() { /* ... unverändert ... */ } createGalaxy();
 
-// === NEUE OBJEKT-STRUKTUR ===
+// === NEU: Planetensystem-Logik ===
 const celestialObjects = [];
 
-// Objekt 0: Das Schwarze Loch
-const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-scene.add(blackHoleCore);
-const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
-const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
-scene.add(cubeCamera);
-const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
-scene.add(lensingSphere);
-function createAccretionDisk() { /* ... unverändert ... */ }
-const accretionDisk = createAccretionDisk();
-const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = 'Project_Mariner'; const bhLineDiv = document.createElement('div'); bhLineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(bhLineDiv);
-const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); blackHoleCore.add(blackHoleLabel);
-const bhPacingCircle = new THREE.Mesh(new THREE.RingGeometry(12, 12.2, 64), new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 })); bhPacingCircle.rotation.x = Math.PI / 2; scene.add(bhPacingCircle);
-
-celestialObjects.push({
-    mesh: blackHoleCore,
-    labelDiv: blackHoleLabelDiv,
-    pacingCircle: bhPacingCircle,
-    name: 'Project_Mariner',
-    orbitPivot: null // Das Zentrum hat keinen Orbit
-});
-
-// Objekte 1-6: Die Planeten
-for (let i = 1; i <= 6; i++) {
-    // 1. Planet-Mesh
-    const planetMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(Math.random(), Math.random(), Math.random()), roughness: 0.8 });
-    const planetMesh = new THREE.Mesh(new THREE.SphereGeometry(2, 32, 32), planetMaterial);
-    
-    // 2. Umlaufbahn-Pivot
-    const orbitRadius = 30 + i * 12;
-    const orbitSpeed = 0.001 + Math.random() * 0.005;
-    const orbitPivot = new THREE.Object3D();
-    planetMesh.position.x = orbitRadius;
-    orbitPivot.add(planetMesh);
-    scene.add(orbitPivot);
-    
-    // 3. Umlaufbahn-Spur
-    const trailPoints = [];
-    const trailColors = [];
-    const trailSegments = 100;
-    const trailAngle = Math.PI * (150 / 180); // 150 Grad
-    for (let j = 0; j <= trailSegments; j++) {
-        const angle = (j / trailSegments) * trailAngle;
-        trailPoints.push(new THREE.Vector3(Math.cos(angle) * orbitRadius, 0, -Math.sin(angle) * orbitRadius));
-        const alpha = 1.0 - (j / trailSegments); // Fade-Out
-        trailColors.push(0.5, 0.8, 1, alpha);
+// Funktion zum Erstellen eines Planeten (oder Schwarzen Lochs)
+function createCelestialObject(config) {
+    let objectMesh;
+    if (config.isBlackHole) {
+        // Logik für das realistische Schwarze Loch
+        const blackHoleGroup = new THREE.Group();
+        const core = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+        blackHoleGroup.add(core);
+        const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+        const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
+        const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
+        blackHoleGroup.add(lensingSphere);
+        const accretionDisk = createAccretionDisk();
+        blackHoleGroup.add(accretionDisk);
+        objectMesh = blackHoleGroup;
+        config.lensingData = { cubeCamera, lensingSphere, core, accretionDisk };
+    } else {
+        // Logik für einen prozeduralen Planeten
+        objectMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(config.size, 32, 32),
+            new THREE.MeshStandardMaterial({ color: config.color, roughness: 0.8 })
+        );
     }
-    const trailGeometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
-    trailGeometry.setAttribute('color', new THREE.Float32BufferAttribute(trailColors, 4));
-    const trailMaterial = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true });
-    const trail = new THREE.Line(trailGeometry, trailMaterial);
-    orbitPivot.add(trail);
+    scene.add(objectMesh);
 
-    // 4. Label und Pacing Circle
-    const planetLabelDiv = document.createElement('div'); planetLabelDiv.className = 'label'; planetLabelDiv.textContent = `Project_Mariner (Kopie ${i + 1})`; const pLineDiv = document.createElement('div'); pLineDiv.className = 'label-line'; planetLabelDiv.appendChild(pLineDiv);
-    const planetLabel = new CSS2DObject(planetLabelDiv); planetLabel.position.set(0, 7, 0); planetMesh.add(planetLabel);
-    const pPacingCircle = new THREE.Mesh(new THREE.RingGeometry(8, 8.2, 64), new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 })); pPacingCircle.rotation.x = Math.PI / 2; planetMesh.add(pPacingCircle);
-    
-    celestialObjects.push({ mesh: planetMesh, labelDiv: planetLabelDiv, pacingCircle: pPacingCircle, name: `Project_Mariner (Kopie ${i + 1})`, orbitPivot: orbitPivot, orbitSpeed: orbitSpeed });
+    // Label
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'label';
+    labelDiv.textContent = config.name;
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'label-line';
+    labelDiv.appendChild(lineDiv);
+    const label = new CSS2DObject(labelDiv);
+    label.position.set(0, config.size + 5, 0);
+    objectMesh.add(label);
+
+    // Grenzkreis
+    const circleGeometry = new THREE.RingGeometry(config.proximityRadius, config.proximityRadius + 0.2, 64);
+    const circleMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+    const circle = new THREE.Mesh(circleGeometry, circleMaterial);
+    circle.rotation.x = Math.PI / 2;
+    scene.add(circle);
+
+    // Orbit-Spur
+    const trailPoints = 100;
+    const trailGeometry = new THREE.BufferGeometry();
+    const trailPositions = new Float32Array(trailPoints * 3);
+    const trailColors = new Float32Array(trailPoints * 3);
+    trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    trailGeometry.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
+    const trailMaterial = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending });
+    const trail = new THREE.Line(trailGeometry, trailMaterial);
+    scene.add(trail);
+
+    const celestial = {
+        mesh: objectMesh, label: label, circle: circle, trail: trail,
+        orbitRadius: config.orbitRadius, orbitSpeed: config.orbitSpeed, angle: Math.random() * Math.PI * 2,
+        isBlackHole: config.isBlackHole, size: config.size,
+        lensingData: config.lensingData
+    };
+    celestialObjects.push(celestial);
 }
 
+// Erstelle die Himmelskörper
+createCelestialObject({ name: 'Project_Mariner', isBlackHole: true, size: 1.5, proximityRadius: 12, orbitRadius: 0, orbitSpeed: 0 });
+createCelestialObject({ name: 'Project_Mariner (Kopie 2)', color: 0xff8844, size: 2.5, proximityRadius: 15, orbitRadius: 20, orbitSpeed: 0.03 });
+createCelestialObject({ name: 'Project_Mariner (Kopie 3)', color: 0x4488ff, size: 3, proximityRadius: 18, orbitRadius: 35, orbitSpeed: 0.02 });
+createCelestialObject({ name: 'Project_Mariner (Kopie 4)', color: 0x88ff88, size: 2, proximityRadius: 14, orbitRadius: 50, orbitSpeed: 0.015 });
+createCelestialObject({ name: 'Project_Mariner (Kopie 5)', color: 0xff4444, size: 3.5, proximityRadius: 20, orbitRadius: 68, orbitSpeed: 0.01 });
+createCelestialObject({ name: 'Project_Mariner (Kopie 6)', color: 0xffff44, size: 2.8, proximityRadius: 17, orbitRadius: 85, orbitSpeed: 0.008 });
+createCelestialObject({ name: 'Project_Mariner (Kopie 7)', color: 0x8844ff, size: 2.2, proximityRadius: 16, orbitRadius: 100, orbitSpeed: 0.005 });
+
+// === Hauptobjekt-Setup ===
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) { /* ... unverändert ... */ }
-let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
+function createForcefield(radius) { /* ... */ }
+
+let isIntroAnimationPlaying = false;
 
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 loader.load(modelURL, (gltf) => {
     progressBar.style.width = '100%'; loadingText.textContent = 'Tippen zum Starten';
-    ship = gltf.scene; scene.add(ship); ship.position.set(0, 0, -30);
+    ship = gltf.scene;
+    scene.add(ship);
+    ship.position.set(0, 0, -50); // Startposition etwas weiter weg
     forcefield = createForcefield(5.1); ship.add(forcefield);
     ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
     camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
 
     loadingScreen.addEventListener('click', () => {
-        loadingScreen.style.opacity = '0'; setTimeout(() => loadingScreen.style.display = 'none', 500);
-        audio.play(); isIntroAnimationPlaying = true;
-        infoElement.classList.add('ui-visible'); joystickZone.classList.add('ui-visible'); muteButton.classList.add('ui-visible');
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => loadingScreen.style.display = 'none', 500);
+        audio.play();
+        isIntroAnimationPlaying = true;
+        infoElement.classList.add('ui-visible');
+        joystickZone.classList.add('ui-visible');
+        muteButton.classList.add('ui-visible');
         animate();
     }, { once: true });
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
@@ -128,58 +147,76 @@ let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 let cameraFingerId = null; let initialPinchDistance = 0; let previousTouch = { x: 0, y: 0 };
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
-nipplejs.create({ /*...*/ });
-renderer.domElement.addEventListener('touchstart', (e) => { /*...*/ }, { passive: false });
-renderer.domElement.addEventListener('touchmove', (e) => { /*...*/ }, { passive: false });
-renderer.domElement.addEventListener('touchend', (e) => { /*...*/ });
-function getPinchDistance(e) { /*...*/ }
-
+nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
+renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
+renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
+renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
+function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
     const elapsedTime = clock.getElapsedTime();
+    const deltaTime = clock.getDelta();
 
-    let isNearAnyObject = false;
+    let isNearAnyPlanet = false;
 
-    // Planeten und Objekte animieren
+    // Update alle Himmelskörper
     celestialObjects.forEach(obj => {
-        // Umlaufbahnen
-        if (obj.orbitPivot) {
-            obj.orbitPivot.rotation.y += obj.orbitSpeed;
-        }
-        // Pacing Circle
-        const pulse = Math.sin(elapsedTime * 0.8 + obj.mesh.position.x) * 0.5 + 0.5;
-        obj.pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
-        obj.pacingCircle.material.opacity = 0.3 + pulse * 0.4;
+        // Umlaufbahn
+        obj.angle += obj.orbitSpeed * deltaTime;
+        obj.mesh.position.x = Math.cos(obj.angle) * obj.orbitRadius;
+        obj.mesh.position.z = Math.sin(obj.angle) * obj.orbitRadius;
+        
+        // Grenzkreis folgt dem Planeten und pulsiert
+        obj.circle.position.copy(obj.mesh.position);
+        const pulse = Math.sin(elapsedTime * 0.8 + obj.orbitRadius) * 0.5 + 0.5;
+        obj.circle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+        obj.circle.material.opacity = 0.3 + pulse * 0.4;
 
-        // Label-Ausrichtung
+        // Label ausrichten
         if (ship && !isIntroAnimationPlaying) {
-            const labelWorldPosition = new THREE.Vector3();
-            obj.mesh.getWorldPosition(labelWorldPosition);
-            const angle = Math.atan2(ship.position.x - labelWorldPosition.x, ship.position.z - labelWorldPosition.z);
-            obj.labelDiv.style.transform = `rotate(${angle}rad)`;
+            const angle = Math.atan2(ship.position.x - obj.mesh.position.x, ship.position.z - obj.mesh.position.z);
+            obj.label.element.style.transform = `rotate(${angle}rad)`;
         }
 
-        // Button-Trigger-Logik
+        // Orbit-Spur aktualisieren
+        const trailPositions = obj.trail.geometry.attributes.position;
+        const trailColors = obj.trail.geometry.attributes.color;
+        const trailLength = 150 * (Math.PI / 180); // 150 Grad
+        for (let i = 0; i < 100; i++) {
+            const ratio = i / 99;
+            const angle = obj.angle - ratio * trailLength;
+            trailPositions.setXYZ(i, Math.cos(angle) * obj.orbitRadius, 0, Math.sin(angle) * obj.orbitRadius);
+            trailColors.setXYZ(i, 0, 0.67, 1); // Farbe (Blau)
+            trailColors.setW(i, 1 - ratio); // Alpha verblasst
+        }
+        trailPositions.needsUpdate = true;
+        trailColors.needsUpdate = true;
+
+        // Proximity-Check für Analyze-Button
         if (ship) {
-            const distanceToCenter = ship.position.distanceTo(obj.mesh.getWorldPosition(new THREE.Vector3()));
-            const circleCurrentRadius = (obj.pacingCircle.geometry.parameters.outerRadius || 12) * obj.pacingCircle.scale.x;
-            if (distanceToCenter < circleCurrentRadius) {
-                isNearAnyObject = true;
-                if (!isAnalyzeButtonVisible) {
-                    analyzeButton.classList.add('ui-visible');
-                    isAnalyzeButtonVisible = true;
-                }
-                analyzeButton.textContent = `Analyze ${obj.name}`;
+            const distanceToShip = ship.position.distanceTo(obj.mesh.position);
+            const circleCurrentRadius = obj.circle.geometry.parameters.outerRadius * obj.circle.scale.x;
+            if (distanceToShip < circleCurrentRadius) {
+                isNearAnyPlanet = true;
             }
+        }
+
+        // Schwarzes Loch Logik
+        if(obj.isBlackHole) {
+            obj.lensingData.accretionDisk.rotation.z += 0.005;
+            obj.lensingData.lensingSphere.visible = false; obj.lensingData.core.visible = false; obj.lensingData.accretionDisk.visible = false;
+            obj.lensingData.cubeCamera.update(renderer, scene);
+            obj.lensingData.lensingSphere.visible = true; obj.lensingData.core.visible = true; obj.lensingData.accretionDisk.visible = true;
         }
     });
 
-    // Button ausblenden, wenn kein Objekt in der Nähe ist
-    if (!isNearAnyObject && isAnalyzeButtonVisible) {
-        analyzeButton.classList.remove('ui-visible');
-        isAnalyzeButtonVisible = false;
+    // Analyze-Button ein-/ausblenden
+    if (isNearAnyPlanet) {
+        if (!analyzeButton.classList.contains('ui-visible')) analyzeButton.classList.add('ui-visible');
+    } else {
+        if (analyzeButton.classList.contains('ui-visible')) analyzeButton.classList.remove('ui-visible');
     }
 
     // Schiffsbewegung und Kollision
@@ -188,18 +225,17 @@ function animate() {
         const previousPosition = ship.position.clone();
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
-
-        celestialObjects.forEach(obj => {
-            const objectRadius = obj.mesh.geometry.parameters.radius || 1.5;
-            const collisionThreshold = shipRadius + objectRadius;
-            if (ship.position.distanceTo(obj.mesh.getWorldPosition(new THREE.Vector3())) < collisionThreshold) {
-                ship.position.copy(previousPosition);
-                if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
-            }
-        });
+        
+        // Kollision nur mit dem ersten Objekt (Schwarzes Loch)
+        const blackHoleObj = celestialObjects[0];
+        const collisionThreshold = shipRadius + blackHoleObj.size;
+        if (ship.position.distanceTo(blackHoleObj.mesh.position) < collisionThreshold) {
+            ship.position.copy(previousPosition);
+            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+        }
     }
 
-    // Intro-Animation & Kamera-Physik
+    // Kamera-Steuerung
     if (isIntroAnimationPlaying) {
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
         if (Math.abs(cameraPivot.rotation.y) < 0.01) { cameraPivot.rotation.y = 0; isIntroAnimationPlaying = false; }
@@ -211,20 +247,16 @@ function animate() {
     }
     
     cameraVelocity.multiplyScalar(DAMPING);
-    zoomDistance += zoomVelocity;
-    zoomVelocity *= DAMPING;
+    zoomDistance += zoomVelocity; zoomVelocity *= DAMPING;
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
     if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
-    // Allgemeine Animationen
-    accretionDisk.rotation.z += 0.005;
-    if (forcefield && forcefield.visible) { forcefield.material.opacity -= 0.04; if (forcefield.material.opacity <= 0) { forcefield.visible = false; } }
-    lensingSphere.visible = false; blackHoleCore.visible = false; accretionDisk.visible = false;
-    cubeCamera.update(renderer, scene);
-    lensingSphere.visible = true; blackHoleCore.visible = true; accretionDisk.visible = true;
+    if (forcefield && forcefield.visible) {
+        forcefield.material.opacity -= 0.04;
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
+    }
 
-    // Rendern
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
 }
@@ -236,12 +268,7 @@ window.addEventListener('resize', () => {
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Hier alle langen, unveränderten Hilfsfunktionen einfügen
-function createGalaxy() { const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' }; const geometry = new THREE.BufferGeometry(); const positions = new Float32Array(parameters.count * 3); const colors = new Float32Array(parameters.count * 3); const colorInside = new THREE.Color(parameters.insideColor); const colorOutside = new THREE.Color(parameters.outsideColor); for (let i = 0; i < parameters.count; i++) { const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b; } geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32); gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(255,255,255,1)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 64, 64); const particleTexture = new THREE.CanvasTexture(canvas); const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true }); galaxy = new THREE.Points(geometry, material); scene.add(galaxy); }
-function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
+// Hilfsfunktionen, die hier zur Vollständigkeit eingefügt werden müssen
 function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
-nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
-renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
-renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
-renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
-function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
+function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; return disk; }
+function createGalaxy() { const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' }; const geometry = new THREE.BufferGeometry(); const positions = new Float32Array(parameters.count * 3); const colors = new Float32Array(parameters.count * 3); const colorInside = new THREE.Color(parameters.insideColor); const colorOutside = new THREE.Color(parameters.outsideColor); for (let i = 0; i < parameters.count; i++) { const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b; } geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32); gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(255,255,255,1)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 64, 64); const particleTexture = new THREE.CanvasTexture(canvas); const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true }); galaxy = new THREE.Points(geometry, material); scene.add(galaxy); }
