@@ -10,10 +10,7 @@
     </script>
 </head>
 <body>
-    <!-- NEU: Container für 2D-Labels -->
     <div id="label-container"></div>
-    
-    <!-- UI Elemente -->
     <div id="info">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
     <div id="joystick-zone"></div>
     <button id="mute-button" title="Ton umschalten">
@@ -22,17 +19,12 @@
             <path id="mute-slash" d="M1 1l22 22"/>
         </svg>
     </button>
-    
-    <!-- NEU: Analyze Button -->
     <button id="analyze-button">Analyze Object</button>
-    
     <div id="loading-screen">
         <div id="loading-text">Lade Modell...</div>
         <div id="progress-bar-container"><div id="progress-bar"></div></div>
     </div>
-    
     <audio id="media-player" loop><source src="https://professorengineergit.github.io/Project_Mariner/Arcadia.mp3" type="audio/mpeg"></audio>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
     <script type="module" src="main.js"></script>
 </body>
