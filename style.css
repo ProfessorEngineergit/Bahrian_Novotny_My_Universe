@@ -1,130 +1,46 @@
-body {
-    margin: 0;
-    overflow: hidden;
-    background-color: #000;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+canvas { display: block; }
 
-canvas {
-    display: block;
-}
+#info, #joystick-zone, #mute-button { opacity: 0; pointer-events: none; transition: opacity 1s ease-out; }
+#info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible { opacity: 1; pointer-events: auto; }
 
-/* KORREKTUR: UI-Elemente starten unsichtbar für den Fade-In */
-#info, #joystick-zone, #mute-button {
+#info { position: absolute; top: 10px; width: 100%; text-align: center; color: rgba(255, 255, 255, 0.8); font-size: 14px; text-shadow: 2px 2px 4px #000000; z-index: 10; }
+#joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 160px; height: 160px; background-color: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%; z-index: 5; }
+#mute-button { position: absolute; top: 20px; right: 20px; width: 44px; height: 44px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%; cursor: pointer; padding: 10px; z-index: 20; transition: background-color 0.2s ease, opacity 1s ease-out; }
+#mute-button:hover { background: rgba(255, 255, 255, 0.1); }
+#mute-button svg { width: 100%; height: 100%; }
+#mute-button #speaker-icon { fill: white; }
+#mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
+#mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
+
+/* NEU: Styling für den Analyze Button */
+#analyze-button {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    background: rgba(0, 170, 255, 0.2);
+    border: 1px solid rgba(0, 170, 255, 0.5);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    z-index: 20;
     opacity: 0;
-    pointer-events: none; /* Verhindert Klicks auf unsichtbare Elemente */
-    transition: opacity 1s ease-out; /* Sanfter Fade-In über 1 Sekunde */
+    pointer-events: none;
+    transition: opacity 0.4s ease-out, background-color 0.2s ease;
 }
-
-/* NEU: Klasse, die die UI sichtbar macht */
-#info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible {
+#analyze-button:hover {
+    background: rgba(0, 170, 255, 0.4);
+}
+#analyze-button.visible {
     opacity: 1;
     pointer-events: auto;
 }
 
-#info {
-    position: absolute;
-    top: 10px;
-    width: 100%;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 14px;
-    text-shadow: 2px 2px 4px #000000;
-    z-index: 10;
-}
-
-#joystick-zone {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    width: 160px;
-    height: 160px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    z-index: 5;
-}
-
-#mute-button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 44px;
-    height: 44px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    cursor: pointer;
-    padding: 10px;
-    z-index: 20;
-    transition: background-color 0.2s ease, opacity 1s ease-out;
-}
-
-#mute-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-#mute-button svg {
-    width: 100%;
-    height: 100%;
-}
-
-#mute-button #speaker-icon {
-    fill: white;
-}
-
-#mute-button #mute-slash {
-    fill: none;
-    stroke: white;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    opacity: 0;
-    transform-origin: center;
-    transform: scale(0.8);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-#mute-button.muted #mute-slash {
-    opacity: 1;
-    transform: scale(1);
-}
-
-#loading-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #000;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-size: 1.5em;
-    z-index: 100;
-    transition: opacity 0.5s ease;
-    cursor: pointer;
-}
-
-#loading-text {
-    margin-bottom: 20px;
-}
-
-#progress-bar-container {
-    width: 80%;
-    max-width: 400px;
-    height: 10px;
-    border: 1px solid white;
-}
-
-#progress-bar {
-    width: 0%;
-    height: 100%;
-    background-color: #00aaff;
-    transition: width 0.2s ease-out;
-}
-
-#media-player {
-    display: none;
-}
+#loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-size: 1.5em; z-index: 100; transition: opacity 0.5s ease; cursor: pointer; }
+#loading-text { margin-bottom: 20px; }
+#progress-bar-container { width: 80%; max-width: 400px; height: 10px; border: 1px solid white; }
+#progress-bar { width: 0%; height: 100%; background-color: #00aaff; transition: width 0.2s ease-out; }
+#media-player { display: none; }
