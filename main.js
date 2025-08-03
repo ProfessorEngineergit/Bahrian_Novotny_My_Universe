@@ -35,10 +35,41 @@ const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new 
 scene.add(lensingSphere);
 function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
 const accretionDisk = createAccretionDisk();
-let ship;
-let forcefield;
-const cameraPivot = new THREE.Object3D();
-const cameraHolder = new THREE.Object3D();
+
+// === Label und Linien-Setup ===
+let projectLabel, labelLine;
+
+function createProjectLabelAndLine() {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 512;
+    canvas.height = 128;
+    context.font = 'bold 48px Segoe UI, sans-serif';
+    context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText('Project_Mariner', canvas.width / 2, canvas.height / 2);
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    const geometry = new THREE.PlaneGeometry(8, 2);
+    const label = new THREE.Mesh(geometry, material);
+    label.position.set(0, 5, 0);
+    scene.add(label);
+    const lineGeometry = new THREE.PlaneGeometry(0.1, 5);
+    const colors = new Float32Array([1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]);
+    lineGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+    const lineMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    const line = new THREE.Mesh(lineGeometry, lineMaterial);
+    line.position.set(0, 2.5, 0);
+    scene.add(line);
+    return { label, line };
+}
+const labelElements = createProjectLabelAndLine();
+projectLabel = labelElements.label;
+labelLine = labelElements.line;
+
+// === Hauptobjekt-Setup ===
+let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
 function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
 let isIntroAnimationPlaying = false;
@@ -70,16 +101,12 @@ loader.load(modelURL, (gltf) => {
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
         isIntroAnimationPlaying = true;
-        
-        // KORREKTUR: UI sofort einblenden
         infoElement.classList.add('ui-visible');
         joystickZone.classList.add('ui-visible');
         muteButton.classList.add('ui-visible');
-
         animate();
     }, { once: true });
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
-
 
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
@@ -110,10 +137,12 @@ function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 
 function animate() {
     requestAnimationFrame(animate);
 
-    // --- KORREKTUR: Die Logik wurde restrukturiert ---
-
     // 1. Logik, die immer läuft (sobald das Schiff existiert)
     if (ship) {
+        // Label und Linie auf das Schiff ausrichten
+        projectLabel.lookAt(ship.position);
+        labelLine.lookAt(ship.position);
+
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
         ship.translateZ(shipMove.forward);
@@ -134,7 +163,7 @@ function animate() {
             isIntroAnimationPlaying = false;
         }
     } else {
-        // User-gesteuerte Kamera-Physik (nur nach der Intro)
+        // User-gesteuerte Kamera-Physik
         if (cameraFingerId === null) {
             cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
             cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
