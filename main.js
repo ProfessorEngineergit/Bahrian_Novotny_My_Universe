@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 // === Grund-Setup ===
 const scene = new THREE.Scene();
@@ -10,6 +11,11 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.id = 'label-container';
+document.body.appendChild(labelRenderer.domElement);
+
 // === UI Elemente ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
@@ -17,8 +23,8 @@ const loadingText = document.getElementById('loading-text');
 const infoElement = document.getElementById('info');
 const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
-const audio = document.getElementById('media-player');
 const analyzeButton = document.getElementById('analyze-button');
+const audio = document.getElementById('media-player');
 
 // === Szenerie-Setup ===
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
@@ -61,22 +67,21 @@ function createAccretionDisk() {
     return disk;
 }
 const accretionDisk = createAccretionDisk();
+const labelDiv = document.createElement('div');
+labelDiv.className = 'label';
+labelDiv.textContent = 'Project_Mariner';
+const lineDiv = document.createElement('div');
+lineDiv.className = 'label-line';
+labelDiv.appendChild(lineDiv);
+const blackHoleLabel = new CSS2DObject(labelDiv);
+blackHoleLabel.position.set(0, 7, 0);
+scene.add(blackHoleLabel);
+const pacingCircleGeometry = new THREE.RingGeometry(12, 12.2, 64);
+const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial);
+pacingCircle.rotation.x = Math.PI / 2;
+scene.add(pacingCircle);
 
-// Scanning Ring Setup
-let scanningRing;
-const clock = new THREE.Clock();
-
-function createScanningRing() {
-    const geometry = new THREE.RingGeometry(0.99, 1, 128);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending });
-    const ring = new THREE.Mesh(geometry, material);
-    ring.rotation.x = Math.PI / 2;
-    scene.add(ring);
-    return ring;
-}
-scanningRing = createScanningRing();
-
-// Hauptobjekt-Setup
 let ship;
 let forcefield;
 const cameraPivot = new THREE.Object3D();
@@ -91,6 +96,7 @@ function createForcefield(radius) {
 }
 
 let isIntroAnimationPlaying = false;
+let isAnalyzeButtonVisible = false;
 
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
@@ -113,6 +119,7 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
+
     loadingScreen.addEventListener('click', () => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
@@ -151,27 +158,17 @@ renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch =
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
+const clock = new THREE.Clock();
+
 function animate() {
     requestAnimationFrame(animate);
     const elapsedTime = clock.getElapsedTime();
 
-    // Scanning Ring Animation
-    const baseRadius = 8;
-    const amplitude = 4;
-    const speed = 0.5;
-    const currentScanRadius = baseRadius + Math.sin(elapsedTime * speed) * amplitude;
-    scanningRing.scale.set(currentScanRadius, currentScanRadius, 1);
-
-    // Schiffsbewegung und Kollision
+    const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
+    pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+    pacingCircle.material.opacity = 0.3 + pulse * 0.4;
+    
     if (ship) {
-        // Kollision mit dem Scanning Ring
-        const shipDistance = ship.position.length();
-        if (shipDistance < currentScanRadius) {
-            analyzeButton.classList.add('visible');
-        } else {
-            analyzeButton.classList.remove('visible');
-        }
-
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
         ship.translateZ(shipMove.forward);
@@ -180,14 +177,19 @@ function animate() {
         const collisionThreshold = shipRadius + blackHoleRadius;
         if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
             ship.position.copy(previousPosition);
-            if (forcefield) {
-                forcefield.visible = true;
-                forcefield.material.opacity = 1.0;
+            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+        }
+
+        if (!isAnalyzeButtonVisible) {
+            const distanceToCenter = ship.position.length();
+            const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
+            if (distanceToCenter < circleCurrentRadius) {
+                analyzeButton.classList.add('ui-visible');
+                isAnalyzeButtonVisible = true;
             }
         }
     }
 
-    // Kamera-Steuerungslogik
     if (isIntroAnimationPlaying) {
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
         if (Math.abs(cameraPivot.rotation.y) < 0.01) {
@@ -195,42 +197,35 @@ function animate() {
             isIntroAnimationPlaying = false;
         }
     } else {
-        // User-gesteuerte Kamera-Physik
+        if (ship) {
+            const angle = Math.atan2(
+                ship.position.x - blackHoleLabel.position.x,
+                ship.position.z - blackHoleLabel.position.z
+            );
+            labelDiv.style.transform = `rotate(${angle}rad)`;
+        }
         if (cameraFingerId === null) {
             cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
             cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
         }
-        if (cameraHolder.rotation.x > ROTATION_LIMIT) {
-            cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
-        } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) {
-            cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS;
-        }
-        if (cameraPivot.rotation.y > ROTATION_LIMIT) {
-            cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS;
-        } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) {
-            cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
-        }
+        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
         cameraHolder.rotation.x += cameraVelocity.x;
         cameraPivot.rotation.y += cameraVelocity.y;
     }
-
-    // Logik, die immer läuft
+    
     cameraVelocity.multiplyScalar(DAMPING);
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) {
-        zoomVelocity = 0;
-    }
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
     accretionDisk.rotation.z += 0.005;
 
     if (forcefield && forcefield.visible) {
         forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) {
-            forcefield.visible = false;
-        }
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
     }
 
     lensingSphere.visible = false;
@@ -242,10 +237,12 @@ function animate() {
     accretionDisk.visible = true;
 
     renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
 }
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});```
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
