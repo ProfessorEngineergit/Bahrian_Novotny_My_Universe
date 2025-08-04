@@ -113,28 +113,24 @@ function createPlanetTexture(color) {
 function createPlanet(data) {
     const orbitPivot = new THREE.Object3D();
     scene.add(orbitPivot);
-
     const texture = createPlanetTexture(Math.random() * 360);
     const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
     const material = new THREE.MeshStandardMaterial({ map: texture });
     const planetMesh = new THREE.Mesh(geometry, material);
     planetMesh.position.x = data.orbit;
     orbitPivot.add(planetMesh);
-
     const orbitPathGeometry = new THREE.RingGeometry(data.orbit - 0.1, data.orbit + 0.1, 128);
     const orbitPathMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
-    const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial); // Material was wrong here
+    const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial);
     orbitPath.rotation.x = Math.PI / 2;
     scene.add(orbitPath);
-
     const labelDiv = document.createElement('div');
     labelDiv.className = 'label';
     labelDiv.textContent = data.name;
     const planetLabel = new CSS2DObject(labelDiv);
     planetLabel.position.y = data.radius + 2;
     planetMesh.add(planetLabel);
-
-    planets.push({ pivot: orbitPivot, speed: data.speed, labelDiv: labelDiv });
+    planets.push({ pivot: orbitPivot, speed: data.speed, labelDiv: labelDiv, labelObject: planetLabel });
 }
 
 planetData.forEach(createPlanet);
@@ -189,7 +185,6 @@ loader.load(modelURL, (gltf) => {
     }, { once: true });
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
-
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
@@ -229,7 +224,7 @@ function animate() {
     planets.forEach(planet => {
         planet.pivot.rotation.y += planet.speed;
     });
-
+    
     if (ship) {
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
@@ -260,15 +255,17 @@ function animate() {
         }
     } else {
         if (ship) {
-            const angleToShip = (targetPosition) => Math.atan2(
+            const getAngleToShip = (targetPosition) => Math.atan2(
                 ship.position.x - targetPosition.x,
                 ship.position.z - targetPosition.z
             );
-            blackHoleLabelDiv.style.transform = `rotate(${angleToShip(blackHoleLabel.position)}rad)`;
+            
+            blackHoleLabelDiv.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
+
             planets.forEach(p => {
-                const planetWorldPosition = new THREE.Vector3();
-                p.pivot.children[0].getWorldPosition(planetWorldPosition); // get world position of planet mesh
-                p.labelDiv.style.transform = `rotate(${angleToShip(planetWorldPosition)}rad)`;
+                const worldPosition = new THREE.Vector3();
+                p.pivot.getWorldPosition(worldPosition);
+                p.labelDiv.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
             });
         }
         if (cameraFingerId === null) {
