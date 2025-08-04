@@ -1,48 +1,117 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>USS Enterprise 3D Flug</title>
-    <link rel="stylesheet" href="style.css">
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
-            }
-        }
-    </script>
-</head>
-<body>
-    <!-- Container für 2D-Labels (wird von JS befüllt) -->
-    <div id="label-container"></div>
-    
-    <!-- UI-Elemente -->
-    <div id="info">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
-    <div id="joystick-zone"></div>
-    
-    <button id="mute-button" title="Ton umschalten">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path id="speaker-icon" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-            <path id="mute-slash" d="M1 1l22 22"/>
-        </svg>
-    </button>
-    
-    <button id="analyze-button">Analyze Object</button>
-    
-    <div id="loading-screen">
-        <div id="loading-text">Lade Modell...</div>
-        <div id="progress-bar-container"><div id="progress-bar"></div></div>
-    </div>
-    
-    <audio id="media-player" loop>
-        <source src="https://professorengineergit.github.io/Project_Mariner/Arcadia.mp3" type="audio/mpeg">
-        Ihr Browser unterstützt das Audio-Element nicht.
-    </audio>
-
-    <!-- Externe Bibliotheken -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
-    <script type="module" src="main.js"></script>
-</body>
-</html>
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+#label-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.label {
+    color: #fff;
+    font-size: 16px;
+    text-shadow: 0 0 5px #00aaff;
+    white-space: nowrap;
+    text-align: center;
+}
+.label-line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, rgba(0, 170, 255, 0.8), rgba(0, 170, 255, 0));
+    margin: 8px auto 0;
+}
+#info, #joystick-zone, #mute-button, #analyze-button {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-out;
+}
+#info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible, #analyze-button.ui-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+#info {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    text-shadow: 2px 2px 4px #000000;
+    z-index: 10;
+}
+#joystick-zone {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 160px;
+    height: 160px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    z-index: 5;
+}
+#mute-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 20;
+    transition: background-color 0.2s ease, opacity 1s ease-out;
+}
+#mute-button:hover { background: rgba(255, 255, 255, 0.1); }
+#mute-button svg { width: 100%; height: 100%; }
+#mute-button #speaker-icon { fill: white; }
+#mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
+#mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
+#analyze-button {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: rgba(0, 170, 255, 0.2);
+    border: 1px solid rgba(0, 170, 255, 0.8);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 20;
+}
+#analyze-button:hover { background-color: rgba(0, 170, 255, 0.4); }
+#loading-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.5em;
+    z-index: 100;
+    transition: opacity 0.5s ease;
+    cursor: pointer;
+}
+#loading-text { margin-bottom: 20px; }
+#progress-bar-container { width: 80%; max-width: 400px; height: 10px; border: 1px solid white; }
+#progress-bar { width: 0%; height: 100%; background-color: #00aaff; transition: width 0.2s ease-out; }
+#media-player { display: none; }
