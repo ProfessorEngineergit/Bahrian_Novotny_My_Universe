@@ -4,42 +4,53 @@ body {
     background-color: #000;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
 canvas {
     display: block;
     position: absolute;
     top: 0;
     left: 0;
 }
+
+/* Container für 2D-Labels sitzt über dem Canvas */
 #label-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
+    pointer-events: none; /* Wichtig, damit Klicks "durchfallen" */
 }
+
+/* Styling für das Schwarze Loch-Label */
 .label {
     color: #fff;
     font-size: 16px;
     text-shadow: 0 0 5px #00aaff;
     white-space: nowrap;
-    text-align: center;
+    text-align: center; /* Sorgt dafür, dass die Linie zentriert ist */
 }
 .label-line {
     width: 1px;
-    height: 50px;
-    background: linear-gradient(to bottom, rgba(0, 170, 255, 0.8), rgba(0, 170, 255, 0));
+    height: 50px; /* Höhe der Linie */
+    background: linear-gradient(to bottom, rgba(0, 170, 255, 0.8), rgba(0, 170, 255, 0)); /* Farbverlauf */
     margin: 8px auto 0;
 }
+
+
+/* UI-Elemente starten unsichtbar für den Fade-In */
 #info, #joystick-zone, #mute-button, #analyze-button {
     opacity: 0;
     pointer-events: none;
     transition: opacity 1s ease-out;
 }
+
+/* Klasse, die die UI sichtbar macht */
 #info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible, #analyze-button.ui-visible {
     opacity: 1;
     pointer-events: auto;
 }
+
 #info {
     position: absolute;
     top: 10px;
@@ -50,6 +61,7 @@ canvas {
     text-shadow: 2px 2px 4px #000000;
     z-index: 10;
 }
+
 #joystick-zone {
     position: absolute;
     bottom: 20px;
@@ -61,6 +73,7 @@ canvas {
     border-radius: 50%;
     z-index: 5;
 }
+
 #mute-button {
     position: absolute;
     top: 20px;
@@ -75,14 +88,41 @@ canvas {
     z-index: 20;
     transition: background-color 0.2s ease, opacity 1s ease-out;
 }
-#mute-button:hover { background: rgba(255, 255, 255, 0.1); }
-#mute-button svg { width: 100%; height: 100%; }
-#mute-button #speaker-icon { fill: white; }
-#mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
-#mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
+
+#mute-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#mute-button svg {
+    width: 100%;
+    height: 100%;
+}
+
+#mute-button #speaker-icon {
+    fill: white;
+}
+
+#mute-button #mute-slash {
+    fill: none;
+    stroke: white;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    opacity: 0;
+    transform-origin: center;
+    transform: scale(0.8);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#mute-button.muted #mute-slash {
+    opacity: 1;
+    transform: scale(1);
+}
+
+
+/* Styling für den Analyze-Button */
 #analyze-button {
     position: absolute;
-    top: 80px;
+    top: 80px; /* Unter dem Mute-Button */
     right: 20px;
     padding: 10px 20px;
     background-color: rgba(0, 170, 255, 0.2);
@@ -93,7 +133,11 @@ canvas {
     border-radius: 5px;
     z-index: 20;
 }
-#analyze-button:hover { background-color: rgba(0, 170, 255, 0.4); }
+#analyze-button:hover {
+    background-color: rgba(0, 170, 255, 0.4);
+}
+
+
 #loading-screen {
     position: absolute;
     top: 0;
@@ -111,7 +155,25 @@ canvas {
     transition: opacity 0.5s ease;
     cursor: pointer;
 }
-#loading-text { margin-bottom: 20px; }
-#progress-bar-container { width: 80%; max-width: 400px; height: 10px; border: 1px solid white; }
-#progress-bar { width: 0%; height: 100%; background-color: #00aaff; transition: width 0.2s ease-out; }
-#media-player { display: none; }
+
+#loading-text {
+    margin-bottom: 20px;
+}
+
+#progress-bar-container {
+    width: 80%;
+    max-width: 400px;
+    height: 10px;
+    border: 1px solid white;
+}
+
+#progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #00aaff;
+    transition: width 0.2s ease-out;
+}
+
+#media-player {
+    display: none;
+}
