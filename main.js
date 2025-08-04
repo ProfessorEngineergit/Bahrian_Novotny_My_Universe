@@ -45,43 +45,95 @@ const accretionDisk = createAccretionDisk();
 const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = 'Project_Mariner'; const lineDiv = document.createElement('div'); lineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(lineDiv); const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); scene.add(blackHoleLabel);
 const pacingCircleGeometry = new THREE.RingGeometry(12, 12.2, 64); const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }); const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial); pacingCircle.rotation.x = Math.PI / 2; scene.add(pacingCircle);
 
+// === Planeten-Setup ===
 const planets = [];
 const planetData = [
-    { name: 'Xylos', radius: 1, orbit: 20, speed: 0.005 }, { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.003 }, { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.002 }, { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.004 }, { name: 'Terminus', radius: 2, orbit: 80, speed: 0.001 }, { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.0015 }
+    { name: 'Xylos', radius: 1, orbit: 20, speed: 0.00125 },       // Speed / 4
+    { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.00075 },// Speed / 4
+    { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.0005 },   // Speed / 4
+    { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.001 },      // Speed / 4
+    { name: 'Terminus', radius: 2, orbit: 80, speed: 0.00025 },  // Speed / 4
+    { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.000375 }// Speed / 4
 ];
+
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
-function createPlanet(data) { const orbitPivot = new THREE.Object3D(); scene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; orbitPivot.add(planetMesh); const orbitPathGeometry = new THREE.RingGeometry(data.orbit - 0.1, data.orbit + 0.1, 128); const orbitPathMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.15 }); const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial); orbitPath.rotation.x = Math.PI / 2; scene.add(orbitPath); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); planets.push({ pivot: orbitPivot, speed: data.speed, labelDiv: labelDiv, labelObject: planetLabel }); }
+
+// NEU: Funktion für ausblendende Orbit-Linien
+function createFadingOrbit(radius) {
+    const segments = 128;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array((segments + 1) * 3);
+    const colors = new Float32Array((segments + 1) * 4); // RGBA
+
+    for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        positions[i * 3] = Math.cos(theta) * radius;
+        positions[i * 3 + 1] = 0;
+        positions[i * 3 + 2] = Math.sin(theta) * radius;
+
+        colors[i * 4] = 0.5; // R
+        colors[i * 4 + 1] = 0.5; // G
+        colors[i * 4 + 2] = 0.5; // B
+
+        if (i < segments / 3) {
+            colors[i * 4 + 3] = 0.3; // Alpha (sichtbarer Teil)
+        } else {
+            const fade = 1.0 - ((i - segments / 3) / (segments * 2 / 3));
+            colors[i * 4 + 3] = fade * 0.3; // Alpha (ausblendender Teil)
+        }
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+
+    const material = new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true
+    });
+    const line = new THREE.Line(geometry, material);
+    line.rotation.x = Math.PI / 2;
+    return line;
+}
+
+function createPlanet(data) {
+    const orbitPivot = new THREE.Object3D();
+    scene.add(orbitPivot);
+    const texture = createPlanetTexture(Math.random() * 360);
+    const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ map: texture });
+    const planetMesh = new THREE.Mesh(geometry, material);
+    planetMesh.position.x = data.orbit;
+    orbitPivot.add(planetMesh);
+
+    // KORREKTUR: Verwende die neue Fading-Orbit-Funktion
+    const orbitPath = createFadingOrbit(data.orbit);
+    scene.add(orbitPath);
+
+    const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name;
+    const planetLabel = new CSS2DObject(labelDiv);
+    planetLabel.position.y = data.radius + 2;
+    planetMesh.add(planetLabel);
+
+    planets.push({ mesh: planetMesh, pivot: orbitPivot, speed: data.speed, labelDiv: labelDiv, labelObject: planetLabel, radius: data.radius });
+}
+
 planetData.forEach(createPlanet);
 
-let ship;
-let forcefield;
-const cameraPivot = new THREE.Object3D();
-const cameraHolder = new THREE.Object3D();
+let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
 function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
-let isIntroAnimationPlaying = false;
-let isAnalyzeButtonVisible = false;
+let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 
 // === GLTF Modell-Lader ===
-const loader = new GLTFLoader();
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-loader.setDRACOLoader(dracoLoader);
+const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
-
 loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%';
-    loadingText.textContent = 'Tippen zum Starten';
+    progressBar.style.width = '100%'; loadingText.textContent = 'Tippen zum Starten';
     ship = gltf.scene;
     scene.add(ship);
-    ship.position.set(0, 0, -30); // Bewährte Startposition
-    forcefield = createForcefield(5.1);
-    ship.add(forcefield);
-    ship.add(cameraPivot);
-    cameraPivot.add(cameraHolder);
-    cameraHolder.add(camera);
-    camera.position.set(0, 4, -15);
-    camera.lookAt(cameraHolder.position);
+    ship.position.set(0, 0, 30);
+    forcefield = createForcefield(5.1); ship.add(forcefield);
+    ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
+    camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
 
     loadingScreen.addEventListener('click', () => {
@@ -96,30 +148,22 @@ loader.load(modelURL, (gltf) => {
     }, { once: true });
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
+
 // === Steuerung und Animation ===
 let shipMove = { forward: 0, turn: 0 };
 const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
-const minZoom = 8;
-const maxZoom = 25;
-let cameraVelocity = new THREE.Vector2(0, 0);
-let zoomVelocity = 0;
-const SPRING_STIFFNESS = 0.03;
-const DAMPING = 0.90;
-const LERP_FACTOR = 0.05;
-let cameraFingerId = null;
-let initialPinchDistance = 0;
-let previousTouch = { x: 0, y: 0 };
+const minZoom = 8; const maxZoom = 25;
+let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
+const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
+let cameraFingerId = null; let initialPinchDistance = 0; let previousTouch = { x: 0, y: 0 };
 
-muteButton.addEventListener('click', () => {
-    audio.muted = !audio.muted;
-    muteButton.classList.toggle('muted');
-});
+muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
 
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => {
     if (data.vector && ship) {
-        // KORREKTUR: Joystick-Eingaben invertiert für korrekte Steuerung
-        shipMove.forward = -data.vector.y * 0.1;
+        // KORREKTUR: Steuerung erneut invertiert
+        shipMove.forward = data.vector.y * 0.1;
         shipMove.turn = -data.vector.x * 0.05;
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
@@ -144,22 +188,33 @@ function animate() {
     });
     
     if (ship) {
-        // KORREKTUR: Fester, verlässlicher Radius für den "Schutzschild"
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
-
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
 
+        // Kollisionsprüfung für Schwarzes Loch
         const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-        const collisionThreshold = shipRadius + blackHoleRadius;
-        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+        const collisionThresholdBH = shipRadius + blackHoleRadius;
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThresholdBH) {
             ship.position.copy(previousPosition);
             if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
         }
 
+        // KORREKTUR: Kollisionsprüfung für Planeten
+        for (const planet of planets) {
+            const planetWorldPosition = new THREE.Vector3();
+            planet.mesh.getWorldPosition(planetWorldPosition);
+            const collisionThresholdPlanet = shipRadius + planet.radius;
+            if (ship.position.distanceTo(planetWorldPosition) < collisionThresholdPlanet) {
+                ship.position.copy(previousPosition);
+                if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+                break; // Verhindert, dass mehrere Kollisionen gleichzeitig die Position blockieren
+            }
+        }
+
         if (!isAnalyzeButtonVisible) {
-            const distanceToCenter = ship.position.lengthSq(); // lengthSq ist performanter
+            const distanceToCenter = ship.position.lengthSq();
             const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
             if (distanceToCenter < circleCurrentRadius * circleCurrentRadius) {
                 analyzeButton.classList.add('ui-visible');
@@ -185,7 +240,8 @@ function animate() {
 
             planets.forEach(p => {
                 const worldPosition = new THREE.Vector3();
-                p.pivot.getWorldPosition(worldPosition);
+                p.mesh.getWorldPosition(worldPosition); // Wichtig: Position des Planeten, nicht des Pivots
+                p.labelObject.position.copy(worldPosition);
                 p.labelDiv.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
             });
         }
