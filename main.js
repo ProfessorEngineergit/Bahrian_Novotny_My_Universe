@@ -65,6 +65,7 @@ function createForcefield(radius) { const canvas = document.createElement('canva
 
 let isIntroAnimationPlaying = false;
 let isAnalyzeButtonVisible = false;
+const raycaster = new THREE.Raycaster(); // NEU: Initialisiere den Raycaster einmal
 
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
@@ -72,7 +73,6 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
-
 loader.load(modelURL, (gltf) => {
     progressBar.style.width = '100%';
     loadingText.textContent = 'Tippen zum Starten';
@@ -87,7 +87,6 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
-
     loadingScreen.addEventListener('click', () => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
@@ -122,9 +121,6 @@ renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
 const clock = new THREE.Clock();
-// KORREKTUR: Neue Variablen für die stabile Label-Logik
-const vec3 = new THREE.Vector3();
-let currentLabelOpacity = 1;
 
 function animate() {
     requestAnimationFrame(animate);
@@ -166,26 +162,62 @@ function animate() {
     } else {
         if (ship) {
             const angle = Math.atan2(ship.position.x, ship.position.z);
-            labelDiv.style.transform = `rotate(${angle}rad)`;
+            blackHoleLabel.element.style.transform = `rotate(${angle}rad)`;
 
-            // --- KORREKTUR: Stabile, Vector-basierte Label-Verdeckung ---
-            let targetLabelOpacity = 1.0;
-            const occlusionAngleThreshold = 0.15; // ca. 8.5 Grad - anpassen für mehr/weniger Empfindlichkeit
+            // KORREKTUR: Robuste Label-Verdeckung mit Raycasting
+            let targetOpacity = 1.0;
+            const direction = new THREE.Vector3().subVectors(blackHoleLabel.position, camera.position).normalize();
+            raycaster.set(camera.position, direction);
+            const intersects = raycaster.intersectObject(ship, true);
 
-            const cameraToShip = ship.getWorldPosition(vec3).sub(camera.position);
-            const cameraToLabel = blackHoleLabel.position.clone().sub(camera.position);
-            const angle = cameraToShip.angleTo(cameraToLabel);
-
-            if (angle < occlusionAngleThreshold && cameraToShip.length() < cameraToLabel.length()) {
-                targetLabelOpacity = 0.0;
+            if (intersects.length > 0 && intersects[0].distance < camera.position.distanceTo(blackHoleLabel.position)) {
+                // Wenn der erste Treffer das Schiff ist UND es näher als das Label ist -> ausblenden
+                targetOpacity = 0.0;
             }
             
-            currentLabelOpacity = THREE.MathUtils.lerp(currentLabelOpacity, targetLabelOpacity, 0.1);
-            labelDiv.style.opacity = currentLabelOpacity;
+            // Sanfter Übergang der Deckkraft
+            labelDiv.style.opacity = THREE.MathUtils.lerp(parseFloat(labelDiv.style.opacity || 1), targetOpacity, 0.1);
         }
         
         if (cameraFingerId === null) {
             cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
             cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
         }
-        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (
+        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        cameraHolder.rotation.x += cameraVelocity.x;
+        cameraPivot.rotation.y += cameraVelocity.y;
+    }
+    
+    cameraVelocity.multiplyScalar(DAMPING);
+    zoomDistance += zoomVelocity;
+    zoomVelocity *= DAMPING;
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+    
+    accretionDisk.rotation.z += 0.005;
+
+    if (forcefield && forcefield.visible) {
+        forcefield.material.opacity -= 0.04;
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
+    }
+
+    lensingSphere.visible = false;
+    blackHoleCore.visible = false;
+    accretionDisk.visible = false;
+    cubeCamera.update(renderer, scene);
+    lensingSphere.visible = true;
+    blackHoleCore.visible = true;
+    accretionDisk.visible = true;
+
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
