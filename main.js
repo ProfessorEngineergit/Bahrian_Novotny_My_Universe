@@ -16,7 +16,7 @@ labelRenderer.setSize(window.innerWidth, window.innerHeight);
 labelRenderer.domElement.id = 'label-container';
 document.body.appendChild(labelRenderer.domElement);
 
-// === UI Elemente ===
+// === UI Elemente und Szenerie (unverändert) ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingText = document.getElementById('loading-text');
@@ -25,8 +25,6 @@ const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
-
-// === Szenerie-Setup ===
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
@@ -56,15 +54,14 @@ const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side
 const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial);
 pacingCircle.rotation.x = Math.PI / 2;
 scene.add(pacingCircle);
-
-let ship;
-let forcefield;
-const cameraPivot = new THREE.Object3D();
-const cameraHolder = new THREE.Object3D();
+let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
 function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
 let isIntroAnimationPlaying = false;
 let isAnalyzeButtonVisible = false;
+
+// KORREKTUR: Initialisiere den Raycaster für die Verdeckungsprüfung
+const raycaster = new THREE.Raycaster();
 
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
@@ -100,20 +97,9 @@ loader.load(modelURL, (gltf) => {
     }, { once: true });
 }, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
+
 // === Steuerung und Animation ===
-let shipMove = { forward: 0, turn: 0 };
-const ROTATION_LIMIT = Math.PI * 0.33;
-let zoomDistance = 15;
-const minZoom = 8;
-const maxZoom = 25;
-let cameraVelocity = new THREE.Vector2(0, 0);
-let zoomVelocity = 0;
-const SPRING_STIFFNESS = 0.03;
-const DAMPING = 0.90;
-const LERP_FACTOR = 0.05;
-let cameraFingerId = null;
-let initialPinchDistance = 0;
-let previousTouch = { x: 0, y: 0 };
+let shipMove = { forward: 0, turn: 0 }; const ROTATION_LIMIT = Math.PI * 0.33; let zoomDistance = 15; const minZoom = 8; const maxZoom = 25; let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0; const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05; let cameraFingerId = null; let initialPinchDistance = 0; let previousTouch = { x: 0, y: 0 };
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
@@ -143,7 +129,6 @@ function animate() {
             if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
         }
 
-        // KORREKTUR: Button-Sichtbarkeit dynamisch steuern
         const distanceToCenter = ship.position.length();
         const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
         if (distanceToCenter < circleCurrentRadius && !isAnalyzeButtonVisible) {
@@ -163,30 +148,32 @@ function animate() {
         }
     } else {
         if (ship) {
+            // Label-Ausrichtung (unverändert)
             const angle = Math.atan2(ship.position.x, ship.position.z);
-            blackHoleLabel.element.style.transform = `rotate(${angle}rad)`;
+            labelDiv.style.transform = `rotate(${angle}rad)`;
 
-            // KORREKTUR: Label ausblenden, wenn es vom Schiff verdeckt wird
-            const shipDistance = camera.position.distanceTo(ship.position);
-            const labelDistance = camera.position.distanceTo(blackHoleLabel.position);
-            if (shipDistance < labelDistance) {
-                // Berechne die 2D-Projektionen, um Überlappung zu prüfen
-                const shipScreenPos = ship.position.clone().project(camera);
-                const labelScreenPos = blackHoleLabel.position.clone().project(camera);
-                const screenDistance = new THREE.Vector2(shipScreenPos.x, shipScreenPos.y).distanceTo(new THREE.Vector2(labelScreenPos.x, labelScreenPos.y));
-                
-                // Wenn sie auf dem Bildschirm zu nah sind, blende das Label aus
-                const occlusionThreshold = 0.2; // Wie nah sie sein müssen, um auszublenden
-                if (screenDistance < occlusionThreshold) {
-                    labelDiv.style.opacity = Math.max(0, labelDiv.style.opacity - 0.1);
-                } else {
-                    labelDiv.style.opacity = Math.min(1, parseFloat(labelDiv.style.opacity || 0) + 0.1);
+            // KORREKTUR: Robuste Verdeckungsprüfung mit Raycasting
+            const cameraPosition = new THREE.Vector3();
+            camera.getWorldPosition(cameraPosition);
+            const direction = blackHoleCore.position.clone().sub(cameraPosition).normalize();
+            raycaster.set(cameraPosition, direction);
+            const intersects = raycaster.intersectObject(ship, true);
+
+            // Wenn der Strahl das Schiff trifft, bevor er das Schwarze Loch erreicht, blende das Label aus.
+            let targetOpacity = 1.0;
+            if (intersects.length > 0) {
+                // Prüfen, ob der Treffer näher ist als das Schwarze Loch
+                const distanceToShip = intersects[0].distance;
+                const distanceToBlackHole = cameraPosition.distanceTo(blackHoleCore.position);
+                if (distanceToShip < distanceToBlackHole) {
+                    targetOpacity = 0.0;
                 }
-            } else {
-                labelDiv.style.opacity = Math.min(1, parseFloat(labelDiv.style.opacity || 0) + 0.1);
             }
+            // Sanftes Ein- und Ausblenden der Deckkraft
+            labelDiv.style.opacity = THREE.MathUtils.lerp(parseFloat(labelDiv.style.opacity || 1), targetOpacity, 0.1);
         }
         
+        // Kamera-Physik (unverändert)
         if (cameraFingerId === null) {
             cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
             cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
