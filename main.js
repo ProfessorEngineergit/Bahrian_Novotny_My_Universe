@@ -65,7 +65,6 @@ function createForcefield(radius) { const canvas = document.createElement('canva
 
 let isIntroAnimationPlaying = false;
 let isAnalyzeButtonVisible = false;
-const raycaster = new THREE.Raycaster(); // NEU: Initialisiere den Raycaster einmal
 
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader();
@@ -73,6 +72,7 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
+
 loader.load(modelURL, (gltf) => {
     progressBar.style.width = '100%';
     loadingText.textContent = 'Tippen zum Starten';
@@ -87,6 +87,7 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15);
     camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
+
     loadingScreen.addEventListener('click', () => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
@@ -142,6 +143,7 @@ function animate() {
             if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
         }
 
+        // KORREKTUR: Button-Sichtbarkeit dynamisch steuern
         const distanceToCenter = ship.position.length();
         const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
         if (distanceToCenter < circleCurrentRadius && !isAnalyzeButtonVisible) {
@@ -164,19 +166,25 @@ function animate() {
             const angle = Math.atan2(ship.position.x, ship.position.z);
             blackHoleLabel.element.style.transform = `rotate(${angle}rad)`;
 
-            // KORREKTUR: Robuste Label-Verdeckung mit Raycasting
-            let targetOpacity = 1.0;
-            const direction = new THREE.Vector3().subVectors(blackHoleLabel.position, camera.position).normalize();
-            raycaster.set(camera.position, direction);
-            const intersects = raycaster.intersectObject(ship, true);
-
-            if (intersects.length > 0 && intersects[0].distance < camera.position.distanceTo(blackHoleLabel.position)) {
-                // Wenn der erste Treffer das Schiff ist UND es näher als das Label ist -> ausblenden
-                targetOpacity = 0.0;
+            // KORREKTUR: Label ausblenden, wenn es vom Schiff verdeckt wird
+            const shipDistance = camera.position.distanceTo(ship.position);
+            const labelDistance = camera.position.distanceTo(blackHoleLabel.position);
+            if (shipDistance < labelDistance) {
+                // Berechne die 2D-Projektionen, um Überlappung zu prüfen
+                const shipScreenPos = ship.position.clone().project(camera);
+                const labelScreenPos = blackHoleLabel.position.clone().project(camera);
+                const screenDistance = new THREE.Vector2(shipScreenPos.x, shipScreenPos.y).distanceTo(new THREE.Vector2(labelScreenPos.x, labelScreenPos.y));
+                
+                // Wenn sie auf dem Bildschirm zu nah sind, blende das Label aus
+                const occlusionThreshold = 0.2; // Wie nah sie sein müssen, um auszublenden
+                if (screenDistance < occlusionThreshold) {
+                    labelDiv.style.opacity = Math.max(0, labelDiv.style.opacity - 0.1);
+                } else {
+                    labelDiv.style.opacity = Math.min(1, parseFloat(labelDiv.style.opacity || 0) + 0.1);
+                }
+            } else {
+                labelDiv.style.opacity = Math.min(1, parseFloat(labelDiv.style.opacity || 0) + 0.1);
             }
-            
-            // Sanfter Übergang der Deckkraft
-            labelDiv.style.opacity = THREE.MathUtils.lerp(parseFloat(labelDiv.style.opacity || 1), targetOpacity, 0.1);
         }
         
         if (cameraFingerId === null) {
