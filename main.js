@@ -73,6 +73,10 @@ loader.load(modelURL, (gltf) => {
     progressBar.style.width = '100%';
     loadingText.textContent = 'Tippen zum Starten';
     ship = gltf.scene;
+    
+    // KORREKTUR 1: Rotiere das Schiff einmalig, damit seine "Nase" nach vorne zeigt.
+    ship.rotation.y = Math.PI; // 180 Grad
+    
     scene.add(ship);
     ship.position.set(0, 0, 30);
     forcefield = createForcefield(5.1);
@@ -118,7 +122,7 @@ muteButton.addEventListener('click', () => {
 
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => {
     if (data.vector && ship) {
-        // KORREKTUR: Steuerung zurückgesetzt auf den intuitiven Standard
+        // KORREKTUR 2: Verwende jetzt die intuitive, nicht-invertierte Steuerung.
         shipMove.forward = data.vector.y * 0.1;
         shipMove.turn = -data.vector.x * 0.05;
     }
@@ -127,4 +131,107 @@ nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static'
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
-function getPinchDistance(e) { if (e.touches.length < 2)
+function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
+
+const clock = new THREE.Clock();
+
+function animate() {
+    requestAnimationFrame(animate);
+    const elapsedTime = clock.getElapsedTime();
+
+    const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
+    pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+    pacingCircle.material.opacity = 0.3 + pulse * 0.4;
+
+    planets.forEach(planet => {
+        planet.pivot.rotation.y += planet.speed;
+    });
+    
+    if (ship) {
+        // KORREKTUR 3: Fester, verlässlicher Radius für den "Schutzschild"
+        const shipRadius = 5;
+        const previousPosition = ship.position.clone();
+
+        ship.translateZ(shipMove.forward);
+        ship.rotateY(shipMove.turn);
+
+        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const collisionThreshold = shipRadius + blackHoleRadius;
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+            ship.position.copy(previousPosition);
+            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+        }
+
+        if (!isAnalyzeButtonVisible) {
+            const distanceToCenter = ship.position.lengthSq();
+            const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
+            if (distanceToCenter < circleCurrentRadius * circleCurrentRadius) {
+                analyzeButton.classList.add('ui-visible');
+                isAnalyzeButtonVisible = true;
+            }
+        }
+    }
+
+    if (isIntroAnimationPlaying) {
+        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
+        if (Math.abs(cameraPivot.rotation.y) < 0.01) {
+            cameraPivot.rotation.y = 0;
+            isIntroAnimationPlaying = false;
+        }
+    } else {
+        if (ship) {
+            const getAngleToShip = (targetPosition) => Math.atan2(
+                ship.position.x - targetPosition.x,
+                ship.position.z - targetPosition.z
+            );
+            
+            blackHoleLabelDiv.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
+
+            planets.forEach(p => {
+                const worldPosition = new THREE.Vector3();
+                p.pivot.getWorldPosition(worldPosition);
+                p.labelDiv.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
+            });
+        }
+        if (cameraFingerId === null) {
+            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+        }
+        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        cameraHolder.rotation.x += cameraVelocity.x;
+        cameraPivot.rotation.y += cameraVelocity.y;
+    }
+    
+    cameraVelocity.multiplyScalar(DAMPING);
+    zoomDistance += zoomVelocity;
+    zoomVelocity *= DAMPING;
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+    
+    accretionDisk.rotation.z += 0.005;
+
+    if (forcefield && forcefield.visible) {
+        forcefield.material.opacity -= 0.04;
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
+    }
+
+    lensingSphere.visible = false;
+    blackHoleCore.visible = false;
+    accretionDisk.visible = false;
+    cubeCamera.update(renderer, scene);
+    lensingSphere.visible = true;
+    blackHoleCore.visible = true;
+    accretionDisk.visible = true;
+
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
