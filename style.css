@@ -1,12 +1,16 @@
-/* NEU: Import der Schriftart "Nasalization" */
-@import url('https://fonts.cdnfonts.com/css/nasalization');
+/* NEU: Einbindung der benutzerdefinierten Schriftart */
+@font-face {
+    font-family: 'Nasalization';
+    src: url('nasalization-rg.woff2') format('woff2'); /* Stellen Sie sicher, dass die Datei im selben Ordner liegt */
+    font-weight: normal;
+    font-style: normal;
+}
 
 body {
     margin: 0;
     overflow: hidden;
     background-color: #000;
-    /* NEU: Schriftart für das gesamte Projekt */
-    font-family: 'Nasalization', sans-serif;
+    font-family: 'Nasalization', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Neue Schriftart anwenden */
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -80,22 +84,24 @@ canvas {
     z-index: 5;
 }
 
+/* KORREKTUR: Buttons mit abgerundeten Ecken (Pill-Form) */
+#mute-button, #analyze-button {
+    border-radius: 999px; /* Erzeugt die Pillenform */
+}
+
 #mute-button {
     position: absolute;
     top: 20px;
     right: 20px;
     width: 44px;
     height: 44px;
-    background: rgba(30, 30, 30, 0.8);
+    background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    /* KORREKTUR: Stark abgerundete Ecken */
-    border-radius: 12px;
     cursor: pointer;
     padding: 10px;
     z-index: 20;
     transition: background-color 0.2s ease, opacity 1s ease-out;
 }
-
 #mute-button:hover { background: rgba(255, 255, 255, 0.1); }
 #mute-button svg { width: 100%; height: 100%; }
 #mute-button #speaker-icon { fill: white; }
@@ -107,25 +113,23 @@ canvas {
     top: 80px;
     right: 20px;
     padding: 10px 20px;
-    background-color: rgba(30, 30, 30, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(200, 200, 200, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     color: white;
     font-size: 14px;
     cursor: pointer;
-    /* KORREKTUR: Stark abgerundete Ecken */
-    border-radius: 50px;
     z-index: 20;
-    font-family: 'Nasalization', sans-serif;
 }
 #analyze-button:hover { background-color: rgba(255, 255, 255, 0.2); }
 
+/* KORREKTUR: Komplett neues Styling für den Ladebildschirm */
 #loading-screen {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    /* Der Canvas für den Hyperspace wird von JS hier platziert */
+    background-color: #000;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -135,49 +139,45 @@ canvas {
     cursor: pointer;
 }
 
-#loading-ui-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-    z-index: 101; /* Stellt sicher, dass die UI über dem Hyperspace-Canvas liegt */
-}
-
-#progress-percentage {
-    font-size: 2em;
-    color: white;
-    text-shadow: 0 0 10px white;
-    margin-bottom: 8px;
-}
-
 #loading-text {
-    font-size: 1.2em;
-    color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 20px;
+    color: white;
+    font-size: 1.5em;
+    text-shadow: 0 0 10px #fff;
+    margin-bottom: 25px;
 }
 
-/* KORREKTUR: Glassmorphism-Stil für den Ladebalken */
-#progress-bar-container {
-    width: 300px;
-    max-width: 80%;
-    height: 16px;
-    background: rgba(0, 0, 0, 0.2);
+#loading-bar-container {
+    width: 80%;
+    max-width: 500px;
+    text-align: center;
+}
+
+#loading-bar-percentage {
+    color: white;
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+
+/* Der "Glas"-Container für den Ladebalken */
+#loading-bar {
+    width: 100%;
+    height: 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 2px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    -webkit-backdrop-filter: blur(10px); /* Für Safari */
+    padding: 3px;
+    box-sizing: border-box;
 }
 
-#progress-bar {
+/* Der eigentliche Fortschrittsbalken im Inneren */
+#loading-bar-progress {
     width: 0%;
     height: 100%;
-    background: linear-gradient(90deg, #ffffff, #aaaaaa);
-    border-radius: 50px;
+    background: white;
+    border-radius: 999px;
     transition: width 0.3s ease-out;
 }
 
-#media-player {
-    display: none;
-}
+#media-player { display: none; }
