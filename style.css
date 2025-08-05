@@ -119,7 +119,7 @@ canvas {
     width: 100%;
     height: 100%;
     /* KORREKTUR: Stabilerer Hyperspace-Link */
-    background-image: url('https://i.imgur.com/b4d2tAn.gif');
+    background-image: url('https://i.gifer.com/721m.gif');
     background-size: cover;
     background-position: center;
     display: flex;
@@ -178,8 +178,6 @@ canvas {
 
 ### 2. `main.js` (Final, mit stärkerem Linseneffekt)
 
-Ersetzen Sie den Inhalt Ihrer `main.js`-Datei vollständig mit diesem Code. Die einzige Änderung ist der `refractionRatio`-Wert.
-
 ```javascript
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -234,11 +232,9 @@ scene.add(blackHoleCore);
 const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
 const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
 scene.add(cubeCamera);
-
-// KORREKTUR: Der Brechungsindex wurde verringert für einen stärkeren Effekt
-const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.85, color: 0xffffff }));
+// KORREKTUR: Stärkere Refraktion und größere Linse
+const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.8, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.85, color: 0xffffff }));
 scene.add(lensingSphere);
-
 function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
 const accretionDisk = createAccretionDisk();
 const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = 'Project_Mariner'; const lineDiv = document.createElement('div'); lineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(lineDiv); const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); scene.add(blackHoleLabel);
@@ -265,7 +261,9 @@ let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%'; loadingTitle.textContent = 'Tippen zum Starten'; loadingPercentage.style.display = 'none';
+    progressBar.style.width = '100%';
+    loadingTitle.textContent = 'Tippen zum Starten';
+    loadingPercentage.style.display = 'none';
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     scene.add(ship);
@@ -284,7 +282,13 @@ loader.load(modelURL, (gltf) => {
         muteButton.classList.add('ui-visible');
         animate();
     }, { once: true });
-}, (xhr) => { if (xhr.lengthComputable) { const percentComplete = Math.round((xhr.loaded / xhr.total) * 100); progressBar.style.width = percentComplete + '%'; loadingPercentage.textContent = percentComplete + '%'; } }, (error) => { console.error('Ladefehler:', error); loadingTitle.textContent = "Fehler!"; });
+}, (xhr) => { 
+    if (xhr.lengthComputable) {
+        const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+        progressBar.style.width = percentComplete + '%';
+        loadingPercentage.textContent = percentComplete + '%';
+    }
+}, (error) => { console.error('Ladefehler:', error); loadingTitle.textContent = "Fehler!"; });
 
 // === Steuerung und Animation ===
 const keyboard = {};
