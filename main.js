@@ -37,12 +37,12 @@ const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
+const enterSound = document.getElementById('enter-sound'); // NEU
+const exitSound = document.getElementById('exit-sound');   // NEU
 
 // === Szenerie-Setup ===
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-directionalLight.position.set(10, 20, 15);
-scene.add(directionalLight);
+// KORREKTUR: DirectionalLight entfernt, AmbientLight erhöht für Umgebungslicht
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 let galaxy; function createGalaxy() { const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' }; const geometry = new THREE.BufferGeometry(); const positions = new Float32Array(parameters.count * 3); const colors = new Float32Array(parameters.count * 3); const colorInside = new THREE.Color(parameters.insideColor); const colorOutside = new THREE.Color(parameters.outsideColor); for (let i = 0; i < parameters.count; i++) { const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b; } geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32); gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(255,255,255,1)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 64, 64); const particleTexture = new THREE.CanvasTexture(canvas); const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true }); galaxy = new THREE.Points(geometry, material); scene.add(galaxy); }
 createGalaxy();
 const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
@@ -62,36 +62,9 @@ pacingCircle.rotation.x = Math.PI / 2;
 scene.add(pacingCircle);
 
 const planets = [];
-const planetData = [
-    { name: 'Xylos', radius: 1, orbit: 20, speed: 0.04 }, { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.025 }, { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.015 }, { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.03 }, { name: 'Terminus', radius: 2, orbit: 80, speed: 0.01 }, { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.012 }
-];
+const planetData = [ { name: 'Xylos', radius: 1, orbit: 20, speed: 0.04 }, { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.025 }, { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.015 }, { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.03 }, { name: 'Terminus', radius: 2, orbit: 80, speed: 0.01 }, { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.012 } ];
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
-function createPlanet(data, index) {
-    const orbitPivot = new THREE.Object3D();
-    scene.add(orbitPivot);
-    const texture = createPlanetTexture(Math.random() * 360);
-    const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
-    const material = new THREE.MeshStandardMaterial({ map: texture });
-    const planetMesh = new THREE.Mesh(geometry, material);
-    planetMesh.position.x = data.orbit;
-    orbitPivot.add(planetMesh);
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'label';
-    labelDiv.textContent = data.name;
-    const planetLabel = new CSS2DObject(labelDiv);
-    planetLabel.position.y = data.radius + 2;
-    planetMesh.add(planetLabel);
-    const boundaryRadius = data.radius + 6;
-    const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100);
-    const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
-    boundaryCircle.rotation.x = Math.PI / 2;
-    // KORREKTUR: Grenzkreis an den Planeten heften, nicht an den Pivot.
-    planetMesh.add(boundaryCircle);
-    const initialRotation = (index / planetData.length) * Math.PI * 2;
-    orbitPivot.rotation.y = initialRotation;
-    planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation });
-}
+function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); scene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; orbitPivot.add(planetMesh); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation }); }
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
@@ -103,7 +76,7 @@ let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%'; loadingText.textContent = 'Tippen zum Starten';
+    loadingText.textContent = 'Tippen zum Starten';
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     scene.add(ship);
@@ -122,7 +95,13 @@ loader.load(modelURL, (gltf) => {
         muteButton.classList.add('ui-visible');
         animate();
     }, { once: true });
-}, (xhr) => { if (xhr.lengthComputable) progressBar.style.width = (xhr.loaded / xhr.total) * 100 + '%'; }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
+}, (xhr) => {
+    if (xhr.lengthComputable) {
+        const percentComplete = (xhr.loaded / xhr.total) * 100;
+        // KORREKTUR: Update CSS custom property for conic gradient
+        progressBar.style.setProperty('--progress', `${percentComplete}%`);
+    }
+}, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
 
 // === Steuerung und Animation ===
 const keyboard = {};
@@ -207,12 +186,15 @@ function animate() {
             }
         }
         planets.forEach(p => p.isFrozen = (activeObject === p));
+
         if (activeObject && !isAnalyzeButtonVisible) {
             analyzeButton.classList.add('ui-visible');
             isAnalyzeButtonVisible = true;
+            enterSound.currentTime = 0; enterSound.play();
         } else if (!activeObject && isAnalyzeButtonVisible) {
             analyzeButton.classList.remove('ui-visible');
             isAnalyzeButtonVisible = false;
+            exitSound.currentTime = 0; exitSound.play();
         }
     }
 
