@@ -6,10 +6,53 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// === Grund-Setup ===
+// === NEU: Setup für den Hyperspace Lade-Effekt ===
+const warpCanvas = document.getElementById('warp-canvas');
+const warpRenderer = new THREE.WebGLRenderer({ canvas: warpCanvas, antialias: true });
+const warpScene = new THREE.Scene();
+const warpCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+warpCamera.position.z = 1;
+let warpStars = [];
+let warpAnimationId;
+
+function createWarpEffect() {
+    const starCount = 5000;
+    for (let i = 0; i < starCount; i++) {
+        const geometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([0, 0, 0, 0, 0, -1]); // Eine Linie entlang der Z-Achse
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const star = new THREE.Line(geometry, material);
+        
+        star.position.set(
+            (Math.random() - 0.5) * 100,
+            (Math.random() - 0.5) * 100,
+            (Math.random() - 1) * 500
+        );
+        star.scale.z = Math.random() * 5 + 0.5;
+        star.userData.speed = Math.random() * 2 + 1;
+        
+        warpScene.add(star);
+        warpStars.push(star);
+    }
+}
+
+function animateWarpEffect() {
+    warpStars.forEach(star => {
+        star.position.z += star.userData.speed;
+        if (star.position.z > 1) {
+            star.position.z -= 501;
+        }
+    });
+    warpRenderer.render(warpScene, warpCamera);
+    warpAnimationId = requestAnimationFrame(animateWarpEffect);
+}
+
+// === Haupt-Setup ===
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.domElement.id = 'main-canvas';
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
@@ -31,8 +74,8 @@ composer.addPass(bloomPass);
 // === UI Elemente ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
-const loadingTitle = document.getElementById('loading-title'); // KORREKTUR
-const loadingPercentage = document.getElementById('loading-percentage'); // NEU
+const loadingTitle = document.getElementById('loading-title');
+const loadingPercentage = document.getElementById('loading-percentage');
 const infoElement = document.getElementById('info');
 const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
@@ -51,7 +94,7 @@ scene.add(blackHoleCore);
 const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
 const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
 scene.add(cubeCamera);
-const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
+const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.8, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.85, color: 0xffffff }));
 scene.add(lensingSphere);
 function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
 const accretionDisk = createAccretionDisk();
@@ -78,10 +121,14 @@ let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
+
+// KORREKTUR: Starte die Warp-Animation
+createWarpEffect();
+animateWarpEffect();
+
 loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%';
     loadingTitle.textContent = 'Tippen zum Starten';
-    loadingPercentage.style.display = 'none'; // Hide percentage when ready to start
+    loadingPercentage.style.display = 'none';
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     scene.add(ship);
@@ -91,6 +138,8 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
     loadingScreen.addEventListener('click', () => {
+        // KORREKTUR: Stoppe die Warp-Animation und starte das Hauptspiel
+        cancelAnimationFrame(warpAnimationId);
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
