@@ -4,10 +4,16 @@ body {
     background-color: #000;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     
-    /* NEU: Verhindert das Markieren von Text beim Draggen */
+    /* KORREKTUR: Aggressiveres Deaktivieren von Browser-Standardaktionen */
     -webkit-user-select: none; /* Safari */
+    -moz-user-select: none; /* Firefox */
     -ms-user-select: none; /* IE 10+ */
     user-select: none; /* Standard */
+    -webkit-user-drag: none; /* Verhindert das Ziehen von Elementen in Webkit-Browsern */
+    -khtml-user-drag: none; /* Konqueror */
+    -moz-user-drag: none; /* Firefox */
+    -o-user-drag: none; /* Opera */
+    user-drag: none;
 }
 
 canvas {
@@ -15,6 +21,8 @@ canvas {
     position: absolute;
     top: 0;
     left: 0;
+    /* NEU: Verhindert Standard-Touch-Gesten wie Scrollen oder Seiten-Zoom auf dem Canvas */
+    touch-action: none;
 }
 
 #label-container {
