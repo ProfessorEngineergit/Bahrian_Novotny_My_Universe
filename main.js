@@ -10,8 +10,6 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
-
-// NEU: Verhindere Browser-Standardaktionen für Drag & Drop und Kontextmenü
 renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
 renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -47,18 +45,81 @@ scene.add(lensingSphere);
 function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
 const accretionDisk = createAccretionDisk();
 const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = 'Project_Mariner'; const lineDiv = document.createElement('div'); lineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(lineDiv); const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); scene.add(blackHoleLabel);
-const pacingCircleGeometry = new THREE.RingGeometry(12, 12.2, 64); const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }); const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial); pacingCircle.rotation.x = Math.PI / 2; scene.add(pacingCircle);
+
+// KORREKTUR: Funktion für das neue, weiße "Bleed"-Material der Ringe
+function createGlowRingMaterial() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 1;
+    const context = canvas.getContext('2d');
+    const gradient = context.createLinearGradient(0, 0, 64, 0);
+    gradient.addColorStop(0, 'rgba(255,255,255,0)');
+    gradient.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 64, 1);
+    const texture = new THREE.CanvasTexture(canvas);
+    
+    return new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.DoubleSide,
+        transparent: true,
+        blending: THREE.AdditiveBlending
+    });
+}
+const pacingCircleMaterial = createGlowRingMaterial();
+const pacingCircle = new THREE.Mesh(new THREE.RingGeometry(12, 12.3, 64), pacingCircleMaterial); // Etwas dicker für den Bleed-Effekt
+pacingCircle.rotation.x = Math.PI / 2;
+scene.add(pacingCircle);
 
 const planets = [];
 const planetData = [
     { name: 'Xylos', radius: 1, orbit: 20, speed: 0.04 }, { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.025 }, { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.015 }, { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.03 }, { name: 'Terminus', radius: 2, orbit: 80, speed: 0.01 }, { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.012 }
 ];
-function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
-function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); scene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; orbitPivot.add(planetMesh); const orbitPathGeometry = new THREE.RingGeometry(data.orbit - 0.1, data.orbit + 0.1, 128); const orbitPathMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.15 }); const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial); orbitPath.rotation.x = Math.PI / 2; scene.add(orbitPath); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.RingGeometry(boundaryRadius, boundaryRadius + 0.2, 64); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation }); }
+function createPlanetTexture(color) { /* ... */ }
+function createPlanet(data, index) {
+    const orbitPivot = new THREE.Object3D(); scene.add(orbitPivot);
+    const texture = createPlanetTexture(Math.random() * 360);
+    const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ map: texture });
+    const planetMesh = new THREE.Mesh(geometry, material);
+    planetMesh.position.x = data.orbit;
+    orbitPivot.add(planetMesh);
+    const orbitPathGeometry = new THREE.RingGeometry(data.orbit - 0.1, data.orbit + 0.1, 128);
+    const orbitPathMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
+    const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial);
+    orbitPath.rotation.x = Math.PI / 2;
+    scene.add(orbitPath);
+    const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name;
+    const planetLabel = new CSS2DObject(labelDiv);
+    planetLabel.position.y = data.radius + 2;
+    planetMesh.add(planetLabel);
+    const boundaryRadius = data.radius + 6;
+    // KORREKTUR: Verwende das neue weiße Glow-Material
+    const boundaryCircle = new THREE.Mesh(new THREE.RingGeometry(boundaryRadius, boundaryRadius + 0.3, 64), createGlowRingMaterial());
+    boundaryCircle.rotation.x = Math.PI / 2;
+    planetMesh.add(boundaryCircle);
+    const initialRotation = (index / planetData.length) * Math.PI * 2;
+    orbitPivot.rotation.y = initialRotation;
+    planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation });
+}
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
+function createForcefield(radius) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const context = canvas.getContext('2d');
+    // KORREKTUR: Weiße, dünnere Linien
+    context.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    context.lineWidth = 2;
+    for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); }
+    const texture = new THREE.CanvasTexture(canvas);
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide });
+    const ff = new THREE.Mesh(geometry, material);
+    ff.visible = false;
+    return ff;
+}
 
 let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 
@@ -95,25 +156,31 @@ let zoomDistance = 15;
 const minZoom = 8; const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
-
-let cameraFingerId = null;
-let isDraggingMouse = false;
-let initialPinchDistance = 0;
-let previousTouch = { x: 0, y: 0 };
+let cameraFingerId = null; let isDraggingMouse = false; let initialPinchDistance = 0; let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
-window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
+window.addEventListener('keydown', (e) => {
+    keyboard[e.key.toLowerCase()] = true;
+    if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+    }
+});
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
-
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
-
 renderer.domElement.addEventListener('mousedown', (e) => { if (e.target.closest('#joystick-zone')) return; isDraggingMouse = true; cameraVelocity.set(0, 0); previousTouch.x = e.clientX; previousTouch.y = e.clientY; });
 window.addEventListener('mousemove', (e) => { if (isDraggingMouse) { const deltaX = e.clientX - previousTouch.x; const deltaY = e.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = e.clientX; previousTouch.y = e.clientY; } });
 window.addEventListener('mouseup', () => { isDraggingMouse = false; });
-
+renderer.domElement.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.ctrlKey) {
+        zoomVelocity += e.deltaY * 0.01;
+    } else {
+        zoomVelocity += e.deltaY * 0.05;
+    }
+}, { passive: false });
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
 const clock = new THREE.Clock();
@@ -129,7 +196,6 @@ function animate() {
 
     planets.forEach(planet => {
         planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
-        planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
         const targetRotation = planet.initialRotation + elapsedTime * planet.speed;
         if (!planet.isFrozen) {
             planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
