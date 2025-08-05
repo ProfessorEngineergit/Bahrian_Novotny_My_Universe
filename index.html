@@ -6,19 +6,12 @@
     <title>USS Enterprise 3D Flug</title>
     <link rel="stylesheet" href="style.css">
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.150.1/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/" } }
     </script>
 </head>
 <body>
-    <!-- Container für 2D-Labels (wird von JS befüllt) -->
     <div id="label-container"></div>
     
-    <!-- UI-Elemente -->
     <div id="info">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
     <div id="joystick-zone"></div>
     
@@ -29,19 +22,26 @@
         </svg>
     </button>
     
-    <button id="analyze-button">Analyze Object</button>
+    <!-- KORREKTUR: Analyze button now uses an icon -->
+    <button id="analyze-button" title="Analyze Object">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+    </button>
     
+    <!-- KORREKTUR: Round progress bar container -->
     <div id="loading-screen">
-        <div id="loading-text">Lade Modell...</div>
-        <div id="progress-bar-container"><div id="progress-bar"></div></div>
+        <div id="progress-bar-container">
+             <div id="progress-bar"></div>
+             <div id="loading-text">Lade Modell...</div>
+        </div>
     </div>
     
-    <audio id="media-player" loop>
-        <source src="https://professorengineergit.github.io/Project_Mariner/Arcadia.mp3" type="audio/mpeg">
-        Ihr Browser unterstützt das Audio-Element nicht.
-    </audio>
+    <!-- KORREKTUR: Audio elements for sound effects -->
+    <audio id="media-player" loop><source src="https://professorengineergit.github.io/Project_Mariner/Arcadia.mp3" type="audio/mpeg"></audio>
+    <audio id="enter-sound"><source src="https://professorengineergit.github.io/Project_Mariner/enter_boundary.mp3" type="audio/mpeg"></audio>
+    <audio id="exit-sound"><source src="https://professorengineergit.github.io/Project_Mariner/exit_boundary.mp3" type="audio/mpeg"></audio>
 
-    <!-- Externe Bibliotheken -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
     <script type="module" src="main.js"></script>
 </body>
