@@ -37,8 +37,8 @@ const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
-const enterSound = document.getElementById('enter-sound'); // NEU
-const exitSound = document.getElementById('exit-sound');   // NEU
+const enterSound = document.getElementById('enter-sound');
+const exitSound = document.getElementById('exit-sound');
 
 // === Szenerie-Setup ===
 // KORREKTUR: DirectionalLight entfernt, AmbientLight erhöht für Umgebungslicht
@@ -98,7 +98,6 @@ loader.load(modelURL, (gltf) => {
 }, (xhr) => {
     if (xhr.lengthComputable) {
         const percentComplete = (xhr.loaded / xhr.total) * 100;
-        // KORREKTUR: Update CSS custom property for conic gradient
         progressBar.style.setProperty('--progress', `${percentComplete}%`);
     }
 }, (error) => { console.error('Ladefehler:', error); loadingText.textContent = "Fehler!"; });
@@ -186,7 +185,7 @@ function animate() {
             }
         }
         planets.forEach(p => p.isFrozen = (activeObject === p));
-
+        
         if (activeObject && !isAnalyzeButtonVisible) {
             analyzeButton.classList.add('ui-visible');
             isAnalyzeButtonVisible = true;
