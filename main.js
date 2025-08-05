@@ -74,7 +74,7 @@ loader.load(modelURL, (gltf) => {
     loadingText.textContent = 'Tippen zum Starten';
     ship = gltf.scene;
     scene.add(ship);
-    ship.position.set(0, 0, -30); // Bewährte Startposition
+    ship.position.set(0, 0, 30);
     forcefield = createForcefield(5.1);
     ship.add(forcefield);
     ship.add(cameraPivot);
@@ -118,8 +118,8 @@ muteButton.addEventListener('click', () => {
 
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => {
     if (data.vector && ship) {
-        // KORREKTUR: Joystick-Eingaben invertiert für korrekte Steuerung
-        shipMove.forward = -data.vector.y * 0.1;
+        // KORREKTUR: Das Minuszeichen bei `data.vector.y` wurde entfernt.
+        shipMove.forward = data.vector.y * 0.1;
         shipMove.turn = -data.vector.x * 0.05;
     }
 }).on('end', () => shipMove = { forward: 0, turn: 0 });
@@ -144,13 +144,10 @@ function animate() {
     });
     
     if (ship) {
-        // KORREKTUR: Fester, verlässlicher Radius für den "Schutzschild"
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
-
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
-
         const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
         const collisionThreshold = shipRadius + blackHoleRadius;
         if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
@@ -159,7 +156,7 @@ function animate() {
         }
 
         if (!isAnalyzeButtonVisible) {
-            const distanceToCenter = ship.position.lengthSq(); // lengthSq ist performanter
+            const distanceToCenter = ship.position.lengthSq();
             const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
             if (distanceToCenter < circleCurrentRadius * circleCurrentRadius) {
                 analyzeButton.classList.add('ui-visible');
