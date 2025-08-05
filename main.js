@@ -142,12 +142,14 @@ function createPlanet(data) {
         mesh: planetMesh,
         speed: data.speed,
         labelDiv: labelDiv,
+        labelObject: planetLabel,
         boundaryCircle: boundaryCircle,
         isPaused: false,
         currentAngle: data.startAngle,
         startAngle: data.startAngle
     });
 }
+
 planetData.forEach(createPlanet);
 
 let ship;
@@ -156,9 +158,32 @@ const cameraPivot = new THREE.Object3D();
 const cameraHolder = new THREE.Object3D();
 
 function createForcefield(radius) {
-    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas);
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const context = canvas.getContext('2d');
+    context.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+    context.lineWidth = 3;
+    for (let i = 0; i < 8; i++) {
+        const x = i * 18;
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, 128);
+        context.stroke();
+        const y = i * 18;
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(128, y);
+        context.stroke();
+    }
+    const texture = new THREE.CanvasTexture(canvas);
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide });
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        opacity: 0,
+        side: THREE.DoubleSide
+    });
     const ff = new THREE.Mesh(geometry, material);
     ff.visible = false;
     return ff;
@@ -222,7 +247,13 @@ muteButton.addEventListener('click', () => {
     muteButton.classList.toggle('muted');
 });
 
-nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => {
+nipplejs.create({
+    zone: document.getElementById('joystick-zone'),
+    mode: 'static',
+    position: { left: '50%', top: '50%' },
+    color: 'white',
+    size: 120
+}).on('move', (evt, data) => {
     if (data.vector && ship) {
         shipMove.forward = data.vector.y * 0.1;
         shipMove.turn = -data.vector.x * 0.05;
@@ -316,27 +347,26 @@ function animate() {
         const previousPosition = ship.position.clone();
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
+        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const collisionThreshold = shipRadius + blackHoleRadius;
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+            ship.position.copy(previousPosition);
+            if (forcefield) {
+                forcefield.visible = true;
+                forcefield.material.opacity = 1.0;
+            }
+        }
 
         let isShipInsideAnyBoundary = false;
-        
-        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-        const collisionThresholdBH = shipRadius + blackHoleRadius;
-        if (ship.position.distanceTo(blackHoleCore.position) < collisionThresholdBH) {
-            ship.position.copy(previousPosition);
-            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
-        }
-        
         const distanceToCenterSq = ship.position.lengthSq();
         const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
         if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
             isShipInsideAnyBoundary = true;
         }
-        
         for (const planet of planets) {
             planet.mesh.getWorldPosition(worldPosition);
             const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
             const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.outerRadius * planet.boundaryCircle.scale.x;
-            
             planet.isPaused = distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius;
             if (planet.isPaused) {
                 isShipInsideAnyBoundary = true;
@@ -346,10 +376,12 @@ function animate() {
             const collisionThresholdPlanet = shipRadius + planetRadius;
             if (distanceToPlanetSq < collisionThresholdPlanet * collisionThresholdPlanet) {
                 ship.position.copy(previousPosition);
-                if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+                if (forcefield) {
+                    forcefield.visible = true;
+                    forcefield.material.opacity = 1.0;
+                }
             }
         }
-
         if (isShipInsideAnyBoundary && !isAnalyzeButtonVisible) {
             analyzeButton.classList.add('ui-visible');
             isAnalyzeButtonVisible = true;
@@ -393,7 +425,9 @@ function animate() {
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) {
+        zoomVelocity = 0;
+    }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
     
     accretionDisk.rotation.z += 0.005;
