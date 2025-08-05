@@ -10,6 +10,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
+
 renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
 renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -46,28 +47,16 @@ function createAccretionDisk() { const canvas = document.createElement('canvas')
 const accretionDisk = createAccretionDisk();
 const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = 'Project_Mariner'; const lineDiv = document.createElement('div'); lineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(lineDiv); const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); scene.add(blackHoleLabel);
 
-// KORREKTUR: Funktion für das neue, weiße "Bleed"-Material der Ringe
-function createGlowRingMaterial() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64; canvas.height = 1;
-    const context = canvas.getContext('2d');
-    const gradient = context.createLinearGradient(0, 0, 64, 0);
-    gradient.addColorStop(0, 'rgba(255,255,255,0)');
-    gradient.addColorStop(0.5, 'rgba(255,255,255,0.7)');
-    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 64, 1);
-    const texture = new THREE.CanvasTexture(canvas);
-    
-    return new THREE.MeshBasicMaterial({
-        map: texture,
-        side: THREE.DoubleSide,
-        transparent: true,
-        blending: THREE.AdditiveBlending
-    });
-}
-const pacingCircleMaterial = createGlowRingMaterial();
-const pacingCircle = new THREE.Mesh(new THREE.RingGeometry(12, 12.3, 64), pacingCircleMaterial); // Etwas dicker für den Bleed-Effekt
+// KORREKTUR: Erstelle das strahlende Material für die Ringe
+const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    blending: THREE.AdditiveBlending // Dies erzeugt den Leuchteffekt
+});
+
+const pacingCircleGeometry = new THREE.TorusGeometry(12, 0.1, 16, 100); // 3D-Ring (Torus)
+const pacingCircle = new THREE.Mesh(pacingCircleGeometry, glowMaterial);
 pacingCircle.rotation.x = Math.PI / 2;
 scene.add(pacingCircle);
 
@@ -75,7 +64,8 @@ const planets = [];
 const planetData = [
     { name: 'Xylos', radius: 1, orbit: 20, speed: 0.04 }, { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.025 }, { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.015 }, { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.03 }, { name: 'Terminus', radius: 2, orbit: 80, speed: 0.01 }, { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.012 }
 ];
-function createPlanetTexture(color) { /* ... */ }
+function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
+
 function createPlanet(data, index) {
     const orbitPivot = new THREE.Object3D(); scene.add(orbitPivot);
     const texture = createPlanetTexture(Math.random() * 360);
@@ -84,20 +74,21 @@ function createPlanet(data, index) {
     const planetMesh = new THREE.Mesh(geometry, material);
     planetMesh.position.x = data.orbit;
     orbitPivot.add(planetMesh);
-    const orbitPathGeometry = new THREE.RingGeometry(data.orbit - 0.1, data.orbit + 0.1, 128);
-    const orbitPathMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
-    const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial);
-    orbitPath.rotation.x = Math.PI / 2;
-    scene.add(orbitPath);
+    
+    // KORREKTUR: Die statischen grauen Orbit-Linien wurden entfernt.
+    
     const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name;
     const planetLabel = new CSS2DObject(labelDiv);
     planetLabel.position.y = data.radius + 2;
     planetMesh.add(planetLabel);
+
     const boundaryRadius = data.radius + 6;
-    // KORREKTUR: Verwende das neue weiße Glow-Material
-    const boundaryCircle = new THREE.Mesh(new THREE.RingGeometry(boundaryRadius, boundaryRadius + 0.3, 64), createGlowRingMaterial());
+    // KORREKTUR: Verwende TorusGeometry und das strahlende Material
+    const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100);
+    const boundaryCircle = new THREE.Mesh(boundaryGeometry, glowMaterial);
     boundaryCircle.rotation.x = Math.PI / 2;
-    planetMesh.add(boundaryCircle);
+    orbitPivot.add(boundaryCircle); // Heften den 3D-Ring an den Pivot, damit er sich mitbewegt
+
     const initialRotation = (index / planetData.length) * Math.PI * 2;
     orbitPivot.rotation.y = initialRotation;
     planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation });
@@ -105,21 +96,7 @@ function createPlanet(data, index) {
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128; canvas.height = 128;
-    const context = canvas.getContext('2d');
-    // KORREKTUR: Weiße, dünnere Linien
-    context.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-    context.lineWidth = 2;
-    for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); }
-    const texture = new THREE.CanvasTexture(canvas);
-    const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide });
-    const ff = new THREE.Mesh(geometry, material);
-    ff.visible = false;
-    return ff;
-}
+function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(255, 255, 255, 0.9)'; context.lineWidth = 2; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
 let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 
@@ -157,7 +134,6 @@ const minZoom = 8; const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 let cameraFingerId = null; let isDraggingMouse = false; let initialPinchDistance = 0; let previousTouch = { x: 0, y: 0 };
-
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 window.addEventListener('keydown', (e) => {
@@ -191,11 +167,10 @@ function animate() {
     const elapsedTime = clock.getElapsedTime();
 
     const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
-    pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     pacingCircle.material.opacity = 0.3 + pulse * 0.4;
 
     planets.forEach(planet => {
-        planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+        planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
         const targetRotation = planet.initialRotation + elapsedTime * planet.speed;
         if (!planet.isFrozen) {
             planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
@@ -221,14 +196,14 @@ function animate() {
 
         let activeObject = null;
         const distanceToCenterSq = ship.position.lengthSq();
-        const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
+        const circleCurrentRadius = pacingCircle.geometry.parameters.radius; // Torus radius
         if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
             activeObject = blackHoleCore;
         }
         for (const planet of planets) {
             planet.mesh.getWorldPosition(worldPosition);
             const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
-            const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.outerRadius * planet.boundaryCircle.scale.x;
+            const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.radius;
             if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) {
                 activeObject = planet;
                 break;
