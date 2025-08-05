@@ -47,22 +47,20 @@ const pacingCircleGeometry = new THREE.RingGeometry(12, 12.2, 64); const pacingC
 
 const planets = [];
 const planetData = [
-    { name: 'Xylos', radius: 1, orbit: 20, speed: 0.00015 },
-    { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.00009 },
-    { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.00006 },
-    { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.00012 },
-    { name: 'Terminus', radius: 2, orbit: 80, speed: 0.00003 },
-    { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.00004 }
+    // KORREKTUR: Geschwindigkeit nochmals stark reduziert
+    { name: 'Xylos', radius: 1, orbit: 20, speed: 0.04 },
+    { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.025 },
+    { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.015 },
+    { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.03 },
+    { name: 'Terminus', radius: 2, orbit: 80, speed: 0.01 },
+    { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.012 }
 ];
 
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
 
-function createPlanet(data, index) { // NEU: Index für die Startposition
+function createPlanet(data, index) {
     const orbitPivot = new THREE.Object3D();
     scene.add(orbitPivot);
-    // KORREKTUR: Planeten gleichmäßig verteilt starten
-    orbitPivot.rotation.y = index * (Math.PI * 2 / planetData.length);
-
     const texture = createPlanetTexture(Math.random() * 360);
     const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
     const material = new THREE.MeshStandardMaterial({ map: texture });
@@ -87,22 +85,17 @@ function createPlanet(data, index) { // NEU: Index für die Startposition
     boundaryCircle.rotation.x = Math.PI / 2;
     planetMesh.add(boundaryCircle);
 
-    // NEU: State Management für jeden Planeten
-    planets.push({
-        pivot: orbitPivot,
-        mesh: planetMesh,
-        speed: data.speed,
-        labelDiv: labelDiv,
-        labelObject: planetLabel,
-        boundaryCircle: boundaryCircle,
-        isFrozen: false
-    });
-}
+    // KORREKTUR: Startpositionen der Planeten verteilen
+    const initialRotation = (index / planetData.length) * Math.PI * 2;
+    orbitPivot.rotation.y = initialRotation;
 
+    planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation });
+}
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) { /* ... */ }
+function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
+
 let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 
 // === GLTF Modell-Lader ===
@@ -156,18 +149,20 @@ function animate() {
     pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     pacingCircle.material.opacity = 0.3 + pulse * 0.4;
 
-    // KORREKTUR: Neue Planeten-Bewegungslogik
+    // Planeten bewegen
     planets.forEach(planet => {
-        const targetRotation = elapsedTime * planet.speed;
-        if (!planet.isFrozen) {
-            // Interpoliere sanft zur Soll-Position, um aufzuholen
-            planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
-        }
         planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
         planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
+        
+        // KORREKTUR: Planetenbewegung mit "Catch-Up"-Logik
+        const targetRotation = planet.initialRotation + elapsedTime * planet.speed;
+        if (!planet.isFrozen) {
+            planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
+        }
     });
     
     if (ship) {
+        // ... (Kollisionslogik mit Schwarzem Loch unverändert) ...
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
         ship.translateZ(shipMove.forward);
@@ -179,36 +174,36 @@ function animate() {
             if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
         }
 
-        let isShipInsideAnyBoundary = false;
+        // KORREKTUR: Neue, robuste Button- und Planeten-Stop-Logik
+        let activeObject = null;
         const distanceToCenterSq = ship.position.lengthSq();
         const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
         if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
-            isShipInsideAnyBoundary = true;
+            activeObject = blackHoleCore;
         }
 
-        // KORREKTUR: Setze den `isFrozen`-Status für jeden Planeten
         for (const planet of planets) {
             planet.mesh.getWorldPosition(worldPosition);
             const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
             const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.outerRadius * planet.boundaryCircle.scale.x;
-            
             if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) {
-                isShipInsideAnyBoundary = true;
-                planet.isFrozen = true;
-            } else {
-                planet.isFrozen = false;
+                activeObject = planet;
+                break;
             }
         }
+        
+        planets.forEach(p => p.isFrozen = (activeObject === p));
 
-        if (isShipInsideAnyBoundary && !isAnalyzeButtonVisible) {
+        if (activeObject && !isAnalyzeButtonVisible) {
             analyzeButton.classList.add('ui-visible');
             isAnalyzeButtonVisible = true;
-        } else if (!isShipInsideAnyBoundary && isAnalyzeButtonVisible) {
+        } else if (!activeObject && isAnalyzeButtonVisible) {
             analyzeButton.classList.remove('ui-visible');
             isAnalyzeButtonVisible = false;
         }
     }
 
+    // ... (Restliche Logik für Kamera, Intro, Labels etc. unverändert) ...
     if (isIntroAnimationPlaying) {
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
         if (Math.abs(cameraPivot.rotation.y) < 0.01) {
@@ -233,23 +228,17 @@ function animate() {
         cameraHolder.rotation.x += cameraVelocity.x;
         cameraPivot.rotation.y += cameraVelocity.y;
     }
-    
     cameraVelocity.multiplyScalar(DAMPING);
     zoomDistance += zoomVelocity;
     zoomVelocity *= DAMPING;
     zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
     if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
     if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
     accretionDisk.rotation.z += 0.005;
-
     if (forcefield && forcefield.visible) {
         forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) {
-            forcefield.visible = false;
-        }
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
     }
-
     lensingSphere.visible = false;
     blackHoleCore.visible = false;
     accretionDisk.visible = false;
@@ -268,6 +257,3 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-// Gekürzte Funktionen zur Übersichtlichkeit
-function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
