@@ -3,13 +3,20 @@ body {
     overflow: hidden;
     background-color: #000;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    
+    /* NEU: Verhindert das Markieren von Text beim Draggen */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none; /* Standard */
 }
+
 canvas {
     display: block;
     position: absolute;
     top: 0;
     left: 0;
 }
+
 #label-container {
     position: absolute;
     top: 0;
@@ -18,6 +25,7 @@ canvas {
     height: 100%;
     pointer-events: none;
 }
+
 .label {
     color: #fff;
     font-size: 16px;
@@ -31,15 +39,18 @@ canvas {
     background: linear-gradient(to bottom, rgba(0, 170, 255, 0.8), rgba(0, 170, 255, 0));
     margin: 8px auto 0;
 }
+
 #info, #joystick-zone, #mute-button, #analyze-button {
     opacity: 0;
     pointer-events: none;
     transition: opacity 1s ease-out;
 }
+
 #info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible, #analyze-button.ui-visible {
     opacity: 1;
     pointer-events: auto;
 }
+
 #info {
     position: absolute;
     top: 10px;
@@ -50,6 +61,7 @@ canvas {
     text-shadow: 2px 2px 4px #000000;
     z-index: 10;
 }
+
 #joystick-zone {
     position: absolute;
     bottom: 20px;
@@ -61,6 +73,7 @@ canvas {
     border-radius: 50%;
     z-index: 5;
 }
+
 #mute-button {
     position: absolute;
     top: 20px;
@@ -75,11 +88,13 @@ canvas {
     z-index: 20;
     transition: background-color 0.2s ease, opacity 1s ease-out;
 }
+
 #mute-button:hover { background: rgba(255, 255, 255, 0.1); }
 #mute-button svg { width: 100%; height: 100%; }
 #mute-button #speaker-icon { fill: white; }
 #mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
 #mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
+
 #analyze-button {
     position: absolute;
     top: 80px;
@@ -94,6 +109,7 @@ canvas {
     z-index: 20;
 }
 #analyze-button:hover { background-color: rgba(0, 170, 255, 0.4); }
+
 #loading-screen {
     position: absolute;
     top: 0;
