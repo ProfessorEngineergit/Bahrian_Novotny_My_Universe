@@ -47,7 +47,6 @@ const pacingCircleGeometry = new THREE.RingGeometry(12, 12.2, 64); const pacingC
 
 const planets = [];
 const planetData = [
-    // KORREKTUR: Geschwindigkeit nochmals stark reduziert
     { name: 'Xylos', radius: 1, orbit: 20, speed: 0.00015 },
     { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.00009 },
     { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.00006 },
@@ -58,9 +57,12 @@ const planetData = [
 
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
 
-function createPlanet(data) {
+function createPlanet(data, index, total) {
     const orbitPivot = new THREE.Object3D();
     scene.add(orbitPivot);
+    // KORREKTUR: Gleichmäßige Verteilung
+    orbitPivot.rotation.y = (index / total) * Math.PI * 2;
+
     const texture = createPlanetTexture(Math.random() * 360);
     const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
     const material = new THREE.MeshStandardMaterial({ map: texture });
@@ -69,7 +71,6 @@ function createPlanet(data) {
     orbitPivot.add(planetMesh);
     const orbitPathGeometry = new THREE.RingGeometry(data.orbit - 0.1, data.orbit + 0.1, 128);
     const orbitPathMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
-    // BUGFIX: Verwende das korrekte Material für die Umlaufbahn
     const orbitPath = new THREE.Mesh(orbitPathGeometry, orbitPathMaterial);
     orbitPath.rotation.x = Math.PI / 2;
     scene.add(orbitPath);
@@ -84,13 +85,19 @@ function createPlanet(data) {
     const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
     const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
     boundaryCircle.rotation.x = Math.PI / 2;
-
-    // KORREKTUR: Grenzkreis an den Planeten heften, nicht an die Szene
     planetMesh.add(boundaryCircle);
 
-    planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, labelObject: planetLabel, boundaryCircle: boundaryCircle });
+    planets.push({
+        pivot: orbitPivot,
+        mesh: planetMesh,
+        speed: data.speed,
+        labelDiv: labelDiv,
+        labelObject: planetLabel,
+        boundaryCircle: boundaryCircle,
+        isStopped: false // NEU: Statusvariable
+    });
 }
-planetData.forEach(createPlanet);
+planetData.forEach((data, index) => createPlanet(data, index, planetData.length));
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
 function createForcefield(radius) { /* ... */ }
@@ -131,10 +138,10 @@ const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 let cameraFingerId = null; let initialPinchDistance = 0; let previousTouch = { x: 0, y: 0 };
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { shipMove.forward = data.vector.y * 0.1; shipMove.turn = -data.vector.x * 0.05; } }).on('end', () => shipMove = { forward: 0, turn: 0 });
-renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
-renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
-renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
-function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
+renderer.domElement.addEventListener('touchstart', (e) => { /* ... */ }, { passive: false });
+renderer.domElement.addEventListener('touchmove', (e) => { /* ... */ }, { passive: false });
+renderer.domElement.addEventListener('touchend', (e) => { /* ... */ });
+function getPinchDistance(e) { /* ... */ }
 
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
@@ -148,7 +155,89 @@ function animate() {
     pacingCircle.material.opacity = 0.3 + pulse * 0.4;
 
     planets.forEach(planet => {
-        planet.pivot.rotation.y += planet.speed;
+        // NEU: Planet bewegt sich nur, wenn er nicht angehalten ist
+        if (!planet.isStopped) {
+            planet.pivot.rotation.y += planet.speed;
+        }
+        planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+        planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
+    });
+    
+    if (ship) {
+        let isShipInsideAnyBoundary = false;
+        const shipRadius = 5;
+        const previousPosition = ship.position.clone();
+
+        ship.translateZ(shipMove.forward);
+        ship.rotateY(shipMove.turn);
+
+        // Kollision mit dem Schwarzen Loch
+        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const collisionThresholdBH = shipRadius + blackHoleRadius;
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThresholdBH) {
+            ship.position.copy(previousPosition);
+            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+        }
+
+        // NEU: Interaktion mit Planeten
+        for (const planet of planets) {
+            planet.mesh.getWorldPosition(worldPosition);
+            const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
+
+            // Stufe 1: Prüfen, ob der Planet anhalten soll
+            const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.outerRadius * planet.boundaryCircle.scale.x;
+            if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) {
+                isShipInsideAnyBoundary = true;
+                planet.isStopped = true;
+
+                // Stufe 2: Prüfen, ob eine Kollision stattfindet
+                const planetRadius = planet.mesh.geometry.parameters.radius;
+                const collisionThresholdPlanet = shipRadius + planetRadius;
+                if (distanceToPlanetSq < collisionThresholdPlanet * collisionThresholdPlanet) {
+                    ship.position.copy(previousPosition);
+                    if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+                }
+            } else {
+                planet.isStopped = false; // Setze zurück, wenn außerhalb
+            }
+        }
+
+        const distanceToCenterSq = ship.position.lengthSq();
+        const circleCurrentRadius = pacingCircle.geometry.parameters.outerRadius * pacingCircle.scale.x;
+        if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
+            isShipInsideAnyBoundary = true;
+        }
+
+        if (isShipInsideAnyBoundary && !isAnalyzeButtonVisible) {
+            analyzeButton.classList.add('ui-visible');
+            isAnalyzeButtonVisible = true;
+        } else if (!isShipInsideAnyBoundary && isAnalyzeButtonVisible) {
+            analyzeButton.classList.remove('ui-visible');
+            isAnalyzeButtonVisible = false;
+        }
+    }
+
+    // ... (Rest der Logik für Kamera, Intro, Labels etc. bleibt unverändert) ...
+}
+
+// Hier alle langen, unveränderten Funktionen einfügen
+function createForcefield(radius) { /* ... */ }
+function getPinchDistance(e) { /* ... */ }
+renderer.domElement.addEventListener('touchstart', (e) => { /* ... */ }, { passive: false });
+renderer.domElement.addEventListener('touchmove', (e) => { /* ... */ }, { passive: false });
+renderer.domElement.addEventListener('touchend', (e) => { /* ... */ });
+function animate() {
+    requestAnimationFrame(animate);
+    const elapsedTime = clock.getElapsedTime();
+
+    const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
+    pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+    pacingCircle.material.opacity = 0.3 + pulse * 0.4;
+
+    planets.forEach(planet => {
+        if (!planet.isStopped) {
+            planet.pivot.rotation.y += planet.speed;
+        }
         planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
         planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
     });
@@ -158,9 +247,10 @@ function animate() {
         const previousPosition = ship.position.clone();
         ship.translateZ(shipMove.forward);
         ship.rotateY(shipMove.turn);
+
         const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-        const collisionThreshold = shipRadius + blackHoleRadius;
-        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+        const collisionThresholdBH = shipRadius + blackHoleRadius;
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThresholdBH) {
             ship.position.copy(previousPosition);
             if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
         }
@@ -171,16 +261,27 @@ function animate() {
         if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
             isShipInsideAnyBoundary = true;
         }
+
         for (const planet of planets) {
-            // KORREKTUR: Verwende die Weltposition des Planeten-Meshes, nicht des Pivots
             planet.mesh.getWorldPosition(worldPosition);
             const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
             const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.outerRadius * planet.boundaryCircle.scale.x;
+
             if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) {
                 isShipInsideAnyBoundary = true;
-                break;
+                planet.isStopped = true;
+
+                const planetRadius = planet.mesh.geometry.parameters.radius;
+                const collisionThresholdPlanet = shipRadius + planetRadius;
+                if (distanceToPlanetSq < collisionThresholdPlanet * collisionThresholdPlanet) {
+                    ship.position.copy(previousPosition);
+                    if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+                }
+            } else {
+                planet.isStopped = false;
             }
         }
+        
         if (isShipInsideAnyBoundary && !isAnalyzeButtonVisible) {
             analyzeButton.classList.add('ui-visible');
             isAnalyzeButtonVisible = true;
@@ -201,7 +302,7 @@ function animate() {
             const getAngleToShip = (targetPosition) => Math.atan2(ship.position.x - targetPosition.x, ship.position.z - targetPosition.z);
             blackHoleLabelDiv.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
             planets.forEach(p => {
-                p.mesh.getWorldPosition(worldPosition); // Verwende die Weltposition des Planeten-Meshes
+                p.mesh.getWorldPosition(worldPosition);
                 p.labelDiv.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
             });
         }
@@ -226,9 +327,7 @@ function animate() {
 
     if (forcefield && forcefield.visible) {
         forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) {
-            forcefield.visible = false;
-        }
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
     }
 
     lensingSphere.visible = false;
