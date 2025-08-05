@@ -42,25 +42,11 @@ const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new 
 scene.add(lensingSphere);
 function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; scene.add(disk); return disk; }
 const accretionDisk = createAccretionDisk();
-const blackHoleLabelDiv = document.createElement('div');
-blackHoleLabelDiv.className = 'label';
-blackHoleLabelDiv.textContent = 'Project_Mariner';
-const lineDiv = document.createElement('div');
-lineDiv.className = 'label-line';
-blackHoleLabelDiv.appendChild(lineDiv);
-const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv);
-blackHoleLabel.position.set(0, 7, 0);
-scene.add(blackHoleLabel);
-const pacingCircleGeometry = new THREE.RingGeometry(12, 12.2, 64);
-const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
-const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial);
-pacingCircle.rotation.x = Math.PI / 2;
-scene.add(pacingCircle);
+const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = 'Project_Mariner'; const lineDiv = document.createElement('div'); lineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(lineDiv); const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); scene.add(blackHoleLabel);
+const pacingCircleGeometry = new THREE.RingGeometry(12, 12.2, 64); const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }); const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial); pacingCircle.rotation.x = Math.PI / 2; scene.add(pacingCircle);
 
-// === Planeten-Setup ===
 const planets = [];
 const planetData = [
-    // KORREKTUR: Geschwindigkeit nochmals stark reduziert
     { name: 'Xylos', radius: 1, orbit: 20, speed: 0.00015 },
     { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.00009 },
     { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.00006 },
@@ -71,19 +57,17 @@ const planetData = [
 
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
 
-function createPlanet(data, index) { // NEU: index für die Startposition
+function createPlanet(data, index) { // NEU: Index für die Startposition
     const orbitPivot = new THREE.Object3D();
     scene.add(orbitPivot);
+    // KORREKTUR: Planeten gleichmäßig verteilt starten
+    orbitPivot.rotation.y = index * (Math.PI * 2 / planetData.length);
+
     const texture = createPlanetTexture(Math.random() * 360);
     const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
     const material = new THREE.MeshStandardMaterial({ map: texture });
     const planetMesh = new THREE.Mesh(geometry, material);
-
-    // KORREKTUR: Planeten gleichmäßig verteilen
-    const angle = (index / planetData.length) * Math.PI * 2;
-    planetMesh.position.x = Math.cos(angle) * data.orbit;
-    planetMesh.position.z = Math.sin(angle) * data.orbit;
-    
+    planetMesh.position.x = data.orbit;
     orbitPivot.add(planetMesh);
     const orbitPathGeometry = new THREE.RingGeometry(data.orbit - 0.1, data.orbit + 0.1, 128);
     const orbitPathMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
@@ -101,10 +85,9 @@ function createPlanet(data, index) { // NEU: index für die Startposition
     const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
     const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
     boundaryCircle.rotation.x = Math.PI / 2;
-
-    // KORREKTUR: Grenzkreis an den Planeten heften
     planetMesh.add(boundaryCircle);
 
+    // NEU: State Management für jeden Planeten
     planets.push({
         pivot: orbitPivot,
         mesh: planetMesh,
@@ -112,10 +95,10 @@ function createPlanet(data, index) { // NEU: index für die Startposition
         labelDiv: labelDiv,
         labelObject: planetLabel,
         boundaryCircle: boundaryCircle,
-        isStopped: false, // NEU: Status für jeden Planeten
-        targetRotationY: angle // NEU: Startwinkel als Ziel
+        isFrozen: false
     });
 }
+
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
@@ -173,16 +156,13 @@ function animate() {
     pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     pacingCircle.material.opacity = 0.3 + pulse * 0.4;
 
-    // KORREKTUR: Neue Planeten-Animationslogik
+    // KORREKTUR: Neue Planeten-Bewegungslogik
     planets.forEach(planet => {
-        // Die "Soll-Position" des Planeten bewegt sich immer weiter
-        planet.targetRotationY += planet.speed;
-
-        // Die "Ist-Position" folgt der Soll-Position sanft, es sei denn, der Planet ist gestoppt
-        if (!planet.isStopped) {
-            planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, planet.targetRotationY, 0.02);
+        const targetRotation = elapsedTime * planet.speed;
+        if (!planet.isFrozen) {
+            // Interpoliere sanft zur Soll-Position, um aufzuholen
+            planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
         }
-
         planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
         planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
     });
@@ -206,19 +186,19 @@ function animate() {
             isShipInsideAnyBoundary = true;
         }
 
-        // KORREKTUR: Individuelle Planeten-Prüfung
-        planets.forEach(planet => {
+        // KORREKTUR: Setze den `isFrozen`-Status für jeden Planeten
+        for (const planet of planets) {
             planet.mesh.getWorldPosition(worldPosition);
             const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
             const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.outerRadius * planet.boundaryCircle.scale.x;
-
+            
             if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) {
                 isShipInsideAnyBoundary = true;
-                planet.isStopped = true; // Stoppe diesen Planeten
+                planet.isFrozen = true;
             } else {
-                planet.isStopped = false; // Setze die Bewegung für diesen Planeten fort
+                planet.isFrozen = false;
             }
-        });
+        }
 
         if (isShipInsideAnyBoundary && !isAnalyzeButtonVisible) {
             analyzeButton.classList.add('ui-visible');
@@ -287,4 +267,7 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
-});```
+});
+
+// Gekürzte Funktionen zur Übersichtlichkeit
+function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(100, 200, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
