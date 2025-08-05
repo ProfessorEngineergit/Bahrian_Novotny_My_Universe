@@ -231,4 +231,135 @@ function animate() {
     if (gameState === 'loading' || gameState === 'ready') {
         hyperspace1.position.z += 2;
         hyperspace2.position.z += 2;
-        if (hype
+        if (hyperspace1.position.z > 500) hyperspace1.position.z = -500;
+        if (hyperspace2.position.z > 500) hyperspace2.position.z = -500;
+        renderer.render(scene, camera);
+        return;
+    }
+    
+    // Ab hier läuft nur noch der 'playing'-Zustand
+    hyperspaceGroup.visible = false;
+    mainSceneGroup.visible = true;
+
+    const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
+    pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+    pacingCircle.material.opacity = 0.3 + pulse * 0.4;
+    planets.forEach(planet => {
+        planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+        planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
+        const targetRotation = planet.initialRotation + elapsedTime * planet.speed;
+        if (!planet.isFrozen) {
+            planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
+        }
+    });
+    
+    if (ship) {
+        const keyForward = (keyboard['w'] ? 0.1 : 0) + (keyboard['s'] ? -0.1 : 0);
+        const keyTurn = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
+        const finalForward = joystickMove.forward + keyForward;
+        const finalTurn = joystickMove.turn + keyTurn;
+        
+        const shipRadius = 5;
+        const previousPosition = ship.position.clone();
+        ship.translateZ(finalForward);
+        ship.rotateY(finalTurn);
+        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const collisionThreshold = shipRadius + blackHoleRadius;
+        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+            ship.position.copy(previousPosition);
+            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+        }
+
+        let activeObject = null;
+        const distanceToCenterSq = ship.position.lengthSq();
+        const circleCurrentRadius = pacingCircle.geometry.parameters.radius * pacingCircle.scale.x;
+        if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
+            activeObject = blackHoleCore;
+        }
+        for (const planet of planets) {
+            planet.mesh.getWorldPosition(worldPosition);
+            const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
+            const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.radius * planet.boundaryCircle.scale.x;
+            if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) {
+                activeObject = planet;
+                break;
+            }
+        }
+        planets.forEach(p => p.isFrozen = (activeObject === p));
+        if (activeObject && !isAnalyzeButtonVisible) {
+            analyzeButton.classList.add('ui-visible');
+            isAnalyzeButtonVisible = true;
+        } else if (!activeObject && isAnalyzeButtonVisible) {
+            analyzeButton.classList.remove('ui-visible');
+            isAnalyzeButtonVisible = false;
+        }
+    }
+
+    if (keyboard['arrowup']) cameraVelocity.x += 0.0005;
+    if (keyboard['arrowdown']) cameraVelocity.x -= 0.0005;
+    if (keyboard['arrowleft']) cameraVelocity.y += 0.0005;
+    if (keyboard['arrowright']) cameraVelocity.y -= 0.0005;
+    if (keyboard['-']) zoomVelocity += 0.1;
+    if (keyboard['+'] || keyboard['=']) zoomVelocity -= 0.1;
+
+    if (isIntroAnimationPlaying) {
+        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
+        if (Math.abs(cameraPivot.rotation.y) < 0.01) {
+            cameraPivot.rotation.y = 0;
+            isIntroAnimationPlaying = false;
+        }
+    } else {
+        if (ship) {
+            const getAngleToShip = (targetPosition) => Math.atan2(ship.position.x - targetPosition.x, ship.position.z - targetPosition.z);
+            blackHoleLabel.element.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
+            planets.forEach(p => {
+                p.mesh.getWorldPosition(worldPosition);
+                p.labelObject.element.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
+            });
+        }
+        if (cameraFingerId === null && !isDraggingMouse) {
+            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+        }
+        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        cameraHolder.rotation.x += cameraVelocity.x;
+        cameraPivot.rotation.y += cameraVelocity.y;
+    }
+    
+    cameraVelocity.multiplyScalar(DAMPING);
+    zoomDistance += zoomVelocity;
+    zoomVelocity *= DAMPING;
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+    
+    accretionDisk.rotation.z += 0.005;
+
+    if (forcefield && forcefield.visible) {
+        forcefield.material.opacity -= 0.04;
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
+    }
+
+    lensingSphere.visible = false;
+    blackHoleCore.visible = false;
+    accretionDisk.visible = false;
+    cubeCamera.update(renderer, scene);
+    lensingSphere.visible = true;
+    blackHoleCore.visible = true;
+    accretionDisk.visible = true;
+
+    composer.render();
+    labelRenderer.render(scene, camera);
+}
+
+// Starte den Loop sofort
+animate();
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
