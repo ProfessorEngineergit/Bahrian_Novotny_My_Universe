@@ -11,6 +11,10 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
+// NEU: Verhindere Browser-Standardaktionen für Drag & Drop und Kontextmenü
+renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
+renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
 labelRenderer.domElement.id = 'label-container';
@@ -92,7 +96,6 @@ const minZoom = 8; const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 
-// Touch- und Maus-Statusvariablen
 let cameraFingerId = null;
 let isDraggingMouse = false;
 let initialPinchDistance = 0;
@@ -103,32 +106,13 @@ window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
 
-// Touch-Listener
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
 
-// NEU: Maus-Listener
-renderer.domElement.addEventListener('mousedown', (e) => {
-    if (e.target.closest('#joystick-zone')) return;
-    isDraggingMouse = true;
-    cameraVelocity.set(0, 0);
-    previousTouch.x = e.clientX;
-    previousTouch.y = e.clientY;
-});
-window.addEventListener('mousemove', (e) => {
-    if (isDraggingMouse) {
-        const deltaX = e.clientX - previousTouch.x;
-        const deltaY = e.clientY - previousTouch.y;
-        cameraVelocity.x += deltaY * 0.0002;
-        cameraVelocity.y -= deltaX * 0.0002;
-        previousTouch.x = e.clientX;
-        previousTouch.y = e.clientY;
-    }
-});
-window.addEventListener('mouseup', () => {
-    isDraggingMouse = false;
-});
+renderer.domElement.addEventListener('mousedown', (e) => { if (e.target.closest('#joystick-zone')) return; isDraggingMouse = true; cameraVelocity.set(0, 0); previousTouch.x = e.clientX; previousTouch.y = e.clientY; });
+window.addEventListener('mousemove', (e) => { if (isDraggingMouse) { const deltaX = e.clientX - previousTouch.x; const deltaY = e.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = e.clientX; previousTouch.y = e.clientY; } });
+window.addEventListener('mouseup', () => { isDraggingMouse = false; });
 
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
@@ -216,7 +200,6 @@ function animate() {
                 p.labelDiv.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
             });
         }
-        // KORREKTUR: Return-to-center nur, wenn weder Touch noch Maus aktiv sind
         if (cameraFingerId === null && !isDraggingMouse) {
             cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
             cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
