@@ -1,110 +1,183 @@
+/* NEU: Import der Schriftart "Nasalization" */
+@import url('https://fonts.cdnfonts.com/css/nasalization');
+
 body {
     margin: 0;
     overflow: hidden;
     background-color: #000;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
-    -webkit-user-drag: none; user-drag: none;
+    /* NEU: Schriftart für das gesamte Projekt */
+    font-family: 'Nasalization', sans-serif;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    user-drag: none;
 }
 
 canvas {
-    display: block; position: absolute; top: 0; left: 0;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
     touch-action: none;
 }
 
 #label-container {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
 }
 
 .label {
-    color: #fff; font-size: 16px; text-shadow: 0 0 5px #ffffff;
-    white-space: nowrap; text-align: center;
+    color: #fff;
+    font-size: 16px;
+    text-shadow: 0 0 5px #ffffff;
+    white-space: nowrap;
+    text-align: center;
 }
 .label-line {
-    width: 1px; height: 50px;
+    width: 1px;
+    height: 50px;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
     margin: 8px auto 0;
 }
 
 #info, #joystick-zone, #mute-button, #analyze-button {
-    opacity: 0; pointer-events: none; transition: opacity 1s ease-out;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-out;
 }
 
 #info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible, #analyze-button.ui-visible {
-    opacity: 1; pointer-events: auto;
+    opacity: 1;
+    pointer-events: auto;
 }
 
 #info {
-    position: absolute; top: 10px; width: 100%; text-align: center;
-    color: rgba(255, 255, 255, 0.8); font-size: 14px; text-shadow: 2px 2px 4px #000000;
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    text-shadow: 2px 2px 4px #000000;
     z-index: 10;
 }
 
 #joystick-zone {
-    position: absolute; bottom: 20px; left: 20px; width: 160px; height: 160px;
-    background-color: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%; z-index: 5;
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 160px;
+    height: 160px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    z-index: 5;
 }
 
-/* KORREKTUR: Common styles for round buttons */
-#mute-button, #analyze-button {
+#mute-button {
     position: absolute;
+    top: 20px;
     right: 20px;
     width: 44px;
     height: 44px;
-    background: rgba(0,0,0,0.3);
+    background: rgba(30, 30, 30, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
+    /* KORREKTUR: Stark abgerundete Ecken */
+    border-radius: 12px;
     cursor: pointer;
     padding: 10px;
     z-index: 20;
     transition: background-color 0.2s ease, opacity 1s ease-out;
 }
 
-#mute-button { top: 20px; }
-#analyze-button { top: 80px; }
-
-#mute-button:hover, #analyze-button:hover { background: rgba(255, 255, 255, 0.1); }
-#mute-button svg, #analyze-button svg { width: 100%; height: 100%; fill: white; }
-
+#mute-button:hover { background: rgba(255, 255, 255, 0.1); }
+#mute-button svg { width: 100%; height: 100%; }
+#mute-button #speaker-icon { fill: white; }
 #mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
 #mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
 
+#analyze-button {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: rgba(30, 30, 30, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    /* KORREKTUR: Stark abgerundete Ecken */
+    border-radius: 50px;
+    z-index: 20;
+    font-family: 'Nasalization', sans-serif;
+}
+#analyze-button:hover { background-color: rgba(255, 255, 255, 0.2); }
+
 #loading-screen {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: #000; display: flex; justify-content: center; align-items: center;
-    z-index: 100; transition: opacity 0.5s ease; cursor: pointer;
-}
-
-/* KORREKTUR: Styling for the round progress bar */
-#progress-bar-container {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: radial-gradient(circle at center, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-#progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    background: conic-gradient(white var(--progress, 0%), transparent 0%);
-    transition: background 0.2s ease-out;
-    mask-image: radial-gradient(transparent 65%, black 66%);
+    /* Der Canvas für den Hyperspace wird von JS hier platziert */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    transition: opacity 0.5s ease;
+    cursor: pointer;
+}
+
+#loading-ui-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    z-index: 101; /* Stellt sicher, dass die UI über dem Hyperspace-Canvas liegt */
+}
+
+#progress-percentage {
+    font-size: 2em;
+    color: white;
+    text-shadow: 0 0 10px white;
+    margin-bottom: 8px;
 }
 
 #loading-text {
-    position: absolute;
-    color: white;
-    font-size: 0.8em;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px black;
+    font-size: 1.2em;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 20px;
 }
 
-#media-player, #enter-sound, #exit-sound { display: none; }
+/* KORREKTUR: Glassmorphism-Stil für den Ladebalken */
+#progress-bar-container {
+    width: 300px;
+    max-width: 80%;
+    height: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+#progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffffff, #aaaaaa);
+    border-radius: 50px;
+    transition: width 0.3s ease-out;
+}
+
+#media-player {
+    display: none;
+}
