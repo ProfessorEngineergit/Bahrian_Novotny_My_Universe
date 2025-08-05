@@ -10,6 +10,7 @@ body {
     -webkit-user-drag: none;
     user-drag: none;
 }
+
 canvas {
     display: block;
     position: absolute;
@@ -17,6 +18,7 @@ canvas {
     left: 0;
     touch-action: none;
 }
+
 #label-container {
     position: absolute;
     top: 0;
@@ -25,28 +27,34 @@ canvas {
     height: 100%;
     pointer-events: none;
 }
+
 .label {
     color: #fff;
     font-size: 16px;
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    /* KORREKTUR: Schein ist jetzt weiß */
+    text-shadow: 0 0 5px #ffffff;
     white-space: nowrap;
     text-align: center;
 }
 .label-line {
     width: 1px;
     height: 50px;
+    /* KORREKTUR: Linienverlauf ist jetzt weiß */
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
     margin: 8px auto 0;
 }
+
 #info, #joystick-zone, #mute-button, #analyze-button {
     opacity: 0;
     pointer-events: none;
     transition: opacity 1s ease-out;
 }
+
 #info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible, #analyze-button.ui-visible {
     opacity: 1;
     pointer-events: auto;
 }
+
 #info {
     position: absolute;
     top: 10px;
@@ -57,6 +65,7 @@ canvas {
     text-shadow: 2px 2px 4px #000000;
     z-index: 10;
 }
+
 #joystick-zone {
     position: absolute;
     bottom: 20px;
@@ -68,6 +77,7 @@ canvas {
     border-radius: 50%;
     z-index: 5;
 }
+
 #mute-button {
     position: absolute;
     top: 20px;
@@ -82,18 +92,21 @@ canvas {
     z-index: 20;
     transition: background-color 0.2s ease, opacity 1s ease-out;
 }
+
 #mute-button:hover { background: rgba(255, 255, 255, 0.1); }
 #mute-button svg { width: 100%; height: 100%; }
 #mute-button #speaker-icon { fill: white; }
 #mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
 #mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
+
 #analyze-button {
     position: absolute;
     top: 80px;
     right: 20px;
     padding: 10px 20px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    /* KORREKTUR: Button-Farbe angepasst */
+    background-color: rgba(200, 200, 200, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     color: white;
     font-size: 14px;
     cursor: pointer;
@@ -101,6 +114,7 @@ canvas {
     z-index: 20;
 }
 #analyze-button:hover { background-color: rgba(255, 255, 255, 0.2); }
+
 #loading-screen {
     position: absolute;
     top: 0;
@@ -120,5 +134,5 @@ canvas {
 }
 #loading-text { margin-bottom: 20px; }
 #progress-bar-container { width: 80%; max-width: 400px; height: 10px; border: 1px solid white; }
-#progress-bar { width: 0%; height: 100%; background-color: #ffffff; transition: width 0.2s ease-out; }
+#progress-bar { width: 0%; height: 100%; background-color: #00aaff; transition: width 0.2s ease-out; }
 #media-player { display: none; }
