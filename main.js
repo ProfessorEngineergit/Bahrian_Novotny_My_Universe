@@ -39,15 +39,15 @@ const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
 
-// === Zustandsverwaltung ===
+// === KORREKTUR: Robuste Zustandsverwaltung ===
 let gameState = 'loading'; // loading, ready, playing
 
-// === Szenerie-Gruppen ===
-let mainSceneGroup = new THREE.Group();
+// === Szenen-Gruppen für saubere Übergänge ===
+const mainSceneGroup = new THREE.Group();
 scene.add(mainSceneGroup);
 mainSceneGroup.visible = false;
 
-let hyperspaceGroup = new THREE.Group();
+const hyperspaceGroup = new THREE.Group();
 scene.add(hyperspaceGroup);
 
 // === Hyperspace-Setup ===
@@ -102,9 +102,7 @@ function createAccretionDisk() {
     return disk;
 }
 
-function createPlanetTexture(color) {
-    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas);
-}
+function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
 
 function createPlanet(data, index) {
     const orbitPivot = new THREE.Object3D();
@@ -162,17 +160,23 @@ let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
+
 loader.load(modelURL, (gltf) => {
-    progressBar.style.width = '100%';
     progressPercentage.textContent = '100%';
+    progressBar.style.width = '100%';
     loadingText.textContent = 'Tippen zum Starten';
+    
     createSceneElements();
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     mainSceneGroup.add(ship);
     ship.position.set(0, 0, 30);
-    forcefield = createForcefield(5.1); ship.add(forcefield);
-    ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
+    forcefield = createForcefield(5.1);
+    ship.add(forcefield);
+    ship.add(cameraPivot);
+    cameraPivot.add(cameraHolder);
+    cameraHolder.add(camera);
+    
     gameState = 'ready';
 }, (xhr) => { 
     if (xhr.lengthComputable) {
@@ -206,6 +210,7 @@ function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 
 
 loadingScreen.addEventListener('click', () => {
     if (gameState === 'ready') {
+        gameState = 'playing';
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
@@ -213,12 +218,11 @@ loadingScreen.addEventListener('click', () => {
         infoElement.classList.add('ui-visible');
         joystickZone.classList.add('ui-visible');
         muteButton.classList.add('ui-visible');
-        gameState = 'playing';
         camera.position.set(0, 4, -15);
         camera.lookAt(cameraHolder.position);
         cameraPivot.rotation.y = Math.PI;
     }
-}, { once: true });
+});
 
 // === Einziger Animations-Loop ===
 const clock = new THREE.Clock();
@@ -229,10 +233,8 @@ function animate() {
     const elapsedTime = clock.getElapsedTime();
 
     if (gameState === 'loading' || gameState === 'ready') {
-        hyperspace1.position.z += 2;
-        hyperspace2.position.z += 2;
-        if (hyperspace1.position.z > 500) hyperspace1.position.z = -500;
-        if (hyperspace2.position.z > 500) hyperspace2.position.z = -500;
+        hyperspace1.position.z = (hyperspace1.position.z + 2) % 1000;
+        hyperspace2.position.z = (hyperspace2.position.z + 2) % 1000;
         renderer.render(scene, camera);
         return;
     }
@@ -311,55 +313,4 @@ function animate() {
     } else {
         if (ship) {
             const getAngleToShip = (targetPosition) => Math.atan2(ship.position.x - targetPosition.x, ship.position.z - targetPosition.z);
-            blackHoleLabel.element.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
-            planets.forEach(p => {
-                p.mesh.getWorldPosition(worldPosition);
-                p.labelObject.element.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
-            });
-        }
-        if (cameraFingerId === null && !isDraggingMouse) {
-            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
-            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
-        }
-        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-        cameraHolder.rotation.x += cameraVelocity.x;
-        cameraPivot.rotation.y += cameraVelocity.y;
-    }
-    
-    cameraVelocity.multiplyScalar(DAMPING);
-    zoomDistance += zoomVelocity;
-    zoomVelocity *= DAMPING;
-    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
-    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
-    accretionDisk.rotation.z += 0.005;
-
-    if (forcefield && forcefield.visible) {
-        forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
-    }
-
-    lensingSphere.visible = false;
-    blackHoleCore.visible = false;
-    accretionDisk.visible = false;
-    cubeCamera.update(renderer, scene);
-    lensingSphere.visible = true;
-    blackHoleCore.visible = true;
-    accretionDisk.visible = true;
-
-    composer.render();
-    labelRenderer.render(scene, camera);
-}
-
-// Starte den Loop sofort
-animate();
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    labelRenderer.setSize(window.innerWidth, window.innerHeight);
-});
+            blackHoleLabel.element.styl
