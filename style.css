@@ -43,13 +43,13 @@ canvas {
     margin: 8px auto 0;
 }
 
-#info, #joystick-zone, #bottom-bar {
+#info, #bottom-bar, #joystick-zone {
     opacity: 0;
     pointer-events: none;
     transition: opacity 1s ease-out;
 }
 
-#info.ui-visible, #joystick-zone.ui-visible, #bottom-bar.ui-visible {
+#info.ui-visible, #bottom-bar.ui-visible, #joystick-zone.ui-visible {
     opacity: 1;
     pointer-events: auto;
 }
@@ -65,13 +65,13 @@ canvas {
     z-index: 10;
 }
 
-/* KORREKTUR: Joystick ist wieder ein separates Element */
+/* KORREKTUR: Joystick wieder als eigenständiges Element */
 #joystick-zone {
     position: absolute;
     bottom: 20px;
     left: 20px;
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     background: rgba(30, 30, 30, 0.5);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -85,45 +85,47 @@ canvas {
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: auto;
-    height: 90px;
+    width: 90%;
+    max-width: 600px;
+    height: 80px;
+    
     background: rgba(30, 30, 30, 0.5);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 25px;
+    
     display: flex;
     align-items: center;
-    justify-content: center; /* Zentriert die Elemente */
-    gap: 20px;
-    padding: 0 30px;
+    justify-content: center; /* Zentriert den Karten-Button */
+    padding: 0 20px;
     box-sizing: border-box;
     z-index: 15;
+    position: relative;
 }
 
 #map-button {
     background: transparent;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     width: 50px;
     height: 50px;
+    border-radius: 50%;
     cursor: pointer;
-    padding: 0;
-    transition: transform 0.2s ease;
+    padding: 10px;
+    transition: background-color 0.2s ease;
+    fill: white;
 }
 #map-button:hover {
-    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.1);
 }
 #map-button svg {
     width: 100%;
     height: 100%;
-    fill: rgba(255, 255, 255, 0.8);
-    transition: fill 0.2s ease;
-}
-#map-button:hover svg {
-    fill: white;
 }
 
 .right-controls {
+    position: absolute; /* Positioniert die rechten Controls absolut zur Bar */
+    right: 15px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -131,26 +133,24 @@ canvas {
 
 #mute-button {
     position: relative;
-    top: 0; right: 0;
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 14px;
     cursor: pointer;
-    padding: 12px;
+    padding: 10px;
     transition: background-color 0.2s ease;
 }
 
 #analyze-button {
     position: relative;
-    top: 0; right: 0;
-    padding: 12px 24px;
+    padding: 10px 20px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
     font-family: 'Nasalization', sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
     border-radius: 50px;
     opacity: 0;
