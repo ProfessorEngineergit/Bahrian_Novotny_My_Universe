@@ -43,85 +43,106 @@ canvas {
     margin: 8px auto 0;
 }
 
-#info, #joystick-zone, #mute-button, #analyze-button {
+#ui-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 120px;
+    background: rgba(20, 20, 22, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+    z-index: 10;
     opacity: 0;
-    pointer-events: none;
     transition: opacity 1s ease-out;
 }
-
-#info.ui-visible, #joystick-zone.ui-visible, #mute-button.ui-visible, #analyze-button.ui-visible {
+#ui-panel.ui-visible {
     opacity: 1;
-    pointer-events: auto;
-}
-
-#info {
-    position: absolute;
-    top: 10px;
-    width: 100%;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 14px;
-    text-shadow: 2px 2px 4px #000000;
-    z-index: 10;
 }
 
 #joystick-zone {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    width: 160px;
-    height: 160px;
-    /* KORREKTUR: Matte Glass Effekt */
-    background: rgba(30, 30, 30, 0.5);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    width: 100px;
+    height: 100px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
-    z-index: 5;
 }
 
-#mute-button {
+#map-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.4s ease, width 0.4s ease, height 0.4s ease;
+    cursor: pointer; /* Zeigt an, dass die Karte klickbar ist */
+}
+#map-container.enlarged {
+    width: 300px;
+    height: 300px;
+    transform: translateY(-100px);
+}
+#map-canvas {
+    width: 100%;
+    height: 100%;
+}
+#map-toggle-button {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 48px;
-    height: 48px;
-    /* KORREKTUR: Matte Glass Effekt */
-    background: rgba(30, 30, 30, 0.5);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
     cursor: pointer;
-    padding: 12px;
-    z-index: 20;
-    transition: background-color 0.2s ease, opacity 1s ease-out;
 }
 
-#mute-button:hover { background: rgba(50, 50, 50, 0.6); }
-#mute-button svg { width: 100%; height: 100%; }
-#mute-button #speaker-icon { fill: white; }
-#mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
-#mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
+.button-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
-#analyze-button {
-    position: absolute;
-    top: 80px;
-    right: 20px;
-    padding: 12px 24px;
-    /* KORREKTUR: Matte Glass Effekt */
-    background: rgba(30, 30, 30, 0.5);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+#analyze-button, #mute-button {
+    opacity: 0;
+    transition: opacity 1s ease-out;
+    background: #2c2c2e;
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
     font-family: 'Nasalization', sans-serif;
     font-size: 16px;
     cursor: pointer;
     border-radius: 50px;
-    z-index: 20;
+    padding: 12px 24px;
 }
-#analyze-button:hover { background-color: rgba(50, 50, 50, 0.6); }
+#analyze-button:hover, #mute-button:hover {
+    background-color: #3a3a3c;
+}
+
+#mute-button {
+    width: 48px;
+    height: 48px;
+    padding: 12px;
+    border-radius: 16px;
+}
+#analyze-button.ui-visible, #mute-button.ui-visible {
+    opacity: 1;
+}
+
+#mute-button svg { width: 100%; height: 100%; }
+#mute-button #speaker-icon { fill: white; }
+#mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
+#mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
 
 #loading-screen {
     position: absolute;
