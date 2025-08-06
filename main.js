@@ -34,6 +34,7 @@ const progressBar = document.getElementById('progress-bar');
 const loadingTitle = document.getElementById('loading-title');
 const loadingPercentage = document.getElementById('loading-percentage');
 const infoElement = document.getElementById('info');
+const joystickZone = document.getElementById('joystick-zone');
 const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
