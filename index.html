@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <title>USS Enterprise 3D Flug</title>
     
+    <!-- Import der Schriftart "Nasalization" -->
     <link href="https://fonts.cdnfonts.com/css/nasalization" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
@@ -20,21 +21,21 @@
 <body>
     <div id="label-container"></div>
     
-    <!-- KORREKTUR: Alle UI-Elemente erhalten die .matte-glass Klasse -->
-    <div id="info" class="matte-glass">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
-    <div id="joystick-zone" class="matte-glass"></div>
+    <div id="info">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
+    <div id="joystick-zone"></div>
     
-    <button id="mute-button" class="matte-glass" title="Ton umschalten">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <button id="mute-button" title="Ton umschalten">
+        <svg xmlns="http://www.w.org/2000/svg" viewBox="0 0 24 24">
             <path id="speaker-icon" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
             <path id="mute-slash" d="M1 1l22 22"/>
         </svg>
     </button>
     
-    <button id="analyze-button" class="matte-glass">Analyze Object</button>
+    <button id="analyze-button">Analyze Object</button>
     
     <div id="loading-screen">
         <div class="loading-content">
+            <!-- KORREKTUR: Neuer Start-Titel -->
             <p id="loading-title">Warp to Bahrians Universe</p>
             <p id="loading-percentage">0%</p>
             <div id="progress-bar-container">
