@@ -20,25 +20,19 @@
 <body>
     <div id="label-container"></div>
     
-    <div id="loading-screen">
-        <div class="loading-content">
-            <p id="loading-title">Warp to Bahrians Universe</p>
-            <p id="loading-percentage">0%</p>
-            <div id="progress-bar-container">
-                <div id="progress-bar"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="ui-panel">
+    <div id="info">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
+    
+    <!-- NEU: Die komplette untere UI ist jetzt in einer Bar zusammengefasst -->
+    <div id="bottom-bar">
         <div id="joystick-zone"></div>
         
-        <div id="map-container">
-            <canvas id="map-canvas"></canvas>
-            <button id="map-toggle-button" title="Sternenkarte umschalten"></button>
-        </div>
-
-        <div class="button-group">
+        <button id="map-button" title="Sternensystem-Karte">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-8h10v2H7v-2z"/>
+            </svg>
+        </button>
+        
+        <div class="right-controls">
             <button id="analyze-button">Analyze Object</button>
             <button id="mute-button" title="Ton umschalten">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -46,6 +40,16 @@
                     <path id="mute-slash" d="M1 1l22 22"/>
                 </svg>
             </button>
+        </div>
+    </div>
+    
+    <div id="loading-screen">
+        <div class="loading-content">
+            <p id="loading-title">Warp to Bahrians Universe</p>
+            <p id="loading-percentage">0%</p>
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
         </div>
     </div>
     
