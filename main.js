@@ -34,10 +34,10 @@ const progressBar = document.getElementById('progress-bar');
 const loadingTitle = document.getElementById('loading-title');
 const loadingPercentage = document.getElementById('loading-percentage');
 const infoElement = document.getElementById('info');
-const bottomBar = document.getElementById('bottom-bar'); // NEU
+const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
-const mapButton = document.getElementById('map-button'); // NEU
+const mapButton = document.getElementById('map-button');
 const audio = document.getElementById('media-player');
 
 // === Hyperspace-Animation Setup ===
