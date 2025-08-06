@@ -118,7 +118,7 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #000;
+    background-color: #000; /* Fallback-Farbe */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -127,14 +127,14 @@ canvas {
     cursor: pointer;
 }
 
-/* NEU: Canvas für den Hyperspace-Effekt */
+/* NEU: Canvas für den Hyperspace-Hintergrund */
 #hyperspace-canvas {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 1;
+    z-index: 0; /* Liegt hinter dem Lade-Inhalt */
 }
 
 .loading-content {
@@ -144,8 +144,7 @@ canvas {
     text-align: center;
     color: white;
     text-shadow: 0 0 10px rgba(0,0,0,0.5);
-    z-index: 2;
-    position: relative;
+    z-index: 1; /* Liegt über dem Hyperspace-Canvas */
 }
 
 #loading-title {
