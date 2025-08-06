@@ -65,40 +65,37 @@ canvas {
     z-index: 10;
 }
 
+/* KORREKTUR: Joystick ist wieder ein eigenständiges Element */
 #joystick-zone {
     position: absolute;
     bottom: 20px;
     left: 20px;
     width: 160px;
     height: 160px;
-    /* KORREKTUR: Matte Glass Effekt */
     background: rgba(30, 30, 30, 0.5);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    z-index: 5;
+    z-index: 20; /* Wichtig: Höherer z-index, damit er über der Bar liegt */
 }
 
+/* KORREKTUR: Die Bar ist jetzt linksbündig und füllt den restlichen Platz */
 #bottom-bar {
     position: absolute;
     bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60%;
-    max-width: 500px;
+    left: 200px; /* Startet nach dem Joystick (160px + 20px Puffer) */
+    right: 20px; /* Endet am rechten Rand */
+    width: auto;
     height: 90px;
-    
     background: rgba(30, 30, 30, 0.5);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 25px;
-    
     display: flex;
     align-items: center;
-    /* KORREKTUR: Passt sich an fehlenden Joystick an */
-    justify-content: space-around;
+    justify-content: space-between; /* Verteilt den Inhalt */
     padding: 0 30px;
     box-sizing: border-box;
     z-index: 15;
@@ -131,8 +128,7 @@ canvas {
 
 #mute-button {
     position: relative;
-    top: 0;
-    right: 0;
+    top: 0; right: 0;
     width: 48px;
     height: 48px;
     background: rgba(0,0,0,0.3);
@@ -145,8 +141,7 @@ canvas {
 
 #analyze-button {
     position: relative;
-    top: 0;
-    right: 0;
+    top: 0; right: 0;
     padding: 12px 24px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
