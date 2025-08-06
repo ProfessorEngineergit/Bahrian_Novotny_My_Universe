@@ -2,6 +2,7 @@ body {
     margin: 0;
     overflow: hidden;
     background-color: #000;
+    /* KORREKTUR: Globale Schriftart setzen */
     font-family: 'Nasalization', sans-serif;
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -84,6 +85,7 @@ canvas {
     height: 48px;
     background: #2c2c2e;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    /* KORREKTUR: Abgerundete Ecken */
     border-radius: 16px;
     cursor: pointer;
     padding: 12px;
@@ -107,34 +109,29 @@ canvas {
     color: white;
     font-size: 16px;
     cursor: pointer;
+    /* KORREKTUR: Abgerundete Ecken */
     border-radius: 50px;
     z-index: 20;
 }
 #analyze-button:hover { background-color: #3a3a3c; }
 
+/* KORREKTUR: Styling für den neuen Ladebildschirm */
 #loading-screen {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #000;
+    /* NEU: Hyperspace-Hintergrund */
+    background-image: url('https://media1.tenor.com/m/1p_i_1j29_kAAAAC/hyperspace-starwars.gif');
+    background-size: cover;
+    background-position: center;
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
     transition: opacity 0.5s ease;
     cursor: pointer;
-}
-
-/* NEU: Canvas für den Hyperspace-Effekt */
-#hyperspace-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0; /* Hinter dem Lade-Inhalt */
 }
 
 .loading-content {
@@ -144,12 +141,6 @@ canvas {
     text-align: center;
     color: white;
     text-shadow: 0 0 10px rgba(0,0,0,0.5);
-    position: relative; /* Stellt sicher, dass es über dem Canvas liegt */
-    z-index: 1;
-    /* NEU: Hintergrund für bessere Lesbarkeit */
-    background-color: rgba(0,0,0,0.3);
-    padding: 20px 40px;
-    border-radius: 20px;
 }
 
 #loading-title {
@@ -167,6 +158,7 @@ canvas {
     width: 300px;
     max-width: 80%;
     height: 16px;
+    /* NEU: Glassmorphism-Effekt */
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
