@@ -6,70 +6,17 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// === NEU: Hyperspace-Logik ===
-let hyperspaceAnimationId;
-function startHyperspaceAnimation() {
-    const canvas = document.getElementById('hyperspace-canvas');
-    const ctx = canvas.getContext('2d');
-
-    const resize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', resize);
-    resize();
-
-    const stars = Array(800).fill().map(() => ({
-        x: Math.random() * 2 - 1,
-        y: Math.random() * 2 - 1,
-        z: Math.random()
-    }));
-
-    function hyperspaceLoop() {
-        const { width, height } = canvas;
-        const halfWidth = width / 2;
-        const halfHeight = height / 2;
-
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, width, height);
-
-        for (const star of stars) {
-            star.z -= 0.01;
-            if (star.z <= 0) {
-                star.x = Math.random() * 2 - 1;
-                star.y = Math.random() * 2 - 1;
-                star.z = 1;
-            }
-
-            const k = 128 / star.z;
-            const px = star.x * k + halfWidth;
-            const py = star.y * k + halfHeight;
-
-            if (px >= 0 && px < width && py >= 0 && py < height) {
-                const size = (1 - star.z) * 5;
-                const shade = (1 - star.z) * 255;
-                ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
-                ctx.fillRect(px, py, size, size);
-            }
-        }
-        hyperspaceAnimationId = requestAnimationFrame(hyperspaceLoop);
-    }
-    hyperspaceLoop();
-}
-
-// Starte den Hyperspace sofort
-startHyperspaceAnimation();
-
-
 // === Grund-Setup ===
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
+
 renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
 renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
 labelRenderer.domElement.id = 'label-container';
@@ -84,8 +31,8 @@ composer.addPass(bloomPass);
 // === UI Elemente ===
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
-const loadingTitle = document.getElementById('loading-title');
-const loadingPercentage = document.getElementById('loading-percentage');
+const loadingTitle = document.getElementById('loading-title'); // KORREKTUR
+const loadingPercentage = document.getElementById('loading-percentage'); // NEU
 const infoElement = document.getElementById('info');
 const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
@@ -134,7 +81,7 @@ const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterpr
 loader.load(modelURL, (gltf) => {
     progressBar.style.width = '100%';
     loadingTitle.textContent = 'Tippen zum Starten';
-    loadingPercentage.style.display = 'none';
+    loadingPercentage.style.display = 'none'; // Hide percentage when ready to start
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     scene.add(ship);
@@ -144,9 +91,6 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
     loadingScreen.addEventListener('click', () => {
-        // NEU: Stoppe die Hyperspace-Animation
-        cancelAnimationFrame(hyperspaceAnimationId);
-        
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
@@ -320,4 +264,4 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
-});```
+});
