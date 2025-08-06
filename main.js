@@ -45,7 +45,6 @@ const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window
 let hyperspaceParticles;
 const HYPERSPACE_LENGTH = 800;
 let loadingProgress = 0;
-let loadingAnimationId;
 
 function createHyperspaceEffect() {
     const geometry = new THREE.BufferGeometry();
@@ -62,16 +61,6 @@ function createHyperspaceEffect() {
     hyperspaceParticles = new THREE.Points(geometry, material);
     loadingScene.add(hyperspaceParticles);
 }
-
-function animateLoadingScreen() {
-    loadingAnimationId = requestAnimationFrame(animateLoadingScreen);
-    hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
-    if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) {
-        hyperspaceParticles.position.z = -HYPERSPACE_LENGTH / 2;
-    }
-    renderer.render(loadingScene, loadingCamera);
-}
-
 
 // === Szenerie-Setup ===
 mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
@@ -107,21 +96,23 @@ planetData.forEach(createPlanet);
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
 function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(255, 255, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
-let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
+// === App-Zustand ===
+let appState = 'loading';
+let isAnalyzeButtonVisible = false;
 
 // === GLTF Modell-Lader ===
 createHyperspaceEffect();
-animateLoadingScreen();
+animate(); // Starte die EINE Animationsschleife
+
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 loader.load(modelURL, (gltf) => {
     loadingProgress = 1;
     progressBar.style.width = '100%';
     loadingPercentage.textContent = '100%';
-    loadingTitle.textContent = 'Drop out of Warp-Speed'; // Neuer Titel
+    loadingTitle.textContent = 'Drop out of Warp-Speed';
+    loadingScreen.classList.add('clickable'); // Mache den Bildschirm klickbar
     
-    cancelAnimationFrame(loadingAnimationId);
-
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     mainScene.add(ship);
@@ -135,11 +126,10 @@ loader.load(modelURL, (gltf) => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
-        isIntroAnimationPlaying = true;
+        appState = 'intro'; // Ändere den App-Zustand
         infoElement.classList.add('ui-visible');
         joystickZone.classList.add('ui-visible');
         muteButton.classList.add('ui-visible');
-        animate();
     }, { once: true });
 }, (xhr) => { 
     if (xhr.lengthComputable) {
@@ -185,6 +175,16 @@ const worldPosition = new THREE.Vector3();
 
 function animate() {
     requestAnimationFrame(animate);
+
+    if (appState === 'loading') {
+        hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
+        if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) {
+            hyperspaceParticles.position.z = -HYPERSPACE_LENGTH / 2;
+        }
+        renderer.render(loadingScene, loadingCamera);
+        return;
+    }
+
     const elapsedTime = clock.getElapsedTime();
 
     const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
@@ -249,13 +249,13 @@ function animate() {
     if (keyboard['-']) zoomVelocity += 0.1;
     if (keyboard['+'] || keyboard['=']) zoomVelocity -= 0.1;
 
-    if (isIntroAnimationPlaying) {
+    if (appState === 'intro') {
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
         if (Math.abs(cameraPivot.rotation.y) < 0.01) {
             cameraPivot.rotation.y = 0;
-            isIntroAnimationPlaying = false;
+            appState = 'playing';
         }
-    } else {
+    } else if (appState === 'playing') {
         if (ship) {
             const getAngleToShip = (targetPosition) => Math.atan2(ship.position.x - targetPosition.x, ship.position.z - targetPosition.z);
             blackHoleLabelDiv.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
