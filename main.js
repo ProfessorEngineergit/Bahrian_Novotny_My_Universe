@@ -38,7 +38,6 @@ const joystickZone = document.getElementById('joystick-zone');
 const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
-const mapButton = document.getElementById('map-button');
 const audio = document.getElementById('media-player');
 
 // === Hyperspace-Animation Setup ===
@@ -307,4 +306,4 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
-});
+});```
