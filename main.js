@@ -6,53 +6,10 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// === NEU: Setup für den Hyperspace Lade-Effekt ===
-const warpCanvas = document.getElementById('warp-canvas');
-const warpRenderer = new THREE.WebGLRenderer({ canvas: warpCanvas, antialias: true });
-const warpScene = new THREE.Scene();
-const warpCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-warpCamera.position.z = 1;
-let warpStars = [];
-let warpAnimationId;
-
-function createWarpEffect() {
-    const starCount = 5000;
-    for (let i = 0; i < starCount; i++) {
-        const geometry = new THREE.BufferGeometry();
-        const vertices = new Float32Array([0, 0, 0, 0, 0, -1]); // Eine Linie entlang der Z-Achse
-        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-        const material = new THREE.LineBasicMaterial({ color: 0xffffff });
-        const star = new THREE.Line(geometry, material);
-        
-        star.position.set(
-            (Math.random() - 0.5) * 100,
-            (Math.random() - 0.5) * 100,
-            (Math.random() - 1) * 500
-        );
-        star.scale.z = Math.random() * 5 + 0.5;
-        star.userData.speed = Math.random() * 2 + 1;
-        
-        warpScene.add(star);
-        warpStars.push(star);
-    }
-}
-
-function animateWarpEffect() {
-    warpStars.forEach(star => {
-        star.position.z += star.userData.speed;
-        if (star.position.z > 1) {
-            star.position.z -= 501;
-        }
-    });
-    warpRenderer.render(warpScene, warpCamera);
-    warpAnimationId = requestAnimationFrame(animateWarpEffect);
-}
-
-// === Haupt-Setup ===
+// === Grund-Setup ===
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.domElement.id = 'main-canvas';
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
@@ -81,6 +38,76 @@ const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
+
+// === NEU: Prozeduraler Hyperspace-Effekt ===
+function initHyperspaceEffect() {
+    const canvas = document.getElementById('hyperspace-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const stars = [];
+    const numStars = 500;
+    const speed = 5;
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Star {
+        constructor() {
+            this.x = Math.random() * canvas.width - canvas.width / 2;
+            this.y = Math.random() * canvas.height - canvas.height / 2;
+            this.z = Math.random() * canvas.width;
+        }
+
+        update() {
+            this.z -= speed;
+            if (this.z <= 0) {
+                this.x = Math.random() * canvas.width - canvas.width / 2;
+                this.y = Math.random() * canvas.height - canvas.height / 2;
+                this.z = canvas.width;
+            }
+        }
+
+        draw() {
+            const sx = (this.x / this.z) * canvas.width / 2;
+            const sy = (this.y / this.z) * canvas.height / 2;
+            const r = (1 - this.z / canvas.width) * 3;
+
+            ctx.beginPath();
+            ctx.arc(sx, sy, r, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+        }
+    }
+
+    for (let i = 0; i < numStars; i++) {
+        stars.push(new Star());
+    }
+
+    function animateHyperspace() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+
+        stars.forEach(star => {
+            star.update();
+            star.draw();
+        });
+
+        ctx.restore();
+        requestAnimationFrame(animateHyperspace);
+    }
+    
+    // Starte die Hyperspace-Animation sofort
+    animateHyperspace();
+}
+initHyperspaceEffect();
+
 
 // === Szenerie-Setup ===
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
@@ -121,12 +148,8 @@ let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 // === GLTF Modell-Lader ===
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
-
-// KORREKTUR: Starte die Warp-Animation
-createWarpEffect();
-animateWarpEffect();
-
 loader.load(modelURL, (gltf) => {
+    progressBar.style.width = '100%';
     loadingTitle.textContent = 'Tippen zum Starten';
     loadingPercentage.style.display = 'none';
     ship = gltf.scene;
@@ -138,8 +161,6 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
     loadingScreen.addEventListener('click', () => {
-        // KORREKTUR: Stoppe die Warp-Animation und starte das Hauptspiel
-        cancelAnimationFrame(warpAnimationId);
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
@@ -313,4 +334,4 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
-});
+});```
