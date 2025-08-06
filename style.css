@@ -43,102 +43,126 @@ canvas {
     margin: 8px auto 0;
 }
 
-#ui-panel {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 120px;
-    background: rgba(20, 20, 22, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    box-sizing: border-box;
-    z-index: 10;
+#info, #bottom-bar {
     opacity: 0;
+    pointer-events: none;
     transition: opacity 1s ease-out;
 }
-#ui-panel.ui-visible {
+
+#info.ui-visible, #bottom-bar.ui-visible {
     opacity: 1;
+    pointer-events: auto;
+}
+
+#info {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    text-shadow: 2px 2px 4px #000000;
+    z-index: 10;
+}
+
+/* NEU: Styling für die untere Kommando-Leiste */
+#bottom-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 800px;
+    height: 90px;
+    
+    background: rgba(30, 30, 30, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 25px;
+    
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-sizing: border-box;
+    z-index: 15;
 }
 
 #joystick-zone {
-    position: relative;
-    width: 100px;
-    height: 100px;
+    position: relative; /* Nicht mehr absolut */
+    width: 120px;
+    height: 120px;
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
+    z-index: 5;
 }
 
-#map-container {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: transform 0.4s ease, width 0.4s ease, height 0.4s ease;
-    cursor: pointer; /* Zeigt an, dass die Karte klickbar ist */
-}
-#map-container.enlarged {
-    width: 300px;
-    height: 300px;
-    transform: translateY(-100px);
-}
-#map-canvas {
-    width: 100%;
-    height: 100%;
-}
-#map-toggle-button {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
+/* NEU: Styling für den Karten-Button */
+#map-button {
     background: transparent;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     cursor: pointer;
+    padding: 12px;
+    transition: background-color 0.2s ease;
+}
+#map-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+#map-button svg {
+    width: 100%;
+    height: 100%;
+    fill: white;
 }
 
-.button-group {
+/* Container für die rechten Buttons */
+.right-controls {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px; /* Abstand zwischen den Buttons */
 }
 
-#analyze-button, #mute-button {
-    opacity: 0;
-    transition: opacity 1s ease-out;
-    background: #2c2c2e;
+#mute-button {
+    position: relative; /* Nicht mehr absolut */
+    top: 0;
+    right: 0;
+    width: 48px;
+    height: 48px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    cursor: pointer;
+    padding: 12px;
+    transition: background-color 0.2s ease;
+}
+
+#analyze-button {
+    position: relative; /* Nicht mehr absolut */
+    top: 0;
+    right: 0;
+    padding: 12px 24px;
+    background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
     font-family: 'Nasalization', sans-serif;
     font-size: 16px;
     cursor: pointer;
     border-radius: 50px;
-    padding: 12px 24px;
+    /* Opacity wird jetzt von der bottom-bar gesteuert */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
 }
-#analyze-button:hover, #mute-button:hover {
-    background-color: #3a3a3c;
-}
-
-#mute-button {
-    width: 48px;
-    height: 48px;
-    padding: 12px;
-    border-radius: 16px;
-}
-#analyze-button.ui-visible, #mute-button.ui-visible {
+#analyze-button.ui-visible {
     opacity: 1;
+    pointer-events: auto;
 }
 
+#mute-button:hover, #analyze-button:hover { background-color: rgba(255, 255, 255, 0.1); }
 #mute-button svg { width: 100%; height: 100%; }
 #mute-button #speaker-icon { fill: white; }
 #mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
@@ -159,51 +183,10 @@ canvas {
     cursor: default;
 }
 
-#loading-screen.clickable {
-    cursor: pointer;
-}
-
-.loading-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    color: white;
-    text-shadow: 0 0 10px rgba(0,0,0,0.5);
-    z-index: 101;
-}
-
-#loading-title {
-    font-size: 1.8em;
-    margin: 0;
-    font-weight: normal;
-}
-
-#loading-percentage {
-    font-size: 1.2em;
-    margin: 20px 0 10px;
-}
-
-#progress-bar-container {
-    width: 300px;
-    max-width: 80%;
-    height: 16px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    padding: 3px;
-    overflow: hidden;
-}
-
-#progress-bar {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,1));
-    border-radius: 50px;
-    transition: width 0.3s ease-out;
-}
-
+#loading-screen.clickable { cursor: pointer; }
+.loading-content { display: flex; flex-direction: column; align-items: center; text-align: center; color: white; text-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 101; }
+#loading-title { font-size: 1.8em; margin: 0; font-weight: normal; }
+#loading-percentage { font-size: 1.2em; margin: 20px 0 10px; }
+#progress-bar-container { width: 300px; max-width: 80%; height: 16px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); padding: 3px; overflow: hidden; }
+#progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,1)); border-radius: 50px; transition: width 0.3s ease-out; }
 #media-player { display: none; }
