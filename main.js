@@ -129,7 +129,7 @@ loader.load(modelURL, (gltf) => {
         appState = 'intro';
         infoElement.classList.add('ui-visible');
         bottomBar.classList.add('ui-visible');
-        joystickZone.classList.add('ui-visible'); // Wichtig: Joystick einblenden
+        joystickZone.classList.add('ui-visible');
     }, { once: true });
 }, (xhr) => { 
     if (xhr.lengthComputable) {
