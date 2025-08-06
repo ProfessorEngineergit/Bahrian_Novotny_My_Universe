@@ -33,21 +33,12 @@ const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingTitle = document.getElementById('loading-title');
 const loadingPercentage = document.getElementById('loading-percentage');
-const uiPanel = document.getElementById('ui-panel');
-const joystickZone = document.getElementById('joystick-zone');
+const infoElement = document.getElementById('info');
+const bottomBar = document.getElementById('bottom-bar'); // NEU
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
+const mapButton = document.getElementById('map-button'); // NEU
 const audio = document.getElementById('media-player');
-
-// === Karten-Setup ===
-const mapCanvas = document.getElementById('map-canvas');
-const mapCtx = mapCanvas.getContext('2d');
-const mapToggleButton = document.getElementById('map-toggle-button');
-const mapContainer = document.getElementById('map-container');
-
-mapToggleButton.addEventListener('click', () => {
-    mapContainer.classList.toggle('enlarged');
-});
 
 // === Hyperspace-Animation Setup ===
 const loadingScene = new THREE.Scene();
@@ -100,7 +91,7 @@ const planetData = [
     { name: 'Xylos', radius: 1, orbit: 20, speed: 0.04 }, { name: 'Cygnus X-1a', radius: 1.5, orbit: 35, speed: 0.025 }, { name: 'Veridia', radius: 1.2, orbit: 50, speed: 0.015 }, { name: 'Klendathu', radius: 0.8, orbit: 65, speed: 0.03 }, { name: 'Terminus', radius: 2, orbit: 80, speed: 0.01 }, { name: 'Helion Prime', radius: 1.8, orbit: 95, speed: 0.012 }
 ];
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
-function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); mainScene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; orbitPivot.add(planetMesh); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation, isPlanet: true }); }
+function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); mainScene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; orbitPivot.add(planetMesh); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation }); }
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
@@ -108,7 +99,6 @@ function createForcefield(radius) { const canvas = document.createElement('canva
 
 let appState = 'loading';
 let isAnalyzeButtonVisible = false;
-let warpTarget = null; // NEU: Variable für das Warp-Ziel
 
 // === GLTF Modell-Lader ===
 createHyperspaceEffect();
@@ -121,6 +111,7 @@ loader.load(modelURL, (gltf) => {
     loadingPercentage.textContent = '100%';
     loadingTitle.textContent = 'Drop out of Warp-Speed';
     loadingScreen.classList.add('clickable');
+    
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     mainScene.add(ship);
@@ -129,14 +120,23 @@ loader.load(modelURL, (gltf) => {
     ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
     camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
+    
     loadingScreen.addEventListener('click', () => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
         appState = 'intro';
-        uiPanel.classList.add('ui-visible');
+        infoElement.classList.add('ui-visible');
+        bottomBar.classList.add('ui-visible');
     }, { once: true });
-}, (xhr) => { if (xhr.lengthComputable) { loadingProgress = Math.min(1, xhr.loaded / xhr.total); const percentComplete = Math.round(loadingProgress * 100); progressBar.style.width = percentComplete + '%'; loadingPercentage.textContent = percentComplete + '%'; } }, (error) => { console.error('Ladefehler:', error); loadingTitle.textContent = "Fehler!"; });
+}, (xhr) => { 
+    if (xhr.lengthComputable) {
+        loadingProgress = Math.min(1, xhr.loaded / xhr.total);
+        const percentComplete = Math.round(loadingProgress * 100);
+        progressBar.style.width = percentComplete + '%';
+        loadingPercentage.textContent = percentComplete + '%';
+    }
+}, (error) => { console.error('Ladefehler:', error); loadingTitle.textContent = "Fehler!"; });
 
 // === Steuerung und Animation ===
 const keyboard = {};
@@ -153,6 +153,7 @@ let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
+mapButton.addEventListener('click', () => { alert('Sternenkarte wird noch implementiert!'); });
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
@@ -166,38 +167,6 @@ window.addEventListener('mousemove', (e) => { if (isDraggingMouse) { const delta
 window.addEventListener('mouseup', () => { isDraggingMouse = false; });
 renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) { zoomVelocity += e.deltaY * 0.01; } else { zoomVelocity += e.deltaY * 0.05; } }, { passive: false });
 
-mapCanvas.addEventListener('click', (event) => {
-    if (!ship) return;
-    const rect = mapCanvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    const mapSize = rect.width;
-    const mapScale = mapSize / 220;
-    
-    // Check black hole
-    const bhMapX = mapSize / 2;
-    const bhMapZ = mapSize / 2;
-    if (Math.hypot(x - bhMapX, y - bhMapZ) < 10 * mapScale) {
-        const direction = new THREE.Vector3(ship.position.x, ship.position.y, ship.position.z).normalize();
-        warpTarget = new THREE.Vector3(0, 0, 0).addScaledVector(direction, pacingCircle.geometry.parameters.radius + 10);
-        return;
-    }
-
-    // Check planets
-    for (const planet of planets) {
-        planet.mesh.getWorldPosition(worldPosition);
-        const mapX = mapSize / 2 + worldPosition.x * mapScale;
-        const mapZ = mapSize / 2 + worldPosition.z * mapScale;
-        if (Math.hypot(x - mapX, y - mapZ) < (planet.mesh.geometry.parameters.radius + 5) * mapScale) {
-            const direction = ship.position.clone().sub(worldPosition).normalize();
-            const arrivalRadius = planet.boundaryCircle.geometry.parameters.radius + 10;
-            warpTarget = worldPosition.clone().addScaledVector(direction, arrivalRadius);
-            return;
-        }
-    }
-});
-
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
 const clock = new THREE.Clock();
@@ -205,7 +174,7 @@ const worldPosition = new THREE.Vector3();
 
 function animate() {
     requestAnimationFrame(animate);
-
+    
     if (appState === 'loading') {
         hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
         if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) {
@@ -216,6 +185,7 @@ function animate() {
     }
 
     const elapsedTime = clock.getElapsedTime();
+
     const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
     pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     pacingCircle.material.opacity = 0.3 + pulse * 0.4;
@@ -230,30 +200,19 @@ function animate() {
     });
     
     if (ship) {
-        if (warpTarget) {
-            ship.position.lerp(warpTarget, 0.05);
-            const warpDirection = warpTarget.clone().sub(ship.position).normalize();
-            const targetQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), warpDirection);
-            ship.quaternion.slerp(targetQuaternion, 0.05);
-
-            if (ship.position.distanceTo(warpTarget) < 1) {
-                warpTarget = null;
-            }
-        } else {
-            const keyForward = (keyboard['w'] ? 0.1 : 0) + (keyboard['s'] ? -0.1 : 0);
-            const keyTurn = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
-            const finalForward = joystickMove.forward + keyForward;
-            const finalTurn = joystickMove.turn + keyTurn;
-            ship.translateZ(finalForward);
-            ship.rotateY(finalTurn);
-        }
-
+        const keyForward = (keyboard['w'] ? 0.1 : 0) + (keyboard['s'] ? -0.1 : 0);
+        const keyTurn = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
+        const finalForward = joystickMove.forward + keyForward;
+        const finalTurn = joystickMove.turn + keyTurn;
+        
         const shipRadius = 5;
+        const previousPosition = ship.position.clone();
+        ship.translateZ(finalForward);
+        ship.rotateY(finalTurn);
         const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
         const collisionThreshold = shipRadius + blackHoleRadius;
         if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
-            const awayVector = ship.position.clone().normalize();
-            ship.position.copy(awayVector.multiplyScalar(collisionThreshold));
+            ship.position.copy(previousPosition);
             if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
         }
 
@@ -327,8 +286,6 @@ function animate() {
         forcefield.material.opacity -= 0.04;
         if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
     }
-    
-    drawMap();
 
     lensingSphere.visible = false;
     blackHoleCore.visible = false;
