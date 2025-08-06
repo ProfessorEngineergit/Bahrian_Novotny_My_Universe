@@ -34,7 +34,7 @@ const progressBar = document.getElementById('progress-bar');
 const loadingTitle = document.getElementById('loading-title');
 const loadingPercentage = document.getElementById('loading-percentage');
 const infoElement = document.getElementById('info');
-const joystickZone = document.getElementById('joystick-zone'); // KORREKTUR: Referenz hinzugefügt
+const joystickZone = document.getElementById('joystick-zone');
 const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
@@ -129,8 +129,7 @@ loader.load(modelURL, (gltf) => {
         appState = 'intro';
         infoElement.classList.add('ui-visible');
         bottomBar.classList.add('ui-visible');
-        // KORREKTUR: Joystick muss ebenfalls eingeblendet werden
-        joystickZone.classList.add('ui-visible');
+        joystickZone.classList.add('ui-visible'); // Wichtig: Joystick einblenden
     }, { once: true });
 }, (xhr) => { 
     if (xhr.lengthComputable) {
