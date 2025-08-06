@@ -43,13 +43,14 @@ canvas {
     margin: 8px auto 0;
 }
 
-#info, #joystick-zone, #bottom-bar {
+/* KORREKTUR: Joystick ist jetzt Teil der Bar und wird mit ihr eingeblendet */
+#info, #bottom-bar {
     opacity: 0;
     pointer-events: none;
     transition: opacity 1s ease-out;
 }
 
-#info.ui-visible, #joystick-zone.ui-visible, #bottom-bar.ui-visible {
+#info.ui-visible, #bottom-bar.ui-visible {
     opacity: 1;
     pointer-events: auto;
 }
@@ -60,34 +61,20 @@ canvas {
     width: 100%;
     text-align: center;
     color: rgba(255, 255, 255, 0.8);
-    /* KORREKTUR: Flexible Schriftgröße */
     font-size: clamp(10px, 2.5vw, 14px);
     text-shadow: 2px 2px 4px #000000;
     z-index: 10;
     padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 
-/* --- DESKTOP LAYOUT --- */
-#joystick-zone {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    width: 160px;
-    height: 160px;
-    background: rgba(30, 30, 30, 0.5);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    z-index: 20;
-}
-
+/* KORREKTUR: Neues Layout für die untere Leiste */
 #bottom-bar {
     position: absolute;
-    bottom: 20px;
-    left: 200px;
-    right: 20px;
-    width: auto;
+    bottom: calc(20px + env(safe-area-inset-bottom)); /* iOS Safe Area */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95%;
+    max-width: 800px;
     height: 90px;
     background: rgba(30, 30, 30, 0.5);
     backdrop-filter: blur(10px);
@@ -97,12 +84,26 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 30px;
+    padding: 0 20px;
     box-sizing: border-box;
     z-index: 15;
 }
 
+#joystick-zone {
+    position: relative; /* Bleibt im Flex-Flow */
+    width: 120px;
+    height: 120px; /* Darf über die Bar hinausragen */
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    z-index: 16; /* Über der Bar */
+}
+
 #map-button {
+    position: absolute; /* Absolut ZENTRIERT innerhalb der Bar */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.2);
     width: 60px;
@@ -112,14 +113,8 @@ canvas {
     padding: 12px;
     transition: background-color 0.2s ease;
 }
-#map-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-#map-button svg {
-    width: 100%;
-    height: 100%;
-    fill: white;
-}
+#map-button:hover { background: rgba(255, 255, 255, 0.1); }
+#map-button svg { width: 100%; height: 100%; fill: white; }
 
 .right-controls {
     display: flex;
@@ -128,8 +123,7 @@ canvas {
 }
 
 #mute-button {
-    position: relative;
-    top: 0; right: 0;
+    position: relative; top: 0; right: 0;
     width: 48px;
     height: 48px;
     background: rgba(0,0,0,0.3);
@@ -141,8 +135,7 @@ canvas {
 }
 
 #analyze-button {
-    position: relative;
-    top: 0; right: 0;
+    position: relative; top: 0; right: 0;
     padding: 12px 24px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -166,8 +159,7 @@ canvas {
 #mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
 #mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
 
-
-/* --- Ladebildschirm (unverändert) --- */
+/* --- Ladebildschirm --- */
 #loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.3); display: flex; justify-content: center; align-items: center; z-index: 100; transition: opacity 0.5s ease; cursor: default; }
 #loading-screen.clickable { cursor: pointer; }
 .loading-content { display: flex; flex-direction: column; align-items: center; text-align: center; color: white; text-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 101; }
@@ -177,28 +169,24 @@ canvas {
 #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,1)); border-radius: 50px; transition: width 0.3s ease-out; }
 #media-player { display: none; }
 
-
-/* ====================================================== */
-/* --- NEU: MOBILES LAYOUT (für schmale Bildschirme) --- */
-/* ====================================================== */
+/* --- Responsives Layout für Smartphones --- */
 @media (max-width: 768px) {
-    #bottom-bar {
-        display: none; /* Die Bar wird auf dem Handy versteckt */
-    }
-
     #joystick-zone {
-        width: 140px;
-        height: 140px;
-        bottom: calc(20px + env(safe-area-inset-bottom)); /* Berücksichtigt die iOS Home Bar */
-        left: 20px;
+        width: 100px;
+        height: 100px;
     }
-
-    /* Die rechten Buttons werden zu einer vertikalen Spalte */
-    .right-controls {
-        position: absolute;
-        bottom: calc(20px + env(safe-area-inset-bottom));
-        right: 20px;
-        flex-direction: column-reverse; /* Mute-Button ist jetzt unten */
-        gap: 15px;
+    #map-button {
+        width: 50px;
+        height: 50px;
+        padding: 10px;
+    }
+    #analyze-button {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+    #mute-button {
+        width: 40px;
+        height: 40px;
+        padding: 8px;
     }
 }
