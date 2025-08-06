@@ -34,8 +34,8 @@ const progressBar = document.getElementById('progress-bar');
 const loadingTitle = document.getElementById('loading-title');
 const loadingPercentage = document.getElementById('loading-percentage');
 const infoElement = document.getElementById('info');
-const joystickZone = document.getElementById('joystick-zone');
 const bottomBar = document.getElementById('bottom-bar');
+const joystickZone = document.getElementById('joystick-zone');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const mapButton = document.getElementById('map-button');
@@ -129,6 +129,7 @@ loader.load(modelURL, (gltf) => {
         appState = 'intro';
         infoElement.classList.add('ui-visible');
         bottomBar.classList.add('ui-visible');
+        joystickZone.classList.add('ui-visible');
     }, { once: true });
 }, (xhr) => { 
     if (xhr.lengthComputable) {
@@ -154,7 +155,7 @@ let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
-mapButton.addEventListener('click', () => { alert('Sternenkarte wird noch implementiert!'); });
+mapButton.addEventListener('click', () => { alert('Sternensystem-Karte wird noch implementiert!'); });
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
