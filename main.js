@@ -6,77 +6,70 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// === NEU: Hyperspace-Funktion ===
-function initHyperspaceEffect() {
+// === NEU: Hyperspace-Logik ===
+let hyperspaceAnimationId;
+function startHyperspaceAnimation() {
     const canvas = document.getElementById('hyperspace-canvas');
     const ctx = canvas.getContext('2d');
-    let stars = [];
-    const numStars = 1000;
-    const speed = 5;
 
-    function resize() {
+    const resize = () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-    }
-    resize();
+    };
     window.addEventListener('resize', resize);
+    resize();
 
-    function createStar() {
-        return {
-            x: Math.random() * 2 - 1,
-            y: Math.random() * 2 - 1,
-            z: Math.random() * 1000
-        };
-    }
+    const stars = Array(800).fill().map(() => ({
+        x: Math.random() * 2 - 1,
+        y: Math.random() * 2 - 1,
+        z: Math.random()
+    }));
 
-    for (let i = 0; i < numStars; i++) {
-        stars.push(createStar());
-    }
+    function hyperspaceLoop() {
+        const { width, height } = canvas;
+        const halfWidth = width / 2;
+        const halfHeight = height / 2;
 
-    function animateStars() {
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, width, height);
 
         for (const star of stars) {
-            star.z -= speed;
-
+            star.z -= 0.01;
             if (star.z <= 0) {
-                Object.assign(star, createStar());
+                star.x = Math.random() * 2 - 1;
+                star.y = Math.random() * 2 - 1;
+                star.z = 1;
             }
 
-            const sx = (star.x / (star.z / 1000)) * centerX + centerX;
-            const sy = (star.y / (star.z / 1000)) * centerY + centerY;
-            const size = (1 - star.z / 1000) * 5;
-            
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(sx, sy, size / 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
+            const k = 128 / star.z;
+            const px = star.x * k + halfWidth;
+            const py = star.y * k + halfHeight;
 
-        requestAnimationFrame(animateStars);
+            if (px >= 0 && px < width && py >= 0 && py < height) {
+                const size = (1 - star.z) * 5;
+                const shade = (1 - star.z) * 255;
+                ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+                ctx.fillRect(px, py, size, size);
+            }
+        }
+        hyperspaceAnimationId = requestAnimationFrame(hyperspaceLoop);
     }
-    animateStars();
+    hyperspaceLoop();
 }
 
-// === Starte den Hyperspace-Effekt sofort ===
-initHyperspaceEffect();
+// Starte den Hyperspace sofort
+startHyperspaceAnimation();
 
 
 // === Grund-Setup ===
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // Alpha für Transparenz über Canvas
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
-
 renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
 renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
-
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
 labelRenderer.domElement.id = 'label-container';
@@ -139,6 +132,7 @@ let isIntroAnimationPlaying = false; let isAnalyzeButtonVisible = false;
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 loader.load(modelURL, (gltf) => {
+    progressBar.style.width = '100%';
     loadingTitle.textContent = 'Tippen zum Starten';
     loadingPercentage.style.display = 'none';
     ship = gltf.scene;
@@ -150,6 +144,9 @@ loader.load(modelURL, (gltf) => {
     camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
     loadingScreen.addEventListener('click', () => {
+        // NEU: Stoppe die Hyperspace-Animation
+        cancelAnimationFrame(hyperspaceAnimationId);
+        
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
         audio.play();
@@ -200,9 +197,8 @@ function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
 
-let animationFrameId = null; // To control the animation loop
 function animate() {
-    animationFrameId = requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
     const elapsedTime = clock.getElapsedTime();
 
     const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
