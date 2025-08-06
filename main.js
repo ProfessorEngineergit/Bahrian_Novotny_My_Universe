@@ -39,7 +39,7 @@ const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
 
-// === NEU: Setup für die Hyperspace-Animation ===
+// === Hyperspace-Animation Setup ===
 const loadingScene = new THREE.Scene();
 const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 let hyperspaceParticles;
@@ -65,15 +65,10 @@ function createHyperspaceEffect() {
 
 function animateLoadingScreen() {
     loadingAnimationId = requestAnimationFrame(animateLoadingScreen);
-    
-    // Bewege Sterne nach vorne
-    hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20; // Geschwindigkeit basierend auf Fortschritt
-
-    // Wrap-Around-Effekt
+    hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
     if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) {
         hyperspaceParticles.position.z = -HYPERSPACE_LENGTH / 2;
     }
-
     renderer.render(loadingScene, loadingCamera);
 }
 
@@ -120,12 +115,12 @@ animateLoadingScreen();
 const loader = new GLTFLoader(); const dracoLoader = new DRACOLoader(); dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/'); loader.setDRACOLoader(dracoLoader);
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 loader.load(modelURL, (gltf) => {
-    // Wenn geladen, setze UI auf 100% und warte auf Klick
+    loadingProgress = 1;
     progressBar.style.width = '100%';
     loadingPercentage.textContent = '100%';
-    loadingTitle.textContent = 'Tippen zum Starten';
+    loadingTitle.textContent = 'Drop out of Warp-Speed'; // Neuer Titel
     
-    cancelAnimationFrame(loadingAnimationId); // Stoppe die Lade-Animation
+    cancelAnimationFrame(loadingAnimationId);
 
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
@@ -144,11 +139,10 @@ loader.load(modelURL, (gltf) => {
         infoElement.classList.add('ui-visible');
         joystickZone.classList.add('ui-visible');
         muteButton.classList.add('ui-visible');
-        animate(); // Starte die Haupt-Animation
+        animate();
     }, { once: true });
 }, (xhr) => { 
     if (xhr.lengthComputable) {
-        // KORREKTUR: Stelle sicher, dass der Wert 100 nicht überschreitet
         loadingProgress = Math.min(1, xhr.loaded / xhr.total);
         const percentComplete = Math.round(loadingProgress * 100);
         progressBar.style.width = percentComplete + '%';
