@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <title>USS Enterprise 3D Flug</title>
     
-    <!-- Import der Schriftart "Nasalization" -->
     <link href="https://fonts.cdnfonts.com/css/nasalization" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
@@ -21,26 +20,34 @@
 <body>
     <div id="label-container"></div>
     
-    <div id="info">Steuerung: Joystick (links) | Kamera: 1-Finger-Wischen | Zoom: 2-Finger-Pinch</div>
-    <div id="joystick-zone"></div>
-    
-    <button id="mute-button" title="Ton umschalten">
-        <svg xmlns="http://www.w.org/2000/svg" viewBox="0 0 24 24">
-            <path id="speaker-icon" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-            <path id="mute-slash" d="M1 1l22 22"/>
-        </svg>
-    </button>
-    
-    <button id="analyze-button">Analyze Object</button>
-    
+    <!-- Ladebildschirm bleibt gleich -->
     <div id="loading-screen">
         <div class="loading-content">
-            <!-- KORREKTUR: Neuer Start-Titel -->
             <p id="loading-title">Warp to Bahrians Universe</p>
             <p id="loading-percentage">0%</p>
             <div id="progress-bar-container">
                 <div id="progress-bar"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- NEU: Das Interface-Panel am unteren Rand -->
+    <div id="ui-panel">
+        <div id="joystick-zone"></div>
+        
+        <div id="map-container">
+            <canvas id="map-canvas"></canvas>
+            <button id="map-toggle-button" title="Sternenkarte umschalten"></button>
+        </div>
+
+        <div class="button-group">
+            <button id="analyze-button">Analyze Object</button>
+            <button id="mute-button" title="Ton umschalten">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path id="speaker-icon" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    <path id="mute-slash" d="M1 1l22 22"/>
+                </svg>
+            </button>
         </div>
     </div>
     
