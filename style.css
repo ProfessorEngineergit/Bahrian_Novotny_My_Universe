@@ -122,8 +122,8 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    /* KORREKTUR: Der Hintergrund wird jetzt vom 3D-Canvas gesteuert */
-    background: #000;
+    /* KORREKTUR: Der Hintergrund wird jetzt vom 3D-Canvas gesteuert, dieser Container ist nur ein Overlay */
+    background: rgba(0, 0, 0, 0.3); /* Leichtes Abdunkeln für bessere Lesbarkeit */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -139,7 +139,7 @@ canvas {
     text-align: center;
     color: white;
     text-shadow: 0 0 10px rgba(0,0,0,0.5);
-    z-index: 101; /* Stellt sicher, dass der Text über dem Canvas liegt */
+    z-index: 101;
 }
 
 #loading-title {
