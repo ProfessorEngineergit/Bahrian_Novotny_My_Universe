@@ -80,13 +80,11 @@ canvas {
     z-index: 20;
 }
 
-/* KORREKTUR: Neues Layout für die untere Leiste */
+/* KORREKTUR: Die Leiste ist jetzt rechtsbündig */
 #bottom-bar {
     position: absolute;
     bottom: calc(20px + env(safe-area-inset-bottom));
-    left: 200px; /* Position rechts vom Joystick */
     right: 20px;
-    width: auto;
     height: 90px;
     background: rgba(30, 30, 30, 0.5);
     backdrop-filter: blur(10px);
@@ -95,20 +93,21 @@ canvas {
     border-radius: 25px;
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* Inhalt nach rechts schieben */
-    padding: 0 30px;
+    justify-content: flex-end; /* Inhalt rechtsbündig */
+    padding: 0 20px;
+    gap: 10px;
     box-sizing: border-box;
     z-index: 15;
 }
 
-.right-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px; /* Etwas mehr Abstand */
+/* Die folgenden Elemente sind jetzt relativ zur #bottom-bar */
+#mute-button, #analyze-button {
+    position: relative;
+    top: 0;
+    right: 0;
 }
 
 #mute-button {
-    position: relative; top: 0; right: 0;
     width: 48px;
     height: 48px;
     background: rgba(0,0,0,0.3);
@@ -120,7 +119,6 @@ canvas {
 }
 
 #analyze-button {
-    position: relative; top: 0; right: 0;
     padding: 12px 24px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -160,16 +158,15 @@ canvas {
         width: 140px;
         height: 140px;
     }
+    
     #bottom-bar {
-        left: 180px; /* Passt sich an den kleineren Joystick an */
         height: 80px;
-        padding: 0 20px;
-    }
-    .right-controls {
+        padding: 0 15px;
         gap: 8px;
     }
+
     #analyze-button {
-        padding: 10px 18px;
+        padding: 10px 16px;
         font-size: 14px;
     }
     #mute-button {
