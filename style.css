@@ -1,8 +1,8 @@
 /* --- 1) Self-Hosting Nasalization V2 — sorgt für Safari-Kompatibilität --- */
 @font-face {
   font-family: 'Nasalization V2';
-  src: url('/fonts/nasalization-v2.woff2') format('woff2'),
-       url('/fonts/nasalization-v2.woff') format('woff');
+  src: url('./Nasalization%20V2.woff2') format('woff2'),
+       url('./Nasalization%20V2.woff') format('woff');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
