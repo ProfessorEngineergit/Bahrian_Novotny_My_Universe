@@ -38,7 +38,6 @@ const joystickZone = document.getElementById('joystick-zone');
 const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
-// const mapButton = document.getElementById('map-button'); // Entfernt
 const audio = document.getElementById('media-player');
 
 // === Hyperspace-Animation Setup ===
@@ -95,7 +94,10 @@ function createPlanetTexture(color) { const canvas = document.createElement('can
 function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); mainScene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; orbitPivot.add(planetMesh); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation }); }
 planetData.forEach(createPlanet);
 
-let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
+let shipHolder; // Wichtig: Das Schiff wird in einem Halter platziert
+let ship;
+let forcefield;
+const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
 function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(255, 255, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
 let appState = 'loading';
@@ -113,13 +115,21 @@ loader.load(modelURL, (gltf) => {
     loadingTitle.textContent = 'Drop out of Warp-Speed';
     loadingScreen.classList.add('clickable');
     
+    shipHolder = new THREE.Object3D();
     ship = gltf.scene;
-    ship.rotation.y = Math.PI;
-    mainScene.add(ship);
-    ship.position.set(0, 0, 30);
-    forcefield = createForcefield(5.1); ship.add(forcefield);
-    ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
-    camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
+    ship.rotation.y = Math.PI; // Korrigiere die Ausrichtung des Modells
+    shipHolder.add(ship);
+    
+    mainScene.add(shipHolder);
+    shipHolder.position.set(0, 0, 30);
+    forcefield = createForcefield(5.1);
+    shipHolder.add(forcefield); // Heften den Schild an den Halter
+    
+    shipHolder.add(cameraPivot); // Heften die Kamera an den Halter
+    cameraPivot.add(cameraHolder);
+    cameraHolder.add(camera);
+    camera.position.set(0, 4, -15);
+    camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
     
     loadingScreen.addEventListener('click', () => {
@@ -154,11 +164,19 @@ let isDraggingMouse = false;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
+// NEU: Variablen für die neue Flugphysik
+let shipCurrentSpeed = { forward: 0, turn: 0 };
+const LERP_ACCELERATION = 0.05;
+let warpState = { active: false, timer: 0 };
+let targetFov = 75;
+let targetStarScaleZ = 1;
+let targetBankAngle = 0;
+
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
-// mapButton.addEventListener('click', () => { alert('Sternenkarte wird noch implementiert!'); }); // Entfernt
+mapButton.addEventListener('click', () => { alert('Sternenkarte wird noch implementiert!'); });
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
-nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
+nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y; joystickMove.turn = -data.vector.x; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
 
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
@@ -176,7 +194,9 @@ const worldPosition = new THREE.Vector3();
 
 function animate() {
     requestAnimationFrame(animate);
-    
+    const delta = clock.getDelta(); // Wichtig für die Timer-Logik
+    const elapsedTime = clock.getElapsedTime();
+
     if (appState === 'loading') {
         hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
         if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) {
@@ -186,8 +206,61 @@ function animate() {
         return;
     }
 
-    const elapsedTime = clock.getElapsedTime();
+    // --- NEUE FLUGPHYSIK ---
+    if (shipHolder) {
+        // 1. Inputs sammeln
+        const keyForward = (keyboard['w'] ? 1 : 0) + (keyboard['s'] ? -1 : 0);
+        const keyTurn = (keyboard['a'] ? 1 : 0) + (keyboard['d'] ? -1 : 0);
+        
+        const targetForward = joystickMove.forward + keyForward;
+        const targetTurn = joystickMove.turn + keyTurn;
 
+        // 2. Geschwindigkeit sanft anpassen (Lerp)
+        shipCurrentSpeed.forward = THREE.MathUtils.lerp(shipCurrentSpeed.forward, targetForward, LERP_ACCELERATION);
+        shipCurrentSpeed.turn = THREE.MathUtils.lerp(shipCurrentSpeed.turn, targetTurn, LERP_ACCELERATION);
+
+        // 3. Warp-Logik
+        if (shipCurrentSpeed.forward > 0.1 && Math.abs(shipCurrentSpeed.turn) < 0.1) {
+            warpState.timer += delta;
+        } else {
+            warpState.timer = 0;
+        }
+        warpState.active = warpState.timer > 3;
+
+        const warpMultiplier = warpState.active ? 1 + (warpState.timer - 3) * 2 : 1;
+        targetFov = warpState.active ? 120 : 75;
+        targetStarScaleZ = warpState.active ? 150 : 1;
+        
+        // 4. Banking-Logik
+        targetBankAngle = -shipCurrentSpeed.turn * 0.5;
+        ship.rotation.z = THREE.MathUtils.lerp(ship.rotation.z, targetBankAngle, LERP_ACCELERATION);
+
+        // 5. Bewegung anwenden
+        const turnDirection = shipCurrentSpeed.forward >= 0 ? 1 : -1;
+        
+        const shipRadius = 5;
+        const previousPosition = shipHolder.position.clone();
+        
+        shipHolder.translateZ(shipCurrentSpeed.forward * 0.2 * warpMultiplier);
+        shipHolder.rotateY(shipCurrentSpeed.turn * 0.05 * turnDirection);
+
+        // Kollision
+        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+        const collisionThreshold = shipRadius + blackHoleRadius;
+        if (shipHolder.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+            shipHolder.position.copy(previousPosition);
+            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+        }
+    }
+
+    // Warp-Visuals anwenden
+    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.05);
+    camera.updateProjectionMatrix();
+    if (galaxy) {
+        galaxy.scale.z = THREE.MathUtils.lerp(galaxy.scale.z, targetStarScaleZ, 0.05);
+    }
+    
+    // --- Restliche Logik (unverändert, außer `ship` -> `shipHolder`) ---
     const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
     pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     pacingCircle.material.opacity = 0.3 + pulse * 0.4;
@@ -201,32 +274,16 @@ function animate() {
         }
     });
     
-    if (ship) {
-        const keyForward = (keyboard['w'] ? 0.1 : 0) + (keyboard['s'] ? -0.1 : 0);
-        const keyTurn = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
-        const finalForward = joystickMove.forward + keyForward;
-        const finalTurn = joystickMove.turn + keyTurn;
-        
-        const shipRadius = 5;
-        const previousPosition = ship.position.clone();
-        ship.translateZ(finalForward);
-        ship.rotateY(finalTurn);
-        const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-        const collisionThreshold = shipRadius + blackHoleRadius;
-        if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
-            ship.position.copy(previousPosition);
-            if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
-        }
-
+    if (shipHolder) {
         let activeObject = null;
-        const distanceToCenterSq = ship.position.lengthSq();
+        const distanceToCenterSq = shipHolder.position.lengthSq();
         const circleCurrentRadius = pacingCircle.geometry.parameters.radius * pacingCircle.scale.x;
         if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
             activeObject = blackHoleCore;
         }
         for (const planet of planets) {
             planet.mesh.getWorldPosition(worldPosition);
-            const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
+            const distanceToPlanetSq = shipHolder.position.distanceToSquared(worldPosition);
             const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.radius * planet.boundaryCircle.scale.x;
             if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) {
                 activeObject = planet;
@@ -257,8 +314,8 @@ function animate() {
             appState = 'playing';
         }
     } else if (appState === 'playing') {
-        if (ship) {
-            const getAngleToShip = (targetPosition) => Math.atan2(ship.position.x - targetPosition.x, ship.position.z - targetPosition.z);
+        if (shipHolder) {
+            const getAngleToShip = (targetPosition) => Math.atan2(shipHolder.position.x - targetPosition.x, shipHolder.position.z - targetPosition.z);
             blackHoleLabelDiv.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
             planets.forEach(p => {
                 p.mesh.getWorldPosition(worldPosition);
