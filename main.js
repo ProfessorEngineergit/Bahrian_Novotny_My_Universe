@@ -1,314 +1,601 @@
-/* --- Self-Hosting Nasalization V2 im Repo-Root --- */
-@font-face {
-  font-family: 'Nasalization V2';
-  src: url('./Nasalization%20V2.woff2') format('woff2'),
-       url('./Nasalization%20V2.woff') format('woff');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// === Grund-Setup ===
+const mainScene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
+renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.id = 'label-container';
+document.body.appendChild(labelRenderer.domElement);
+
+const renderScene = new RenderPass(mainScene, camera);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.4, 0.9);
+const composer = new EffectComposer(renderer);
+composer.addPass(renderScene);
+composer.addPass(bloomPass);
+
+// === UI Referenzen ===
+const loadingScreen = document.getElementById('loading-screen');
+const progressBar = document.getElementById('progress-bar');
+const loadingTitle = document.getElementById('loading-title');
+const loadingPercentage = document.getElementById('loading-percentage');
+const infoElement = document.getElementById('info');
+const joystickZone = document.getElementById('joystick-zone');
+const bottomBar = document.getElementById('bottom-bar');
+const muteButton = document.getElementById('mute-button');
+const analyzeButton = document.getElementById('analyze-button');
+const audio = document.getElementById('media-player');
+
+const analysisWindow = document.getElementById('analysis-window');
+const analysisTitle = document.getElementById('analysis-title');
+const analysisTextContent = document.getElementById('analysis-text-content');
+const closeAnalysisButton = document.getElementById('close-analysis-button');
+
+// Quick Warp UI
+const quickWarpBtn = document.getElementById('quick-warp-btn');
+const quickWarpOverlay = document.getElementById('quick-warp-overlay');
+const warpList = document.getElementById('warp-list');
+const warpHereBtn = document.getElementById('warp-here');
+const warpCloseBtn = document.getElementById('warp-close');
+const warpFlash = document.getElementById('warp-flash');
+
+let chosenWarpTargetId = null;
+
+// === Hyperspace-Loading ===
+const loadingScene = new THREE.Scene();
+const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+let hyperspaceParticles;
+const HYPERSPACE_LENGTH = 800;
+let loadingProgress = 0;
+
+function createHyperspaceEffect() {
+  const geometry = new THREE.BufferGeometry();
+  const vertices = [];
+  for (let i = 0; i < 5000; i++) {
+    vertices.push((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * HYPERSPACE_LENGTH);
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending });
+  hyperspaceParticles = new THREE.Points(geometry, material);
+  loadingScene.add(hyperspaceParticles);
 }
 
-/* === Basis === */
-body {
-  margin: 0;
-  overflow: hidden;
-  background-color: #000;
-  font-family: 'Nasalization V2', system-ui, -apple-system, sans-serif;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-user-drag: none;
-  user-drag: none;
-  -webkit-font-smoothing: antialiased;
+// === Licht & Galaxy ===
+mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(10, 20, 15);
+mainScene.add(directionalLight);
+
+let galaxy;
+function createGalaxy() {
+  const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' };
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(parameters.count * 3);
+  const colors = new Float32Array(parameters.count * 3);
+  const colorInside = new THREE.Color(parameters.insideColor);
+  const colorOutside = new THREE.Color(parameters.outsideColor);
+  for (let i = 0; i < parameters.count; i++) {
+    const i3 = i * 3;
+    const radius = Math.random() * parameters.radius;
+    const spinAngle = radius * parameters.spin;
+    const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2;
+    const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
+    const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1;
+    const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
+    positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
+    positions[i3 + 1] = randomY;
+    positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
+    const mixedColor = colorInside.clone();
+    mixedColor.lerp(colorOutside, radius / parameters.radius);
+    colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b;
+  }
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  const context = canvas.getContext('2d');
+  const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.2, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  context.fillStyle = gradient; context.fillRect(0, 0, 64, 64);
+  const particleTexture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true });
+  galaxy = new THREE.Points(geometry, material);
+  mainScene.add(galaxy);
+}
+createGalaxy();
+
+// Schwarzes Loch + Lens
+const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+blackHoleCore.name = 'Project_Mariner (This Site)';
+mainScene.add(blackHoleCore);
+
+const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
+mainScene.add(cubeCamera);
+const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
+mainScene.add(lensingSphere);
+
+function createAccretionDisk() {
+  const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
+  const context = canvas.getContext('2d');
+  const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128);
+  gradient.addColorStop(0, 'rgba(255, 180, 80, 1)');
+  gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  context.fillStyle = gradient; context.fillRect(0, 0, 256, 256);
+  const texture = new THREE.CanvasTexture(canvas);
+  const geometry = new THREE.RingGeometry(2.5, 5, 64);
+  const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending });
+  const disk = new THREE.Mesh(geometry, material);
+  disk.rotation.x = Math.PI / 2;
+  mainScene.add(disk);
+  return disk;
+}
+const accretionDisk = createAccretionDisk();
+
+// Label Helper (DOM)
+function makeLabel(text) {
+  const root = document.createElement('div');
+  root.className = 'label';
+  root.textContent = text;
+  const lineDiv = document.createElement('div');
+  lineDiv.className = 'label-line';
+  root.appendChild(lineDiv);
+  return root;
 }
 
-canvas {
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  touch-action: none;
+// Blackhole Label
+const blackHoleLabelDiv = makeLabel(blackHoleCore.name);
+const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv);
+blackHoleLabel.position.set(0, 7, 0);
+mainScene.add(blackHoleLabel);
+
+// Pacing Kreis
+const pacingCircleGeometry = new THREE.TorusGeometry(12, 0.1, 16, 100);
+const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial);
+pacingCircle.rotation.x = Math.PI / 2;
+mainScene.add(pacingCircle);
+
+// Planeten
+const planets = [];
+const planetData = [
+  { name: 'Infos', radius: 1, orbit: 20, speed: 0.04 },
+  { name: 'SURGE (The autonomous Robottaxi)', radius: 1.5, orbit: 35, speed: 0.025 },
+  { name: 'OpenImageLabel (A website to label images for professional photography)', radius: 1.2, orbit: 50, speed: 0.015 },
+  { name: 'Project Cablerack (A smarter way to cable-manage)', radius: 0.8, orbit: 65, speed: 0.03 },
+  { name: 'Socials/Other Sites', radius: 2, orbit: 80, speed: 0.01 },
+  { name: 'HA-Lightswitch (Making analog Lightswitches smart)', radius: 1.8, orbit: 95, speed: 0.012 },
+  { name: 'My Creative Work (Filming, flying, photography)', radius: 1.4, orbit: 110, speed: 0.008 },
+  { name: '3D-Printing (The ultimate engineering-tool)', radius: 1.6, orbit: 125, speed: 0.006 }
+];
+
+function createPlanetTexture(color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128; canvas.height = 128;
+  const context = canvas.getContext('2d');
+  context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random() * 128; const y = Math.random() * 128; const r = Math.random() * 1.5;
+    context.beginPath(); context.arc(x, y, r, 0, Math.PI * 2);
+    context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`;
+    context.fill();
+  }
+  return new THREE.CanvasTexture(canvas);
 }
 
-#label-container {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+function createPlanet(data, index) {
+  const orbitPivot = new THREE.Object3D(); mainScene.add(orbitPivot);
+
+  const texture = createPlanetTexture(Math.random() * 360);
+  const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+  const material = new THREE.MeshStandardMaterial({ map: texture });
+  const planetMesh = new THREE.Mesh(geometry, material);
+  planetMesh.position.x = data.orbit;
+  planetMesh.name = data.name;
+  orbitPivot.add(planetMesh);
+
+  const labelDiv = makeLabel(data.name);
+  const planetLabel = new CSS2DObject(labelDiv);
+  planetLabel.position.y = data.radius + 3; // mehr Abstand
+  planetMesh.add(planetLabel);
+
+  const boundaryRadius = data.radius + 6;
+  const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100);
+  const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+  boundaryCircle.rotation.x = Math.PI / 2;
+  planetMesh.add(boundaryCircle);
+
+  const initialRotation = (index / planetData.length) * Math.PI * 2;
+  orbitPivot.rotation.y = initialRotation;
+
+  planets.push({ pivot: orbitPivot, mesh: planetMesh, labelDiv, boundaryCircle, isFrozen: false, initialRotation });
+}
+planetData.forEach(createPlanet);
+
+// Einheitliche Winkelgeschwindigkeit → konstante Phasenabstände
+const GLOBAL_ANGULAR_SPEED = 0.02;
+
+// Ship & Kamera
+let ship; let forcefield;
+const cameraPivot = new THREE.Object3D();
+const cameraHolder = new THREE.Object3D();
+
+function createForcefield(radius) {
+  const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
+  const context = canvas.getContext('2d');
+  context.strokeStyle = 'rgba(255,255,255,0.8)'; context.lineWidth = 3;
+  for (let i = 0; i < 8; i++) {
+    const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke();
+    const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  const geometry = new THREE.SphereGeometry(radius, 32, 32);
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide });
+  const ff = new THREE.Mesh(geometry, material);
+  ff.visible = false;
+  return ff;
 }
 
-/* === Labels (Texte) ===
-   - bleiben horizontal (keine JS-Rotation mehr)
-   - konstante Größe (CSS2D DOM → sowieso screen-space)
-   - mehr Abstand nach unten */
-.label {
-  color: #fff;
-  font-family: 'Nasalization V2', system-ui, -apple-system, sans-serif;
-  font-size: 16px;
-  text-shadow: 0 0 5px #ffffff;
-  white-space: normal;
-  word-break: break-word;
-  max-width: 220px;
-  text-align: center;
-  transform: translateY(-16px);
-  transform-origin: center bottom;
-}
-.label-line {
-  width: 1px;
-  height: 52px;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0));
-  margin: 8px auto 0;
+// States
+let appState = 'loading';
+let isAnalyzeButtonVisible = false;
+let currentlyAnalyzedObject = null;
+
+createHyperspaceEffect();
+animate();
+
+const loader = new GLTFLoader();
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+loader.setDRACOLoader(dracoLoader);
+
+const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
+
+loader.load(modelURL, (gltf) => {
+  loadingProgress = 1;
+  progressBar.style.width = '100%';
+  loadingPercentage.textContent = '100%';
+  loadingTitle.textContent = 'Drop out of Warp-Speed';
+  loadingScreen.classList.add('clickable');
+
+  ship = gltf.scene;
+  ship.rotation.y = Math.PI;
+  mainScene.add(ship);
+  ship.position.set(0, 0, 30);
+  forcefield = createForcefield(5.1); ship.add(forcefield);
+  ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
+  camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
+  cameraPivot.rotation.y = Math.PI;
+
+  loadingScreen.addEventListener('click', () => {
+    loadingScreen.style.opacity = '0';
+    setTimeout(() => loadingScreen.style.display = 'none', 500);
+    audio.play();
+    appState = 'intro';
+    infoElement.classList.add('ui-visible');
+    bottomBar.classList.add('ui-visible');
+    joystickZone.classList.add('ui-visible');
+  }, { once: true });
+
+  // Quick Warp Liste aufbauen, wenn Modell da ist
+  buildWarpList();
+}, (xhr) => {
+  if (xhr.lengthComputable) {
+    loadingProgress = Math.min(1, xhr.loaded / xhr.total);
+    const percentComplete = Math.round(loadingProgress * 100);
+    progressBar.style.width = percentComplete + '%';
+    loadingPercentage.textContent = percentComplete + '%';
+  }
+}, (error) => { console.error('Ladefehler:', error); loadingTitle.textContent = 'Fehler!'; });
+
+// Steuerung
+const keyboard = {};
+let joystickMove = { forward: 0, turn: 0 };
+const ROTATION_LIMIT = Math.PI * 0.33;
+let zoomDistance = 15;
+const minZoom = 8; const maxZoom = 25;
+let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
+const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
+
+let cameraFingerId = null;
+let isDraggingMouse = false;
+let initialPinchDistance = 0;
+let previousTouch = { x: 0, y: 0 };
+
+muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
+window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) e.preventDefault(); });
+window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
+nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 })
+  .on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } })
+  .on('end', () => joystickMove = { forward: 0, turn: 0 });
+
+renderer.domElement.addEventListener('touchstart', (e) => {
+  const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+  if (joystickTouch) return;
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; }
+  }
+  if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; }
+}, { passive: false });
+
+renderer.domElement.addEventListener('touchmove', (e) => {
+  const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
+  if (joystickTouch) return;
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    if (touch.identifier === cameraFingerId) {
+      const dx = touch.clientX - previousTouch.x; const dy = touch.clientY - previousTouch.y;
+      cameraVelocity.x += dy * 0.0002; cameraVelocity.y -= dx * 0.0002;
+      previousTouch.x = touch.clientX; previousTouch.y = touch.clientY;
+    }
+  }
+  if (e.touches.length >= 2) {
+    const current = getPinchDistance(e);
+    zoomVelocity -= (current - initialPinchDistance) * 0.03;
+    initialPinchDistance = current;
+  }
+}, { passive: false });
+
+renderer.domElement.addEventListener('touchend', (e) => {
+  for (const touch of e.changedTouches) if (touch.identifier === cameraFingerId) cameraFingerId = null;
+  if (e.touches.length < 2) initialPinchDistance = 0;
+});
+
+renderer.domElement.addEventListener('mousedown', (e) => {
+  if (e.target.closest('#joystick-zone')) return;
+  isDraggingMouse = true; cameraVelocity.set(0, 0); previousTouch.x = e.clientX; previousTouch.y = e.clientY;
+});
+window.addEventListener('mousemove', (e) => {
+  if (isDraggingMouse) {
+    const dx = e.clientX - previousTouch.x; const dy = e.clientY - previousTouch.y;
+    cameraVelocity.x += dy * 0.0002; cameraVelocity.y -= dx * 0.0002;
+    previousTouch.x = e.clientX; previousTouch.y = e.clientY;
+  }
+});
+window.addEventListener('mouseup', () => { isDraggingMouse = false; });
+renderer.domElement.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  zoomVelocity += e.deltaY * (e.ctrlKey ? 0.01 : 0.05);
+}, { passive: false });
+
+function getPinchDistance(e) {
+  if (e.touches.length < 2) return 0;
+  const t1 = e.touches[0], t2 = e.touches[1];
+  const dx = t1.clientX - t2.clientX; const dy = t1.clientY - t2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
-/* === UI Fades === */
-#info, #joystick-zone, #bottom-bar {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 1s ease-out;
-}
-#info.ui-visible, #joystick-zone.ui-visible, #bottom-bar.ui-visible {
-  opacity: 1;
-  pointer-events: auto;
+// Analyse-Fenster
+analyzeButton.addEventListener('click', () => {
+  if (currentlyAnalyzedObject) {
+    analysisTitle.textContent = currentlyAnalyzedObject.name;
+    analysisTextContent.textContent =
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.";
+    analysisWindow.classList.add('visible');
+    appState = 'paused';
+  }
+});
+closeAnalysisButton.addEventListener('click', () => {
+  analysisWindow.classList.remove('visible');
+  appState = 'playing';
+});
+
+// Quick Warp Interaktion
+quickWarpBtn.addEventListener('click', () => {
+  quickWarpOverlay.classList.add('visible');
+  quickWarpOverlay.setAttribute('aria-hidden', 'false');
+});
+warpCloseBtn.addEventListener('click', closeWarpOverlay);
+
+function closeWarpOverlay() {
+  quickWarpOverlay.classList.remove('visible');
+  quickWarpOverlay.setAttribute('aria-hidden', 'true');
+  chosenWarpTargetId = null;
+  warpHereBtn.disabled = true;
+  [...warpList.children].forEach(li => li.classList.remove('active'));
 }
 
-#info {
-  position: absolute;
-  top: 10px;
-  width: 100%;
-  text-align: center;
-  color: rgba(255,255,255,0.8);
-  font-size: clamp(10px, 2.5vw, 14px);
-  text-shadow: 2px 2px 4px #000;
-  z-index: 10;
-  padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+function buildWarpList() {
+  warpList.innerHTML = '';
+  const entries = [
+    { id: 'blackhole', name: blackHoleCore.name },
+    ...planets.map((p, i) => ({ id: 'planet-' + i, name: p.mesh.name }))
+  ];
+  for (const entry of entries) {
+    const li = document.createElement('li');
+    li.textContent = entry.name;
+    li.dataset.targetId = entry.id;
+    li.addEventListener('click', () => {
+      [...warpList.children].forEach(x => x.classList.remove('active'));
+      li.classList.add('active');
+      chosenWarpTargetId = entry.id;
+      warpHereBtn.disabled = false;
+    });
+    warpList.appendChild(li);
+  }
 }
 
-#joystick-zone {
-  position: absolute;
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  left: 20px;
-  width: 160px;
-  height: 160px;
-  background: rgba(30,30,30,0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 50%;
-  z-index: 20;
+warpHereBtn.addEventListener('click', () => {
+  if (!chosenWarpTargetId || !ship) return;
+  // Flash FX
+  warpFlash.classList.add('active');
+  setTimeout(() => warpFlash.classList.remove('active'), 180);
+
+  // kurzer Halt, dann Warp
+  appState = 'paused';
+  setTimeout(() => {
+    performWarp(chosenWarpTargetId);
+    appState = 'playing';
+  }, 160);
+
+  closeWarpOverlay();
+});
+
+function performWarp(targetId) {
+  if (targetId === 'blackhole') {
+    const target = new THREE.Vector3(0, 0, 0);
+    ship.position.copy(target.clone().add(new THREE.Vector3(0, 0, 30)));
+    ship.lookAt(target);
+  } else {
+    const idx = parseInt(targetId.split('-')[1], 10);
+    const p = planets[idx];
+    const worldPos = new THREE.Vector3();
+    p.mesh.getWorldPosition(worldPos);
+
+    // 12 Einheiten vor Planet, abhängig vom Planeten-Radius
+    const dir = new THREE.Vector3().subVectors(ship.position, worldPos).normalize(); // von Planet weg
+    if (dir.lengthSq() === 0) dir.set(0, 0, 1);
+    ship.position.copy(worldPos.clone().add(dir.multiplyScalar(12 + p.mesh.geometry.parameters.radius)));
+    ship.lookAt(worldPos);
+  }
+  cameraPivot.rotation.y = 0;
 }
 
-#bottom-bar {
-  position: absolute;
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  right: 20px;
-  height: 90px;
-  background: rgba(30,30,30,0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 25px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 20px;
-  gap: 10px;
-  box-sizing: border-box;
-  z-index: 15;
+// === Animation ===
+const clock = new THREE.Clock();
+const worldPosition = new THREE.Vector3();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (appState === 'loading') {
+    hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
+    if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) hyperspaceParticles.position.z = -HYPERSPACE_LENGTH / 2;
+    renderer.render(loadingScene, loadingCamera);
+    return;
+  }
+  if (appState === 'paused') return;
+
+  const elapsedTime = clock.getElapsedTime();
+  const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
+  pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+  pacingCircle.material.opacity = 0.3 + pulse * 0.4;
+
+  // Planeten: konstante Winkelgeschwindigkeit → konstante Phasenabstände
+  planets.forEach(planet => {
+    planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
+    planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
+
+    const targetRotation = planet.initialRotation + elapsedTime * GLOBAL_ANGULAR_SPEED;
+    if (!planet.isFrozen) planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
+  });
+
+  if (ship) {
+    const keyForward = (keyboard['w'] ? 0.1 : 0) + (keyboard['s'] ? -0.1 : 0);
+    const keyTurn = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
+    const finalForward = joystickMove.forward + keyForward;
+    const finalTurn = joystickMove.turn + keyTurn;
+
+    const shipRadius = 5;
+    const previousPosition = ship.position.clone();
+    ship.translateZ(finalForward);
+    ship.rotateY(finalTurn);
+
+    // Kollisionsschutz zum Zentrum
+    const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
+    const collisionThreshold = shipRadius + blackHoleRadius;
+    if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+      ship.position.copy(previousPosition);
+      if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
+    }
+
+    // Aktives Objekt bestimmen
+    let activeObject = null;
+    const distanceToCenterSq = ship.position.lengthSq();
+    const circleCurrentRadius = pacingCircle.geometry.parameters.radius * pacingCircle.scale.x;
+    if (distanceToCenterSq < circleCurrentRadius * circleCurrentRadius) {
+      activeObject = blackHoleCore;
+    }
+    for (const planet of planets) {
+      planet.mesh.getWorldPosition(worldPosition);
+      const distanceToPlanetSq = ship.position.distanceToSquared(worldPosition);
+      const planetBoundaryRadius = planet.boundaryCircle.geometry.parameters.radius * planet.boundaryCircle.scale.x;
+      if (distanceToPlanetSq < planetBoundaryRadius * planetBoundaryRadius) { activeObject = planet.mesh; break; }
+    }
+    planets.forEach(p => p.isFrozen = (activeObject === p.mesh));
+    currentlyAnalyzedObject = activeObject;
+
+    if (activeObject && !isAnalyzeButtonVisible) {
+      analyzeButton.classList.add('ui-visible'); isAnalyzeButtonVisible = true;
+    } else if (!activeObject && isAnalyzeButtonVisible) {
+      analyzeButton.classList.remove('ui-visible'); isAnalyzeButtonVisible = false;
+    }
+  }
+
+  // Intro → danach Quick Warp-Button zeigen
+  if (appState === 'intro') {
+    cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
+    if (Math.abs(cameraPivot.rotation.y) < 0.01) {
+      cameraPivot.rotation.y = 0;
+      appState = 'playing';
+      // erst jetzt sichtbar
+      quickWarpBtn.classList.remove('hidden');
+    }
+  } else if (appState === 'playing') {
+    if (ship) {
+      if (cameraFingerId === null && !isDraggingMouse) {
+        cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+      }
+      if (cameraHolder.rotation.x > ROTATION_LIMIT) cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS;
+      else if (cameraHolder.rotation.x < -ROTATION_LIMIT) cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS;
+      if (cameraPivot.rotation.y > ROTATION_LIMIT) cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS;
+      else if (cameraPivot.rotation.y < -ROTATION_LIMIT) cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS;
+      cameraHolder.rotation.x += cameraVelocity.x;
+      cameraPivot.rotation.y += cameraVelocity.y;
+    }
+  }
+
+  cameraVelocity.multiplyScalar(DAMPING);
+  zoomDistance += zoomVelocity;
+  zoomVelocity *= DAMPING;
+  zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+  if (zoomDistance === minZoom || zoomDistance === maxZoom) zoomVelocity = 0;
+  if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+
+  accretionDisk.rotation.z += 0.005;
+
+  if (forcefield && forcefield.visible) {
+    forcefield.material.opacity -= 0.04;
+    if (forcefield.material.opacity <= 0) forcefield.visible = false;
+  }
+
+  // Refraction Capture
+  lensingSphere.visible = false; blackHoleCore.visible = false; accretionDisk.visible = false;
+  cubeCamera.update(renderer, mainScene);
+  lensingSphere.visible = true; blackHoleCore.visible = true; accretionDisk.visible = true;
+
+  composer.render();
+  labelRenderer.render(mainScene, camera);
 }
 
-#mute-button, #analyze-button { position: relative; top: 0; right: 0; }
-
-#mute-button {
-  width: 48px; height: 48px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
-  cursor: pointer; padding: 12px;
-  transition: background-color .2s ease;
-}
-#analyze-button {
-  padding: 12px 24px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: white; font-size: 16px;
-  cursor: pointer; border-radius: 50px;
-  opacity: 0; pointer-events: none;
-  transition: opacity .5s ease;
-}
-#analyze-button.ui-visible { opacity: 1; pointer-events: auto; }
-#mute-button:hover, #analyze-button:hover { background-color: rgba(255,255,255,0.1); }
-#mute-button svg { width: 100%; height: 100%; }
-#speaker-icon { fill: white; }
-#mute-slash {
-  fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round;
-  opacity: 0; transform-origin: center; transform: scale(0.8);
-  transition: opacity .3s ease, transform .3s ease;
-}
-#mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
-
-/* === Quick Warp === */
-.hidden { display: none !important; }
-
-#quick-warp-btn {
-  position: absolute;
-  right: 40px;
-  bottom: calc(120px + env(safe-area-inset-bottom)); /* über der Bar */
-  padding: 12px 18px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.18);
-  color: #fff;
-  border-radius: 999px;
-  cursor: pointer;
-  z-index: 30;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .3s ease, background-color .2s ease;
-}
-#quick-warp-btn:hover { background: rgba(255,255,255,0.2); }
-
-/* Overlay mit „Wolken“-Look */
-#quick-warp-overlay {
-  position: fixed; inset: 0;
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  display: grid; place-items: center;
-  opacity: 0; pointer-events: none;
-  z-index: 200;
-  transition: opacity .45s ease;
-}
-#quick-warp-overlay.visible { opacity: 1; pointer-events: auto; }
-
-.warp-cloud {
-  width: min(92vw, 560px);
-  height: min(72vh, 680px);
-  background: radial-gradient(120% 120% at 50% 0%, rgba(255,255,255,0.18), rgba(255,255,255,0.06) 70%);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 36px;
-  color: #fff;
-  display: flex; flex-direction: column;
-  overflow: hidden;
-  animation: liquidIn .5s ease forwards;
-  box-shadow: 0 40px 120px rgba(0,0,0,0.45), inset 0 0 60px rgba(255,255,255,0.06);
-}
-@keyframes liquidIn {
-  0% { transform: scale(0.9) translateY(24px); filter: blur(8px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); filter: blur(0); opacity: 1; }
-}
-.warp-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 18px 10px;
-}
-.warp-header h2 { margin: 0; font-size: 20px; letter-spacing: .06em; }
-#warp-close {
-  width: 38px; height: 38px; border-radius: 14px;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff; display: grid; place-items: center; cursor: pointer;
-}
-#warp-close svg { width: 22px; height: 22px; fill: #fff; }
-
-#warp-list {
-  list-style: none; margin: 0; padding: 8px 12px;
-  overflow: auto; flex: 1;
-  display: grid; gap: 8px;
-}
-#warp-list li {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: background-color .2s ease, transform .12s ease;
-}
-#warp-list li:hover { background: rgba(255,255,255,0.14); }
-#warp-list li.active {
-  background: rgba(86, 156, 255, 0.22);
-  border-color: rgba(86,156,255,0.45);
-}
-
-#warp-action {
-  padding: 12px;
-  border-top: 1px solid rgba(255,255,255,0.12);
-  background: linear-gradient(to top, rgba(255,255,255,0.06), transparent);
-}
-#warp-here {
-  width: 100%;
-  padding: 14px 18px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(86,156,255,0.35);
-  color: #fff;
-  font-size: 16px;
-  letter-spacing: .06em;
-  cursor: pointer;
-  transition: filter .2s ease, transform .12s ease, opacity .2s ease;
-}
-#warp-here:disabled { opacity: .45; cursor: default; }
-#warp-here:hover:not(:disabled) { filter: brightness(1.1); }
-
-/* Warp Flash FX */
-#warp-flash {
-  position: fixed; inset: 0;
-  pointer-events: none;
-  opacity: 0; z-index: 250;
-  background: radial-gradient(220px 220px at 50% 60%, rgba(255,255,255,0.85), rgba(255,255,255,0.25), transparent 60%);
-  transition: opacity .15s ease;
-}
-#warp-flash.active { opacity: 1; }
-
-/* Ladebildschirm */
-#loading-screen {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.3);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 100; transition: opacity .5s ease; cursor: default;
-}
-#loading-screen.clickable { cursor: pointer; }
-.loading-content { display: flex; flex-direction: column; align-items: center; text-align: center; color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 101; }
-#loading-title { font-size: 1.8em; margin: 0; font-weight: normal; }
-#loading-percentage { font-size: 1.2em; margin: 20px 0 10px; }
-#progress-bar-container {
-  width: 300px; max-width: 80%; height: 16px;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 50px; box-shadow: 0 4px 30px rgba(0,0,0,0.1);
-  padding: 3px; overflow: hidden;
-}
-#progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,1)); border-radius: 50px; transition: width .3s ease-out; }
-#media-player { display: none; }
-
-/* Analyse-Fenster */
-#analysis-window {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 200; opacity: 0; pointer-events: none; transition: opacity .3s ease;
-}
-#analysis-window.visible { opacity: 1; pointer-events: auto; }
-.analysis-content {
-  position: relative; width: 90%; max-width: 400px; height: 70%; max-height: 600px;
-  background: rgba(30,30,30,0.7);
-  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 20px; padding: 30px; box-sizing: border-box; color: #fff; overflow-y: auto;
-  transform: scale(0.95); transition: transform .3s ease;
-}
-#analysis-window.visible .analysis-content { transform: scale(1); }
-#analysis-title { font-size: 1.5em; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); }
-#analysis-text-content { font-family: sans-serif; font-size: 1em; line-height: 1.6; margin: 0; }
-#close-analysis-button {
-  position: absolute; top: 15px; right: 15px; width: 36px; height: 36px;
-  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 50%; cursor: pointer; padding: 8px; transition: background-color .2s ease;
-}
-#close-analysis-button:hover { background: rgba(255,255,255,0.1); }
-#close-analysis-button svg { width: 100%; height: 100%; fill: white; }
-
-/* Responsiv */
-@media (max-width: 768px) {
-  #joystick-zone { width: 140px; height: 140px; }
-  #bottom-bar { height: 80px; padding: 0 15px; gap: 8px; }
-  #analyze-button { padding: 10px 16px; font-size: 14px; }
-  #mute-button { width: 40px; height: 40px; padding: 8px; }
-}
+// Resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  loadingCamera.aspect = window.innerWidth / window.innerHeight;
+  loadingCamera.updateProjectionMatrix();
+});
