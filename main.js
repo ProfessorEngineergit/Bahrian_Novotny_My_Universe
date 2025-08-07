@@ -40,29 +40,6 @@ const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
 
-// === Hyperspace-Animation Setup ===
-const loadingScene = new THREE.Scene();
-const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-let hyperspaceParticles;
-const HYPERSPACE_LENGTH = 800;
-let loadingProgress = 0;
-
-function createHyperspaceEffect() {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    for (let i = 0; i < 5000; i++) {
-        vertices.push(
-            (Math.random() - 0.5) * 50,
-            (Math.random() - 0.5) * 50,
-            (Math.random() - 0.5) * HYPERSPACE_LENGTH
-        );
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending });
-    hyperspaceParticles = new THREE.Points(geometry, material);
-    loadingScene.add(hyperspaceParticles);
-}
-
 // === Szenerie-Setup ===
 mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
@@ -88,7 +65,6 @@ pacingCircle.rotation.x = Math.PI / 2;
 mainScene.add(pacingCircle);
 
 const planets = [];
-// KORREKTUR: Die `speed` Eigenschaft wird entfernt
 const planetData = [
     { name: 'Infos', radius: 1, orbit: 20 },
     { name: 'SURGE (The autonomous Robottaxi)', radius: 1.5, orbit: 35 },
@@ -100,11 +76,37 @@ const planetData = [
     { name: '3D-Printing (The ultimate engineering-tool)', radius: 1.6, orbit: 125 }
 ];
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
-function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); mainScene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; planetMesh.name = data.name; orbitPivot.add(planetMesh); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation }); }
+
+function createPlanet(data, index) {
+    const orbitPivot = new THREE.Object3D();
+    mainScene.add(orbitPivot);
+    const texture = createPlanetTexture(Math.random() * 360);
+    const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ map: texture });
+    const planetMesh = new THREE.Mesh(geometry, material);
+    planetMesh.position.x = data.orbit;
+    planetMesh.name = data.name;
+    orbitPivot.add(planetMesh);
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'label';
+    labelDiv.textContent = data.name;
+    const planetLabel = new CSS2DObject(labelDiv);
+    planetLabel.position.y = data.radius + 2;
+    planetMesh.add(planetLabel);
+    const boundaryRadius = data.radius + 6;
+    const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100);
+    const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+    boundaryCircle.rotation.x = Math.PI / 2;
+    planetMesh.add(boundaryCircle);
+    const initialRotation = (index / planetData.length) * Math.PI * 2;
+    orbitPivot.rotation.y = initialRotation;
+    planets.push({ pivot: orbitPivot, mesh: planetMesh, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation });
+}
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(255, 255, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
+function createForcefield(radius) { /* ... */ }
 
 let appState = 'loading';
 let isAnalyzeButtonVisible = false;
@@ -121,6 +123,7 @@ loader.load(modelURL, (gltf) => {
     loadingPercentage.textContent = '100%';
     loadingTitle.textContent = 'Drop out of Warp-Speed';
     loadingScreen.classList.add('clickable');
+    
     ship = gltf.scene;
     ship.rotation.y = Math.PI;
     mainScene.add(ship);
@@ -129,6 +132,7 @@ loader.load(modelURL, (gltf) => {
     ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
     camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
     cameraPivot.rotation.y = Math.PI;
+    
     loadingScreen.addEventListener('click', () => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
@@ -156,8 +160,8 @@ const minZoom = 8; const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 
-// KORREKTUR: Eine einzige Geschwindigkeit für das ganze System
-const SYSTEM_ORBITAL_SPEED = 0.01;
+// NEU: Eine einzige Geschwindigkeit für das gesamte System
+const SYSTEM_SPEED = 0.01;
 
 let cameraFingerId = null;
 let isDraggingMouse = false;
@@ -165,6 +169,19 @@ let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
+analyzeButton.addEventListener('click', () => {
+    if (currentlyAnalyzedObject) {
+        analysisTitle.textContent = currentlyAnalyzedObject.name;
+        analysisTextContent.textContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales.";
+        analysisWindow.classList.add('visible');
+        appState = 'paused';
+    }
+});
+closeAnalysisButton.addEventListener('click', () => {
+    analysisWindow.classList.remove('visible');
+    appState = 'playing';
+});
+
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
@@ -179,19 +196,6 @@ window.addEventListener('mouseup', () => { isDraggingMouse = false; });
 renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) { zoomVelocity += e.deltaY * 0.01; } else { zoomVelocity += e.deltaY * 0.05; } }, { passive: false });
 
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
-
-analyzeButton.addEventListener('click', () => {
-    if (currentlyAnalyzedObject) {
-        analysisTitle.textContent = currentlyAnalyzedObject.name;
-        analysisTextContent.textContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales.";
-        analysisWindow.classList.add('visible');
-        appState = 'paused';
-    }
-});
-closeAnalysisButton.addEventListener('click', () => {
-    analysisWindow.classList.remove('visible');
-    appState = 'playing';
-});
 
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
@@ -208,7 +212,9 @@ function animate() {
         return;
     }
     
-    if (appState === 'paused') return;
+    if (appState === 'paused') {
+        return;
+    }
 
     const elapsedTime = clock.getElapsedTime();
 
@@ -219,8 +225,9 @@ function animate() {
     planets.forEach(planet => {
         planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
         planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
-        // KORREKTUR: Verwende die globale Systemgeschwindigkeit
-        const targetRotation = planet.initialRotation + elapsedTime * SYSTEM_ORBITAL_SPEED;
+        
+        // KORREKTUR: Synchronisierte Bewegung
+        const targetRotation = planet.initialRotation + elapsedTime * SYSTEM_SPEED;
         if (!planet.isFrozen) {
             planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
         }
@@ -293,45 +300,4 @@ function animate() {
             });
         }
         if (cameraFingerId === null && !isDraggingMouse) {
-            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
-            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
-        }
-        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
-        cameraHolder.rotation.x += cameraVelocity.x;
-        cameraPivot.rotation.y += cameraVelocity.y;
-    }
-    
-    cameraVelocity.multiplyScalar(DAMPING);
-    zoomDistance += zoomVelocity;
-    zoomVelocity *= DAMPING;
-    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
-    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
-    
-    accretionDisk.rotation.z += 0.005;
-
-    if (forcefield && forcefield.visible) {
-        forcefield.material.opacity -= 0.04;
-        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
-    }
-
-    lensingSphere.visible = false;
-    blackHoleCore.visible = false;
-    accretionDisk.visible = false;
-    cubeCamera.update(renderer, mainScene);
-    lensingSphere.visible = true;
-    blackHoleCore.visible = true;
-    accretionDisk.visible = true;
-
-    composer.render();
-    labelRenderer.render(mainScene, camera);
-}
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    labelRenderer.setSize(window.innerWidth, window.innerHeight);
-});
+   
