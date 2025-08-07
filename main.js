@@ -40,6 +40,29 @@ const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
 
+// === Hyperspace-Animation Setup ===
+const loadingScene = new THREE.Scene();
+const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+let hyperspaceParticles;
+const HYPERSPACE_LENGTH = 800;
+let loadingProgress = 0;
+
+function createHyperspaceEffect() {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < 5000; i++) {
+        vertices.push(
+            (Math.random() - 0.5) * 50,
+            (Math.random() - 0.5) * 50,
+            (Math.random() - 0.5) * HYPERSPACE_LENGTH
+        );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending });
+    hyperspaceParticles = new THREE.Points(geometry, material);
+    loadingScene.add(hyperspaceParticles);
+}
+
 // === Szenerie-Setup ===
 mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
@@ -65,19 +88,46 @@ pacingCircle.rotation.x = Math.PI / 2;
 mainScene.add(pacingCircle);
 
 const planets = [];
+// KORREKTUR: Alle Planeten haben jetzt dieselbe Geschwindigkeit
+const PLANET_SPEED = 0.01;
 const planetData = [
-    // KORREKTUR: Alle Planeten haben jetzt dieselbe, langsame Geschwindigkeit
-    { name: 'Infos', radius: 1, orbit: 20, speed: 0.01 },
-    { name: 'SURGE (The autonomous Robottaxi)', radius: 1.5, orbit: 35, speed: 0.01 },
-    { name: 'OpenImageLabel (A website to label images for professional photography)', radius: 1.2, orbit: 50, speed: 0.01 },
-    { name: 'Project Cablerack (A smarter way to cable-manage)', radius: 0.8, orbit: 65, speed: 0.01 },
-    { name: 'Socials/Other Sites', radius: 2, orbit: 80, speed: 0.01 },
-    { name: 'HA-Lightswitch (Making analog Lightswitches smart)', radius: 1.8, orbit: 95, speed: 0.01 },
-    { name: 'My Creative Work (Filming, flying, photography)', radius: 1.4, orbit: 110, speed: 0.01 },
-    { name: '3D-Printing (The ultimate engineering-tool)', radius: 1.6, orbit: 125, speed: 0.01 }
+    { name: 'Infos', radius: 1, orbit: 20, speed: PLANET_SPEED },
+    { name: 'SURGE (The autonomous Robottaxi)', radius: 1.5, orbit: 35, speed: PLANET_SPEED },
+    { name: 'OpenImageLabel (A website to label images for professional photography)', radius: 1.2, orbit: 50, speed: PLANET_SPEED },
+    { name: 'Project Cablerack (A smarter way to cable-manage)', radius: 0.8, orbit: 65, speed: PLANET_SPEED },
+    { name: 'Socials/Other Sites', radius: 2, orbit: 80, speed: PLANET_SPEED },
+    { name: 'HA-Lightswitch (Making analog Lightswitches smart)', radius: 1.8, orbit: 95, speed: PLANET_SPEED },
+    { name: 'My Creative Work (Filming, flying, photography)', radius: 1.4, orbit: 110, speed: PLANET_SPEED },
+    { name: '3D-Printing (The ultimate engineering-tool)', radius: 1.6, orbit: 125, speed: PLANET_SPEED }
 ];
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
-function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); mainScene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; planetMesh.name = data.name; orbitPivot.add(planetMesh); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation }); }
+function createPlanet(data, index) {
+    const orbitPivot = new THREE.Object3D();
+    mainScene.add(orbitPivot);
+    const texture = createPlanetTexture(Math.random() * 360);
+    const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ map: texture });
+    const planetMesh = new THREE.Mesh(geometry, material);
+    planetMesh.position.x = data.orbit;
+    planetMesh.name = data.name;
+    orbitPivot.add(planetMesh);
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'label';
+    labelDiv.textContent = data.name;
+    const planetLabel = new CSS2DObject(labelDiv);
+    planetLabel.position.y = data.radius + 2;
+    planetMesh.add(planetLabel);
+    const boundaryRadius = data.radius + 6;
+    const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100);
+    const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+    boundaryCircle.rotation.x = Math.PI / 2;
+    planetMesh.add(boundaryCircle);
+    // KORREKTUR: Startpositionen der Planeten gleichmäßig verteilen
+    const initialRotation = (index / planetData.length) * Math.PI * 2;
+    orbitPivot.rotation.y = initialRotation;
+    planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation });
+}
 planetData.forEach(createPlanet);
 
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
@@ -141,6 +191,18 @@ let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
+analyzeButton.addEventListener('click', () => {
+    if (currentlyAnalyzedObject) {
+        analysisTitle.textContent = currentlyAnalyzedObject.name;
+        analysisTextContent.textContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales.";
+        analysisWindow.classList.add('visible');
+        appState = 'paused';
+    }
+});
+closeAnalysisButton.addEventListener('click', () => {
+    analysisWindow.classList.remove('visible');
+    appState = 'playing';
+});
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
@@ -156,19 +218,6 @@ renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); if (e
 
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
-analyzeButton.addEventListener('click', () => {
-    if (currentlyAnalyzedObject) {
-        analysisTitle.textContent = currentlyAnalyzedObject.name;
-        analysisTextContent.textContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales.";
-        analysisWindow.classList.add('visible');
-        appState = 'paused';
-    }
-});
-closeAnalysisButton.addEventListener('click', () => {
-    analysisWindow.classList.remove('visible');
-    appState = 'playing';
-});
-
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
 
@@ -183,7 +232,7 @@ function animate() {
         renderer.render(loadingScene, loadingCamera);
         return;
     }
-    
+
     if (appState === 'paused') {
         return;
     }
