@@ -80,7 +80,6 @@ canvas {
     z-index: 20;
 }
 
-/* KORREKTUR: Die Leiste ist jetzt rechtsbündig */
 #bottom-bar {
     position: absolute;
     bottom: calc(20px + env(safe-area-inset-bottom));
@@ -93,18 +92,16 @@ canvas {
     border-radius: 25px;
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* Inhalt rechtsbündig */
+    justify-content: flex-end;
     padding: 0 20px;
     gap: 10px;
     box-sizing: border-box;
     z-index: 15;
 }
 
-/* Die folgenden Elemente sind jetzt relativ zur #bottom-bar */
 #mute-button, #analyze-button {
     position: relative;
-    top: 0;
-    right: 0;
+    top: 0; right: 0;
 }
 
 #mute-button {
@@ -142,6 +139,83 @@ canvas {
 #mute-button #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
 #mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
 
+/* --- NEU: Styling für das Analyse-Fenster --- */
+#analysis-window {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+#analysis-window.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.analysis-content {
+    position: relative;
+    width: 90%;
+    max-width: 400px;
+    height: 70%;
+    max-height: 600px;
+    background: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px;
+    box-sizing: border-box;
+    color: white;
+    overflow-y: auto;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+#analysis-window.visible .analysis-content {
+    transform: scale(1);
+}
+#analysis-title {
+    font-size: 1.5em;
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+#analysis-text-content {
+    font-family: sans-serif; /* Lorem Ipsum sieht in Nasalization nicht gut aus */
+    font-size: 1em;
+    line-height: 1.6;
+    margin: 0;
+}
+#close-analysis-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 8px;
+    transition: background-color 0.2s ease;
+}
+#close-analysis-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+#close-analysis-button svg {
+    width: 100%;
+    height: 100%;
+    fill: white;
+}
+
+
 /* --- Ladebildschirm --- */
 #loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.3); display: flex; justify-content: center; align-items: center; z-index: 100; transition: opacity 0.5s ease; cursor: default; }
 #loading-screen.clickable { cursor: pointer; }
@@ -152,19 +226,18 @@ canvas {
 #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,1)); border-radius: 50px; transition: width 0.3s ease-out; }
 #media-player { display: none; }
 
+
 /* --- Responsives Layout für Smartphones --- */
 @media (max-width: 768px) {
     #joystick-zone {
         width: 140px;
         height: 140px;
     }
-    
     #bottom-bar {
         height: 80px;
         padding: 0 15px;
         gap: 8px;
     }
-
     #analyze-button {
         padding: 10px 16px;
         font-size: 14px;
