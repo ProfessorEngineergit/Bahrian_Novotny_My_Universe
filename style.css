@@ -1,4 +1,4 @@
-/* --- 1) Self-Hosting Nasalization V2 — sorgt für Safari-Kompatibilität --- */
+/* --- Self-Hosting Nasalization V2 im Repo-Root --- */
 @font-face {
   font-family: 'Nasalization V2';
   src: url('./Nasalization%20V2.woff2') format('woff2'),
@@ -8,7 +8,7 @@
   font-display: swap;
 }
 
-/* Basis-Styling */
+/* === Basis-Styling === */
 body {
   margin: 0;
   overflow: hidden;
@@ -20,10 +20,9 @@ body {
   user-select: none;
   -webkit-user-drag: none;
   user-drag: none;
-  -webkit-font-smoothing: antialiased; /* Glattere Schriften in Safari */
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Verhindert Scrollbar & unerwünschtes Touch-Verhalten */
 canvas {
   display: block;
   position: absolute;
@@ -41,13 +40,15 @@ canvas {
   pointer-events: none;
 }
 
-/* Label Style */
+/* Label Style mit Umbruch-Fix */
 .label {
   color: #fff;
   font-family: 'Nasalization V2', system-ui, -apple-system, sans-serif;
   font-size: 16px;
   text-shadow: 0 0 5px #ffffff;
-  white-space: nowrap;
+  white-space: normal;       /* NEU: erlaubt Zeilenumbruch */
+  word-break: break-word;    /* NEU: bricht lange Worte */
+  max-width: 200px;          /* NEU: Begrenzung Breite */
   text-align: center;
 }
 .label-line {
@@ -57,7 +58,6 @@ canvas {
   margin: 8px auto 0;
 }
 
-/* UI-Elemente */
 #info, #joystick-zone, #bottom-bar {
   opacity: 0;
   pointer-events: none;
@@ -152,12 +152,10 @@ canvas {
 #mute-button:hover, #analyze-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
-
 #mute-button svg {
   width: 100%;
   height: 100%;
 }
-
 #speaker-icon {
   fill: white;
 }
@@ -225,7 +223,7 @@ canvas {
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 #analysis-text-content {
-  font-family: sans-serif; /* Lorem Ipsum besser lesbar */
+  font-family: sans-serif; /* Lorem Ipsum sieht in Nasalization nicht gut aus */
   font-size: 1em;
   line-height: 1.6;
   margin: 0;
@@ -252,7 +250,7 @@ canvas {
   fill: white;
 }
 
-/* Loading Screen */
+/* Ladebildschirm */
 #loading-screen {
   position: absolute;
   top: 0;
@@ -312,7 +310,7 @@ canvas {
   display: none;
 }
 
-/* Responsives Layout */
+/* Responsives Layout für Smartphones */
 @media (max-width: 768px) {
   #joystick-zone {
     width: 140px;
