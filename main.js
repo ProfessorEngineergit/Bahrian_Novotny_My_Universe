@@ -38,7 +38,6 @@ const joystickZone = document.getElementById('joystick-zone');
 const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
-// const mapButton = document.getElementById('map-button'); // Entfernt
 const audio = document.getElementById('media-player');
 
 // === Hyperspace-Animation Setup ===
@@ -48,21 +47,7 @@ let hyperspaceParticles;
 const HYPERSPACE_LENGTH = 800;
 let loadingProgress = 0;
 
-function createHyperspaceEffect() {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    for (let i = 0; i < 5000; i++) {
-        vertices.push(
-            (Math.random() - 0.5) * 50,
-            (Math.random() - 0.5) * 50,
-            (Math.random() - 0.5) * HYPERSPACE_LENGTH
-        );
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending });
-    hyperspaceParticles = new THREE.Points(geometry, material);
-    loadingScene.add(hyperspaceParticles);
-}
+function createHyperspaceEffect() { const geometry = new THREE.BufferGeometry(); const vertices = []; for (let i = 0; i < 5000; i++) { vertices.push((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * HYPERSPACE_LENGTH); } geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending }); hyperspaceParticles = new THREE.Points(geometry, material); loadingScene.add(hyperspaceParticles); }
 
 // === Szenerie-Setup ===
 mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
@@ -149,16 +134,24 @@ const minZoom = 8; const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 
+// NEU: Flugphysik-Variablen
+let forwardThrustTime = 0;
+let isWarping = false;
+const NORMAL_SPEED = 0.1;
+const WARP_SPEED = 0.8;
+const NORMAL_FOV = 75;
+const WARP_FOV = 120;
+let currentSpeed = NORMAL_SPEED;
+
 let cameraFingerId = null;
 let isDraggingMouse = false;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
-// mapButton.addEventListener('click', () => { alert('Sternenkarte wird noch implementiert!'); }); // Entfernt
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
-nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
+nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y; joystickMove.turn = -data.vector.x; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
 
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
@@ -176,7 +169,9 @@ const worldPosition = new THREE.Vector3();
 
 function animate() {
     requestAnimationFrame(animate);
-    
+    const delta = clock.getDelta();
+    const elapsedTime = clock.getElapsedTime();
+
     if (appState === 'loading') {
         hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
         if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) {
@@ -185,8 +180,6 @@ function animate() {
         renderer.render(loadingScene, loadingCamera);
         return;
     }
-
-    const elapsedTime = clock.getElapsedTime();
 
     const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
     pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
@@ -202,15 +195,41 @@ function animate() {
     });
     
     if (ship) {
-        const keyForward = (keyboard['w'] ? 0.1 : 0) + (keyboard['s'] ? -0.1 : 0);
-        const keyTurn = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
-        const finalForward = joystickMove.forward + keyForward;
-        const finalTurn = joystickMove.turn + keyTurn;
-        
+        const keyForward = (keyboard['w'] ? 1 : 0) + (keyboard['s'] ? -1 : 0);
+        const keyTurn = (keyboard['a'] ? 1 : 0) + (keyboard['d'] ? -1 : 0);
+        let finalForward = joystickMove.forward + keyForward;
+        let finalTurn = joystickMove.turn + keyTurn;
+
+        // --- NEUE FLUGPHYSIK ---
+        // 1. Warp-Timer
+        if (finalForward > 0.1) {
+            forwardThrustTime += delta;
+        } else {
+            forwardThrustTime = 0;
+        }
+        isWarping = forwardThrustTime > 3;
+
+        // 2. Flüssige Beschleunigung
+        const targetSpeed = isWarping ? WARP_SPEED : NORMAL_SPEED;
+        currentSpeed = THREE.MathUtils.lerp(currentSpeed, targetSpeed, 0.03);
+
+        // 3. Invertierte Steuerung bei Rückwärtsflug
+        if (finalForward < -0.1) {
+            finalTurn *= -1;
+        }
+
+        // 4. Flüssiges Banking
+        const targetBankAngle = finalTurn * -0.4;
+        ship.rotation.z = THREE.MathUtils.lerp(ship.rotation.z, targetBankAngle, 0.05);
+
+        // 5. Bewegung anwenden
         const shipRadius = 5;
         const previousPosition = ship.position.clone();
-        ship.translateZ(finalForward);
-        ship.rotateY(finalTurn);
+        ship.translateZ(finalForward * currentSpeed); // Multipliziere mit der neuen Geschwindigkeit
+        ship.rotateY(finalTurn * 0.05);
+        
+        // --- Ende der Flugphysik ---
+        
         const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
         const collisionThreshold = shipRadius + blackHoleRadius;
         if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
@@ -242,6 +261,11 @@ function animate() {
             isAnalyzeButtonVisible = false;
         }
     }
+
+    // --- Kamera-Physik ---
+    const targetFov = isWarping ? WARP_FOV : NORMAL_FOV;
+    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.05);
+    camera.updateProjectionMatrix();
 
     if (keyboard['arrowup']) cameraVelocity.x += 0.0005;
     if (keyboard['arrowdown']) cameraVelocity.x -= 0.0005;
