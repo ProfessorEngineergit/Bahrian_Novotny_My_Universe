@@ -39,6 +39,34 @@ const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
 const audio = document.getElementById('media-player');
+// NEU: Referenzen für das Analyse-Fenster
+const analysisWindow = document.getElementById('analysis-window');
+const analysisTitle = document.getElementById('analysis-title');
+const analysisTextContent = document.getElementById('analysis-text-content');
+const closeAnalysisButton = document.getElementById('close-analysis-button');
+
+// === Hyperspace-Animation Setup ===
+const loadingScene = new THREE.Scene();
+const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+let hyperspaceParticles;
+const HYPERSPACE_LENGTH = 800;
+let loadingProgress = 0;
+
+function createHyperspaceEffect() {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < 5000; i++) {
+        vertices.push(
+            (Math.random() - 0.5) * 50,
+            (Math.random() - 0.5) * 50,
+            (Math.random() - 0.5) * HYPERSPACE_LENGTH
+        );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending });
+    hyperspaceParticles = new THREE.Points(geometry, material);
+    loadingScene.add(hyperspaceParticles);
+}
 
 // === Szenerie-Setup ===
 mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
@@ -48,6 +76,7 @@ mainScene.add(directionalLight);
 let galaxy; function createGalaxy() { const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' }; const geometry = new THREE.BufferGeometry(); const positions = new Float32Array(parameters.count * 3); const colors = new Float32Array(parameters.count * 3); const colorInside = new THREE.Color(parameters.insideColor); const colorOutside = new THREE.Color(parameters.outsideColor); for (let i = 0; i < parameters.count; i++) { const i3 = i * 3; const radius = Math.random() * parameters.radius; const spinAngle = radius * parameters.spin; const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2; const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1; const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius; positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX; positions[i3 + 1] = randomY; positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ; const mixedColor = colorInside.clone(); mixedColor.lerp(colorOutside, radius / parameters.radius); colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b; } geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32); gradient.addColorStop(0, 'rgba(255,255,255,1)'); gradient.addColorStop(0.2, 'rgba(255,255,255,1)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 64, 64); const particleTexture = new THREE.CanvasTexture(canvas); const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true }); galaxy = new THREE.Points(geometry, material); mainScene.add(galaxy); }
 createGalaxy();
 const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+// KORREKTUR: Gib dem Objekt einen Namen
 blackHoleCore.name = "Project_Mariner (This Site)";
 mainScene.add(blackHoleCore);
 const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
@@ -57,7 +86,8 @@ const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new 
 mainScene.add(lensingSphere);
 function createAccretionDisk() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const gradient = context.createRadialGradient(128, 128, 80, 128, 128, 128); gradient.addColorStop(0, 'rgba(255, 180, 80, 1)'); gradient.addColorStop(0.7, 'rgba(255, 100, 20, 0.5)'); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(0, 0, 256, 256); const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.RingGeometry(2.5, 5, 64); const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending }); const disk = new THREE.Mesh(geometry, material); disk.rotation.x = Math.PI / 2; mainScene.add(disk); return disk; }
 const accretionDisk = createAccretionDisk();
-const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = blackHoleCore.name; const lineDiv = document.createElement('div'); lineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(lineDiv); const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); mainScene.add(blackHoleLabel);
+const blackHoleLabelDiv = document.createElement('div'); blackHoleLabelDiv.className = 'label'; blackHoleLabelDiv.textContent = blackHoleCore.name; // Verwende den Namen
+const lineDiv = document.createElement('div'); lineDiv.className = 'label-line'; blackHoleLabelDiv.appendChild(lineDiv); const blackHoleLabel = new CSS2DObject(blackHoleLabelDiv); blackHoleLabel.position.set(0, 7, 0); mainScene.add(blackHoleLabel);
 const pacingCircleGeometry = new THREE.TorusGeometry(12, 0.1, 16, 100);
 const pacingCircleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const pacingCircle = new THREE.Mesh(pacingCircleGeometry, pacingCircleMaterial);
@@ -66,51 +96,29 @@ mainScene.add(pacingCircle);
 
 const planets = [];
 const planetData = [
-    { name: 'Infos', radius: 1, orbit: 20 },
-    { name: 'SURGE (The autonomous Robottaxi)', radius: 1.5, orbit: 35 },
-    { name: 'OpenImageLabel (A website to label images for professional photography)', radius: 1.2, orbit: 50 },
-    { name: 'Project Cablerack (A smarter way to cable-manage)', radius: 0.8, orbit: 65 },
-    { name: 'Socials/Other Sites', radius: 2, orbit: 80 },
-    { name: 'HA-Lightswitch (Making analog Lightswitches smart)', radius: 1.8, orbit: 95 },
-    { name: 'My Creative Work (Filming, flying, photography)', radius: 1.4, orbit: 110 },
-    { name: '3D-Printing (The ultimate engineering-tool)', radius: 1.6, orbit: 125 }
+    // KORREKTUR: Neue Namen und mehr Planeten
+    { name: 'Infos', radius: 1, orbit: 20, speed: 0.04 },
+    { name: 'SURGE (The autonomous Robottaxi)', radius: 1.5, orbit: 35, speed: 0.025 },
+    { name: 'OpenImageLabel (A website to label images for professional photography)', radius: 1.2, orbit: 50, speed: 0.015 },
+    { name: 'Project Cablerack (A smarter way to cable-manage)', radius: 0.8, orbit: 65, speed: 0.03 },
+    { name: 'Socials/Other Sites', radius: 2, orbit: 80, speed: 0.01 },
+    { name: 'HA-Lightswitch (Making analog Lightswitches smart)', radius: 1.8, orbit: 95, speed: 0.012 },
+    { name: 'My Creative Work (Filming, flying, photography)', radius: 1.4, orbit: 110, speed: 0.008 },
+    { name: '3D-Printing (The ultimate engineering-tool)', radius: 1.6, orbit: 125, speed: 0.006 }
 ];
 function createPlanetTexture(color) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128); for (let i = 0; i < 3000; i++) { const x = Math.random() * 128; const y = Math.random() * 128; const radius = Math.random() * 1.5; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`; context.fill(); } return new THREE.CanvasTexture(canvas); }
-
-function createPlanet(data, index) {
-    const orbitPivot = new THREE.Object3D();
-    mainScene.add(orbitPivot);
-    const texture = createPlanetTexture(Math.random() * 360);
-    const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
-    const material = new THREE.MeshStandardMaterial({ map: texture });
-    const planetMesh = new THREE.Mesh(geometry, material);
-    planetMesh.position.x = data.orbit;
-    planetMesh.name = data.name;
-    orbitPivot.add(planetMesh);
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'label';
-    labelDiv.textContent = data.name;
-    const planetLabel = new CSS2DObject(labelDiv);
-    planetLabel.position.y = data.radius + 2;
-    planetMesh.add(planetLabel);
-    const boundaryRadius = data.radius + 6;
-    const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100);
-    const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
-    boundaryCircle.rotation.x = Math.PI / 2;
-    planetMesh.add(boundaryCircle);
-    const initialRotation = (index / planetData.length) * Math.PI * 2;
-    orbitPivot.rotation.y = initialRotation;
-    planets.push({ pivot: orbitPivot, mesh: planetMesh, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation });
-}
+function createPlanet(data, index) { const orbitPivot = new THREE.Object3D(); mainScene.add(orbitPivot); const texture = createPlanetTexture(Math.random() * 360); const geometry = new THREE.SphereGeometry(data.radius, 32, 32); const material = new THREE.MeshStandardMaterial({ map: texture }); const planetMesh = new THREE.Mesh(geometry, material); planetMesh.position.x = data.orbit; planetMesh.name = data.name; /* Gib dem Mesh den Namen */ orbitPivot.add(planetMesh); const labelDiv = document.createElement('div'); labelDiv.className = 'label'; labelDiv.textContent = data.name; const planetLabel = new CSS2DObject(labelDiv); planetLabel.position.y = data.radius + 2; planetMesh.add(planetLabel); const boundaryRadius = data.radius + 6; const boundaryGeometry = new THREE.TorusGeometry(boundaryRadius, 0.1, 16, 100); const boundaryMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); const boundaryCircle = new THREE.Mesh(boundaryGeometry, boundaryMaterial); boundaryCircle.rotation.x = Math.PI / 2; planetMesh.add(boundaryCircle); const initialRotation = (index / planetData.length) * Math.PI * 2; orbitPivot.rotation.y = initialRotation; planets.push({ pivot: orbitPivot, mesh: planetMesh, speed: data.speed, labelDiv: labelDiv, boundaryCircle: boundaryCircle, isFrozen: false, initialRotation: initialRotation }); }
 planetData.forEach(createPlanet);
 
+// === NEU: Einheitliche Winkelgeschwindigkeit für konstante Phasenabstände ===
+const GLOBAL_ANGULAR_SPEED = 0.02;
+
 let ship; let forcefield; const cameraPivot = new THREE.Object3D(); const cameraHolder = new THREE.Object3D();
-function createForcefield(radius) { /* ... */ }
+function createForcefield(radius) { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const context = canvas.getContext('2d'); context.strokeStyle = 'rgba(255, 255, 255, 0.8)'; context.lineWidth = 3; for (let i = 0; i < 8; i++) { const x = i * 18; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 128); context.stroke(); const y = i * 18; context.beginPath(); context.moveTo(0, y); context.lineTo(128, y); context.stroke(); } const texture = new THREE.CanvasTexture(canvas); const geometry = new THREE.SphereGeometry(radius, 32, 32); const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide }); const ff = new THREE.Mesh(geometry, material); ff.visible = false; return ff; }
 
 let appState = 'loading';
 let isAnalyzeButtonVisible = false;
-let currentlyAnalyzedObject = null;
+let currentlyAnalyzedObject = null; // NEU: Speichert das aktuelle Objekt
 
 // === GLTF Modell-Lader ===
 createHyperspaceEffect();
@@ -160,28 +168,12 @@ const minZoom = 8; const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
 const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 
-// NEU: Eine einzige Geschwindigkeit für das gesamte System
-const SYSTEM_SPEED = 0.01;
-
 let cameraFingerId = null;
 let isDraggingMouse = false;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
-analyzeButton.addEventListener('click', () => {
-    if (currentlyAnalyzedObject) {
-        analysisTitle.textContent = currentlyAnalyzedObject.name;
-        analysisTextContent.textContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales.";
-        analysisWindow.classList.add('visible');
-        appState = 'paused';
-    }
-});
-closeAnalysisButton.addEventListener('click', () => {
-    analysisWindow.classList.remove('visible');
-    appState = 'playing';
-});
-
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
@@ -196,6 +188,20 @@ window.addEventListener('mouseup', () => { isDraggingMouse = false; });
 renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) { zoomVelocity += e.deltaY * 0.01; } else { zoomVelocity += e.deltaY * 0.05; } }, { passive: false });
 
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
+
+// NEU: Event Listener für den Analyse-Button
+analyzeButton.addEventListener('click', () => {
+    if (currentlyAnalyzedObject) {
+        analysisTitle.textContent = currentlyAnalyzedObject.name;
+        analysisTextContent.textContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales.";
+        analysisWindow.classList.add('visible');
+        appState = 'paused';
+    }
+});
+closeAnalysisButton.addEventListener('click', () => {
+    analysisWindow.classList.remove('visible');
+    appState = 'playing';
+});
 
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
@@ -213,6 +219,7 @@ function animate() {
     }
     
     if (appState === 'paused') {
+        // Im Pausenmodus wird nichts animiert
         return;
     }
 
@@ -225,9 +232,10 @@ function animate() {
     planets.forEach(planet => {
         planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
         planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
-        
-        // KORREKTUR: Synchronisierte Bewegung
-        const targetRotation = planet.initialRotation + elapsedTime * SYSTEM_SPEED;
+
+        // Einheitliche Winkelgeschwindigkeit für alle Planeten
+        const targetRotation = planet.initialRotation + elapsedTime * GLOBAL_ANGULAR_SPEED;
+
         if (!planet.isFrozen) {
             planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
         }
@@ -266,7 +274,7 @@ function animate() {
             }
         }
         planets.forEach(p => p.isFrozen = (activeObject === p.mesh));
-        currentlyAnalyzedObject = activeObject;
+        currentlyAnalyzedObject = activeObject; // NEU: Update des aktuellen Objekts
         
         if (activeObject && !isAnalyzeButtonVisible) {
             analyzeButton.classList.add('ui-visible');
@@ -300,4 +308,46 @@ function animate() {
             });
         }
         if (cameraFingerId === null && !isDraggingMouse) {
-   
+            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+        }
+        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        cameraHolder.rotation.x += cameraVelocity.x;
+        cameraPivot.rotation.y += cameraVelocity.y;
+    }
+    
+    cameraVelocity.multiplyScalar(DAMPING);
+    zoomDistance += zoomVelocity;
+    zoomVelocity *= DAMPING;
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+    
+    accretionDisk.rotation.z += 0.005;
+
+    if (forcefield && forcefield.visible) {
+        forcefield.material.opacity -= 0.04;
+        if (forcefield.material.opacity <= 0) { forcefield.visible = false; }
+    }
+
+    lensingSphere.visible = false;
+    blackHoleCore.visible = false;
+    accretionDisk.visible = false;
+    cubeCamera.update(renderer, mainScene);
+    lensingSphere.visible = true;
+    blackHoleCore.visible = true;
+    accretionDisk.visible = true;
+
+    composer.render();
+    labelRenderer.render(mainScene, camera);
+}
+
+// (aus deinem Projekt)
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
