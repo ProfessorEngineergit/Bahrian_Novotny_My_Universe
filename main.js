@@ -38,30 +38,8 @@ const joystickZone = document.getElementById('joystick-zone');
 const bottomBar = document.getElementById('bottom-bar');
 const muteButton = document.getElementById('mute-button');
 const analyzeButton = document.getElementById('analyze-button');
+const mapButton = document.getElementById('map-button');
 const audio = document.getElementById('media-player');
-
-// === Hyperspace-Animation Setup ===
-const loadingScene = new THREE.Scene();
-const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-let hyperspaceParticles;
-const HYPERSPACE_LENGTH = 800;
-let loadingProgress = 0;
-
-function createHyperspaceEffect() {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    for (let i = 0; i < 5000; i++) {
-        vertices.push(
-            (Math.random() - 0.5) * 50,
-            (Math.random() - 0.5) * 50,
-            (Math.random() - 0.5) * HYPERSPACE_LENGTH
-        );
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending });
-    hyperspaceParticles = new THREE.Points(geometry, material);
-    loadingScene.add(hyperspaceParticles);
-}
 
 // === Szenerie-Setup ===
 mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
@@ -127,8 +105,8 @@ loader.load(modelURL, (gltf) => {
         audio.play();
         appState = 'intro';
         infoElement.classList.add('ui-visible');
-        joystickZone.classList.add('ui-visible');
         bottomBar.classList.add('ui-visible');
+        joystickZone.classList.add('ui-visible');
     }, { once: true });
 }, (xhr) => { 
     if (xhr.lengthComputable) {
@@ -141,35 +119,31 @@ loader.load(modelURL, (gltf) => {
 
 // === Steuerung und Animation ===
 const keyboard = {};
-let joystickMove = { forward: 0, turn: 0 };
+const joystickMove = { forward: 0, turn: 0 }; // Renamed from shipMove to avoid confusion
+const ROTATION_LIMIT = Math.PI * 0.33;
 let zoomDistance = 15;
 const minZoom = 8; const maxZoom = 25;
 let cameraVelocity = new THREE.Vector2(0, 0); let zoomVelocity = 0;
-const DAMPING = 0.90; const LERP_FACTOR = 0.05;
-let cameraFingerId = null; let isDraggingMouse = false; let initialPinchDistance = 0; let previousTouch = { x: 0, y: 0 };
+const SPRING_STIFFNESS = 0.03; const DAMPING = 0.90; const LERP_FACTOR = 0.05;
 
-// NEU: Physik-Konstanten für das Schiff
-const shipPhysics = {
-    forwardVelocity: 0,
-    turnVelocity: 0,
-    roll: 0,
-    targetRoll: 0,
-    thrust: 0.003,
-    turnPower: 0.002,
-    drag: 0.97,
-    maxBankAngle: Math.PI / 6 // 30 Grad
-};
-const warp = {
-    timer: 0,
-    isWarping: false,
-    chargeTime: 3.0, // 3 Sekunden
-    speedMultiplier: 5.0,
-    normalFov: 75,
-    warpFov: 110
-};
+// NEU: Flugphysik-Variablen
+const NORMAL_SPEED = 10;
+const WARP_SPEED = 80;
+const NORMAL_FOV = 75;
+const WARP_FOV = 120;
+let targetSpeed = NORMAL_SPEED;
+let currentSpeed = 0; // Start at 0 for initial acceleration
+let targetFov = NORMAL_FOV;
+let timeFlyingStraight = 0;
+let targetBankAngle = 0;
 
+let cameraFingerId = null;
+let isDraggingMouse = false;
+let initialPinchDistance = 0;
+let previousTouch = { x: 0, y: 0 };
 
 muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
+mapButton.addEventListener('click', () => { alert('Sternenkarte wird noch implementiert!'); });
 window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); } });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 }).on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y; joystickMove.turn = -data.vector.x; } }).on('end', () => joystickMove = { forward: 0, turn: 0 });
@@ -177,10 +151,12 @@ nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static'
 renderer.domElement.addEventListener('touchstart', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; } }, { passive: false });
 renderer.domElement.addEventListener('touchmove', (e) => { const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone')); if (joystickTouch) return; e.preventDefault(); for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { const deltaX = touch.clientX - previousTouch.x; const deltaY = touch.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; } } if (e.touches.length >= 2) { const currentPinchDistance = getPinchDistance(e); zoomVelocity -= (currentPinchDistance - initialPinchDistance) * 0.03; initialPinchDistance = currentPinchDistance; } }, { passive: false });
 renderer.domElement.addEventListener('touchend', (e) => { for (const touch of e.changedTouches) { if (touch.identifier === cameraFingerId) { cameraFingerId = null; } } if (e.touches.length < 2) { initialPinchDistance = 0; } });
+
 renderer.domElement.addEventListener('mousedown', (e) => { if (e.target.closest('#joystick-zone')) return; isDraggingMouse = true; cameraVelocity.set(0, 0); previousTouch.x = e.clientX; previousTouch.y = e.clientY; });
 window.addEventListener('mousemove', (e) => { if (isDraggingMouse) { const deltaX = e.clientX - previousTouch.x; const deltaY = e.clientY - previousTouch.y; cameraVelocity.x += deltaY * 0.0002; cameraVelocity.y -= deltaX * 0.0002; previousTouch.x = e.clientX; previousTouch.y = e.clientY; } });
 window.addEventListener('mouseup', () => { isDraggingMouse = false; });
 renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) { zoomVelocity += e.deltaY * 0.01; } else { zoomVelocity += e.deltaY * 0.05; } }, { passive: false });
+
 function getPinchDistance(e) { if (e.touches.length < 2) return 0; const touch1 = e.touches[0]; const touch2 = e.touches[1]; const dx = touch1.clientX - touch2.clientX; const dy = touch1.clientY - touch2.clientY; return Math.sqrt(dx * dx + dy * dy); }
 
 const clock = new THREE.Clock();
@@ -188,8 +164,7 @@ const worldPosition = new THREE.Vector3();
 
 function animate() {
     requestAnimationFrame(animate);
-    const delta = clock.getDelta();
-
+    
     if (appState === 'loading') {
         hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
         if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) {
@@ -199,11 +174,13 @@ function animate() {
         return;
     }
 
+    const deltaTime = clock.getDelta();
     const elapsedTime = clock.getElapsedTime();
 
     const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
     pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     pacingCircle.material.opacity = 0.3 + pulse * 0.4;
+
     planets.forEach(planet => {
         planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
         planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
@@ -217,49 +194,47 @@ function animate() {
         // --- NEUE FLUGPHYSIK ---
         const keyForward = (keyboard['w'] ? 1 : 0) + (keyboard['s'] ? -1 : 0);
         const keyTurn = (keyboard['a'] ? 1 : 0) + (keyboard['d'] ? -1 : 0);
-        
         const finalForward = joystickMove.forward + keyForward;
         const finalTurn = joystickMove.turn + keyTurn;
 
-        // Beschleunigung und Verzögerung (Drag)
-        shipPhysics.forwardVelocity += finalForward * shipPhysics.thrust;
-        shipPhysics.turnVelocity += finalTurn * shipPhysics.turnPower;
-        shipPhysics.forwardVelocity *= shipPhysics.drag;
-        shipPhysics.turnVelocity *= shipPhysics.drag;
-
-        // Warp-Logik
-        if (finalForward > 0.5) { // Braucht starken Schub
-            warp.timer += delta;
-            if (warp.timer > warp.chargeTime) {
-                warp.isWarping = true;
-            }
+        // Warp-Antrieb Logik
+        if (finalForward > 0.1 && Math.abs(finalTurn) < 0.1) {
+            timeFlyingStraight += deltaTime;
         } else {
-            warp.timer = 0;
-            warp.isWarping = false;
+            timeFlyingStraight = 0;
         }
-        const warpFactor = warp.isWarping ? warp.speedMultiplier : 1.0;
 
-        // Bewegung anwenden
-        const previousPosition = ship.position.clone();
-        ship.translateZ(shipPhysics.forwardVelocity * warpFactor);
-        ship.rotateY(shipPhysics.turnVelocity);
+        if (timeFlyingStraight > 3) {
+            targetSpeed = WARP_SPEED;
+            targetFov = WARP_FOV;
+        } else {
+            targetSpeed = (finalForward > 0) ? NORMAL_SPEED : 0;
+        }
+        if(finalForward < 0){ // Rückwärtsgang
+             targetSpeed = NORMAL_SPEED / 2;
+        }
+
+        // Banking Logik
+        targetBankAngle = finalTurn * 0.5;
+
+        // Flugphysik anwenden (Lerp für flüssige Übergänge)
+        currentSpeed = THREE.MathUtils.lerp(currentSpeed, targetSpeed * Math.abs(finalForward), 0.05);
+        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.05);
+        camera.updateProjectionMatrix();
+        ship.rotation.z = THREE.MathUtils.lerp(ship.rotation.z, targetBankAngle, 0.05);
         
-        // Banking (in die Kurve legen)
-        shipPhysics.targetRoll = shipPhysics.turnVelocity * shipPhysics.maxBankAngle * -100;
-        shipPhysics.roll = THREE.MathUtils.lerp(shipPhysics.roll, shipPhysics.targetRoll, 0.05);
-        ship.rotation.z = shipPhysics.roll;
-
-        // Kollision
         const shipRadius = 5;
+        const previousPosition = ship.position.clone();
+        ship.translateZ(currentSpeed * deltaTime);
+        ship.rotateY(finalTurn * 1.5 * deltaTime);
+
         const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
         const collisionThreshold = shipRadius + blackHoleRadius;
         if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
             ship.position.copy(previousPosition);
-            shipPhysics.forwardVelocity = 0; // Stoppe die Bewegung bei Kollision
             if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
         }
 
-        // Analyze-Button Logik
         let activeObject = null;
         const distanceToCenterSq = ship.position.lengthSq();
         const circleCurrentRadius = pacingCircle.geometry.parameters.radius * pacingCircle.scale.x;
@@ -285,18 +260,12 @@ function animate() {
         }
     }
 
-    // Kamera-Steuerung
     if (keyboard['arrowup']) cameraVelocity.x += 0.0005;
     if (keyboard['arrowdown']) cameraVelocity.x -= 0.0005;
     if (keyboard['arrowleft']) cameraVelocity.y += 0.0005;
     if (keyboard['arrowright']) cameraVelocity.y -= 0.0005;
     if (keyboard['-']) zoomVelocity += 0.1;
     if (keyboard['+'] || keyboard['=']) zoomVelocity -= 0.1;
-
-    // Warp-Effekt (FOV)
-    const targetFov = warp.isWarping ? warp.warpFov : warp.normalFov;
-    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.05);
-    camera.updateProjectionMatrix();
 
     if (appState === 'intro') {
         cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
