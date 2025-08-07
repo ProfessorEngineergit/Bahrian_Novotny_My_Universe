@@ -527,3 +527,81 @@ function animate() {
                 activeObject = planet;
                 break;
             }
+        }
+        planets.forEach(p => p.isFrozen = (activeObject === p));
+        if (activeObject && !isAnalyzeButtonVisible) {
+            analyzeButton.classList.add('ui-visible');
+            isAnalyzeButtonVisible = true;
+        } else if (!activeObject && isAnalyzeButtonVisible) {
+            analyzeButton.classList.remove('ui-visible');
+            isAnalyzeButtonVisible = false;
+        }
+    }
+
+    if (keyboard['arrowup']) cameraVelocity.x += 0.0005;
+    if (keyboard['arrowdown']) cameraVelocity.x -= 0.0005;
+    if (keyboard['arrowleft']) cameraVelocity.y += 0.0005;
+    if (keyboard['arrowright']) cameraVelocity.y -= 0.0005;
+    if (keyboard['-']) zoomVelocity += 0.1;
+    if (keyboard['+'] || keyboard['=']) zoomVelocity -= 0.1;
+
+    if (appState === 'intro') {
+        cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
+        if (Math.abs(cameraPivot.rotation.y) < 0.01) {
+            cameraPivot.rotation.y = 0;
+            appState = 'playing';
+        }
+    } else if (appState === 'playing') {
+        if (ship) {
+            const getAngleToShip = (targetPosition) => Math.atan2(ship.position.x - targetPosition.x, ship.position.z - targetPosition.z);
+            blackHoleLabelDiv.style.transform = `rotate(${getAngleToShip(blackHoleCore.position)}rad)`;
+            planets.forEach(p => {
+                p.mesh.getWorldPosition(worldPosition);
+                p.labelDiv.style.transform = `rotate(${getAngleToShip(worldPosition)}rad)`;
+            });
+        }
+        if (cameraFingerId === null && !isDraggingMouse) {
+            cameraHolder.rotation.x = THREE.MathUtils.lerp(cameraHolder.rotation.x, 0, LERP_FACTOR);
+            cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, LERP_FACTOR);
+        }
+        if (cameraHolder.rotation.x > ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraHolder.rotation.x < -ROTATION_LIMIT) { cameraVelocity.x -= (cameraHolder.rotation.x + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        if (cameraPivot.rotation.y > ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y - ROTATION_LIMIT) * SPRING_STIFFNESS; } else if (cameraPivot.rotation.y < -ROTATION_LIMIT) { cameraVelocity.y -= (cameraPivot.rotation.y + ROTATION_LIMIT) * SPRING_STIFFNESS; }
+        cameraHolder.rotation.x += cameraVelocity.x;
+        cameraPivot.rotation.y += cameraVelocity.y;
+    }
+    
+    cameraVelocity.multiplyScalar(DAMPING);
+    zoomDistance += zoomVelocity;
+    zoomVelocity *= DAMPING;
+    zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
+    if (zoomDistance === minZoom || zoomDistance === maxZoom) { zoomVelocity = 0; }
+    if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+    
+    accretionDisk.rotation.z += 0.005;
+
+    if (forcefield && forcefield.visible) {
+        forcefield.material.opacity -= 0.04;
+        if (forcefield.material.opacity <= 0) {
+            forcefield.visible = false;
+        }
+    }
+
+    lensingSphere.visible = false;
+    blackHoleCore.visible = false;
+    accretionDisk.visible = false;
+    cubeCamera.update(renderer, mainScene);
+    lensingSphere.visible = true;
+    blackHoleCore.visible = true;
+    accretionDisk.visible = true;
+
+    composer.render();
+    labelRenderer.render(mainScene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
