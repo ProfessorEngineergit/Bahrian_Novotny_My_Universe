@@ -262,13 +262,24 @@ function createForcefield(radius) {
 const OBJECT_CONTENT = {
   'Project_Mariner (This Site)': {
     title: 'Project Mariner',
-    html: `<p>Willkommen in meinem Universum. Hier findest du alle Projekte als Himmelskörper angeordnet.</p>`,
+    html: `<p>Hi, I’m Bahrian Novotny — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.
+From exploring the mechanics of the universe to experimenting with creative coding and engineering, I’m constantly looking for new ways to learn, build, and share ideas.
+This website grew out of that passion. For over a year, I had planned to build a portfolio site — but I wanted something different. Something exciting. Something interactive.
+Welcome to my universe.
+
+<b>Project Mariner: How This Site Was Born</b>
+
+It all began with a simple HTML prototype. Instead of the ship you see now, there was a pyramid you could steer in the most basic way using a joystick, along with some very early camera rotation controls.
+About a week later, I had refined both the design and the functionality. I realized that by limiting the controls, the site would feel more polished — so I made the camera snap back to a fixed position and only allowed permanent zoom adjustments.
+Around that time, I replaced the pyramid with the USS Enterprise-D and introduced a loading screen.
+Next came the planets. The tricky part was making sure they stayed as far apart from each other as possible. Finally, I implemented a feature where, when the ship enters a planet’s inner sphere to analyze it, the planet stops moving — and as soon as the ship leaves, it accelerates to catch up to the position it would have reached had it never stopped.
+</p>`,
     images: []
   },
   'Infos': {
     title: 'Infos',
     html: `<p>
-THIS IS PROJECT_MARINER V1.0
+THIS IS <b>PROJECT_MARINER V1.0</b>
 
 NEW RELEASES:
 
@@ -292,37 +303,58 @@ V2.0-SCEDULED FOR DECEMBER 2025</p>`,
   },
   'SURGE (The autonomous Robottaxi)': {
     title: 'SURGE – Autonomous Robottaxi',
-    html: `<p>Kurzbeschreibung von SURGE. Ersetze diesen Text durch deinen eigenen.</p>`,
+    html: `<p>
+    <i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i>
+SURGE is my 8th-grade capstone project — a fully autonomous, electrically powered mini robotic taxi designed to navigate city streets all on its own. The idea was born from two things I care deeply about: cutting CO₂ emissions and exploring how robotics can reshape everyday mobility.
+At its core, SURGE runs on an NVIDIA Jetson Nano — a compact but powerful AI computer that processes live camera data for obstacle detection and navigation. The drive system allows precise and flexible movement in tight spaces, making it ideal for urban environments.
+The design process began with sketches and CAD models, which I brought to life using 3D printing. The chassis was built to be modular, making upgrades easy, and I integrated LED accents for both style and functional feedback — such as indicating movement or charging status.
+On the software side, SURGE uses AI-driven control logic for mapping, path planning, and decision-making in real time. While I initially planned to use an Intel RealSense D435 depth camera, I ultimately went with a Raspberry Pi camera — a simpler, lighter choice that still enabled effective autonomous navigation.
+From mechanical design to electronics and AI control, every aspect of SURGE was designed, built, and programmed by me. It’s a fusion of engineering, AI, and creative design — and a small glimpse into how shared, smart mobility could work in the cities of tomorrow.</p>`,
     images: []
   },
   'OpenImageLabel (A website to label images for professional photography)': {
     title: 'OpenImageLabel',
-    html: `<p>Beschreibung deines Labeling-Tools. Screenshots kannst du als Bilder anhängen.</p>`,
+    html: `<p>OpenImageLabel is my latest experiment in making metadata work for you, not against you. It started as a simple browser app, but its goal is much bigger: to become the fastest way to tag and present your photos, whether you’re on a laptop, an iPhone or an Android device.
+The idea is straightforward: drag a photo into the page, and OpenImageLabel pulls the EXIF data straight from the file. Exposure time, aperture and ISO pop up along the top of the image, while the camera model appears at the bottom left. You can adjust the font size, move and fade the text with a couple of sliders, and then copy that style to other images or apply it to everything at once. There’s even a checkbox below each card to choose which photos you want to download; when you click “Download selection” or “Download all,” it generates finished JPEGs with your chosen overlays baked in.
+I built the interface so that it stays out of your way. When you first land on the app, all you see is a big “Drag images here or click” area; only after you upload do the cards, tools and download options appear. The same clean design will carry over to the iOS and Android versions I’m working on now. By turning metadata into a flexible, customisable overlay, OpenImageLabel lets you present your shots professionally without fiddling with an editor — just load, label and share.
+</p>`,
     images: []
   },
   'Project Cablerack (A smarter way to cable-manage)': {
     title: 'Project Cablerack',
-    html: `<p>Dein Text zu Cablerack.</p>`,
+    html: `<p>I’m currently building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup will connect to my monitor through a single cable, keeping the workspace clean and simple.
+Inside the rack, an HDMI switcher box will allow me to change outputs at the press of a remote-control button. To keep everything cool — especially when the plexiglass door is closed — I’m adding ARGB fans for both airflow and style. All of this will be integrated with Apple Home, so I can control cooling and lighting via my HomePod mini.
+This way, Project Cablerack won’t just organise my gear — it will make it easier, cooler (literally), and far more enjoyable to use.
+</p>`,
     images: []
   },
   'Socials/Other Sites': {
     title: 'Socials & Links',
-    html: `<ul><li><a href="#" target="_blank" rel="noopener">Website</a></li><li><a href="#" target="_blank" rel="noopener">YouTube</a></li></ul>`,
+    html: `<ul><li><a href="#" target="_blank" rel="noopener">Website</a></li><li><a href="#" target="_blank" rel="https://www.youtube.com/@droneXplorer-t1n">YouTube</a></li></ul>`,
     images: []
   },
   'HA-Lightswitch (Making analog Lightswitches smart)': {
     title: 'HA-Lightswitch',
-    html: `<p>Beschreibung des Lichtschalter-Projekts.</p>`,
+    html: `<p>At my school, there’s a small makerspace called the MakerLab. Over time, we’ve automated the entire room to a high degree — but one thing remained: the lights. Since this is a school, we couldn’t just take apart the existing light switches.
+Our solution was to design a custom 3D-printed case that allows a servo motor to physically flip a standard analog light switch, all without any permanent modification. The servo is controlled through Home Assistant via MQTT, running on an Arduino.
+It’s a simple, inexpensive, and fully reversible way to add smart-light control to any space where replacing the switch isn’t an option.
+You can download the project files and read more on our GitHub page: https://github.com/makerLab314/OpenLightswitch-HA</p>`,
     images: []
   },
   'My Creative Work (Filming, flying, photography)': {
     title: 'Creative Work',
-    html: `<p>Kurzer Text über deine kreativen Arbeiten.</p>`,
+    html: `<p>Flying a drone is more than just capturing the view from above — it’s about telling a story in a way no ground-based camera can. With my DJI Mini 2, I enjoy to create videos that inspire and make people want to watc
+
+Under the name DroneXplorer, I produce cinematic footage for a variety of projects — from from paid projects, where I film houses etc. to personal creative explorations.
+
+Flying brings me a feeling of liberty and endless possibility. The feeling of flying over our beautiful earth at the same altitude as birds, is just merely describable.</p>`,
     images: []
   },
   '3D-Printing (The ultimate engineering-tool)': {
     title: '3D-Printing',
-    html: `<p>Hier können Drucke, Setups, Materialien etc. beschrieben werden.</p>`,
+    html: `<p>3D-Printing has become an essential tool for me. Since I was very young I have always made inventions. In kindergarten I already had concepts for self-landing rockets, without having ever heard of Falcon 9. I developed ideas for power plants,
+    that would be climate friendly. But I never could take these ideas past my mind and a sheet of paper. Till three years ago, when I first saw a 3D-Printer in a library. I learned CAD that same week and printed out a smart desk, that we had concepted in
+    a project week in school. One year later, I had purchased my own 3D-printer. It has truly been a great tool for me!</p>`,
     images: []
   }
 };
