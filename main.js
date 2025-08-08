@@ -347,9 +347,7 @@ This way, Project Cablerack won’t just organise my gear — it will make it ea
   },
   'Socials/Other Sites': {
     title: 'Socials & Links',
-    html: <a href: "https://github.com/ProfessorEngineergit">
-    My GitHub-profile:
-  </a>
+    html: 
   },
   'HA-Lightswitch (Making analog Lightswitches smart)': {
     title: 'HA-Lightswitch',
