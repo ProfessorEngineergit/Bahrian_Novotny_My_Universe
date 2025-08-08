@@ -95,7 +95,7 @@ canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none
 #quick-warp-btn {
   position: absolute;
   right: 40px;
-  bottom: calc(120px + env(safe-area-inset-bottom)); /* über der Bar */
+  bottom: calc(120px + env(safe-area-inset-bottom));
   padding: 12px 18px;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.18);
@@ -188,11 +188,7 @@ canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none
 }
 #analysis-window.visible .analysis-content { transform: scale(1); }
 #analysis-title { font-size: 1.5em; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); }
-
-/* für eigene HTML-Inhalte & Bilder */
 #analysis-text-content { font-family: sans-serif; font-size: 1em; line-height: 1.6; margin: 0; }
-#analysis-text-content img { max-width: 100%; height: auto; display: block; border-radius: 12px; margin: 12px 0; }
-
 #close-analysis-button {
   position: absolute; top: 15px; right: 15px; width: 36px; height: 36px;
   background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
@@ -200,6 +196,10 @@ canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none
 }
 #close-analysis-button:hover { background: rgba(255,255,255,0.1); }
 #close-analysis-button svg { width: 100%; height: 100%; fill: white; }
+
+/* --- NEU für Bilder/Text im Analyse-Fenster --- */
+#analysis-text-content img { max-width: 100%; height: auto; border-radius: 12px; display: block; }
+#analysis-text-content .analysis-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 12px; }
 
 /* Responsiv */
 @media (max-width: 768px) {
