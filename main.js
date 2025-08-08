@@ -262,7 +262,7 @@ function createForcefield(radius) {
 const OBJECT_CONTENT = {
   'Project_Mariner (This Site)': {
     title: 'Project Mariner',
-    html: `<p>Hi, I’m Bahrian Novotny \n — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.
+    html: `<p>Hi, I’m Bahrian Novotny <br> — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.
 From exploring the mechanics of the universe to experimenting with creative coding and engineering, I’m constantly looking for new ways to learn, build, and share ideas.
 This website grew out of that passion. For over a year, I had planned to build a portfolio site — but I wanted something different. Something exciting. Something interactive.
 Welcome to my universe.
