@@ -267,7 +267,25 @@ const OBJECT_CONTENT = {
   },
   'Infos': {
     title: 'Infos',
-    html: `<p>Hier kommt dein eigener Info-Text hin. Du kannst auch <strong>Listen</strong> oder Links verwenden.</p>`,
+    html: `<p>
+THIS IS PROJECT_MARINER V1.0
+
+NEW RELEASES:
+
+PROJECT MARINER V1.5 PRO
+
+V1.5 PRO SHOULD INCORPORATE MINOR BUG FIXES AS WELL AS FOLLOWING FEATURES:
+
+NEWSLETTER-FUNCTION
+OVERVIEW-FUNCTION
+DEEP SPACE-FUNCTION
+NEW, BEAUTIFUL PLANETS CRAFTED IN BLENDER
+MORE CONTROLLS
+MATTE GLASS 1.5 PRO-MATERIAL
+ENHANCED BUTTON-ANIMATIONS
+MORE FLUID ANIMATIONS FOR QUICK WARP
+
+V2.0-SCEDULED FOR DECEMBER 2025</p>`,
     images: [
       /* Beispiel: 'content/infos-1.jpg', 'content/infos-2.jpg' */
     ]
