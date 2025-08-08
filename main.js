@@ -1,3 +1,4 @@
+// ===== IMPORTS =====
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
@@ -6,7 +7,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// === Grund-Setup ===
+// ===== GRUND-SETUP =====
 const mainScene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -23,12 +24,15 @@ labelRenderer.domElement.id = 'label-container';
 document.body.appendChild(labelRenderer.domElement);
 
 const renderScene = new RenderPass(mainScene, camera);
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.4, 0.9);
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  1.2, 0.4, 0.9
+);
 const composer = new EffectComposer(renderer);
 composer.addPass(renderScene);
 composer.addPass(bloomPass);
 
-// === UI Referenzen ===
+// ===== UI REFERENZEN =====
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingTitle = document.getElementById('loading-title');
@@ -52,12 +56,13 @@ const warpList = document.getElementById('warp-list');
 const warpHereBtn = document.getElementById('warp-here');
 const warpCloseBtn = document.getElementById('warp-close');
 const warpFlash = document.getElementById('warp-flash');
-
 let chosenWarpTargetId = null;
 
-// === Hyperspace-Loading ===
+// ===== HYPERSPACE-LOADING =====
 const loadingScene = new THREE.Scene();
-const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const loadingCamera = new THREE.PerspectiveCamera(
+  75, window.innerWidth / window.innerHeight, 0.1, 1000
+);
 let hyperspaceParticles;
 const HYPERSPACE_LENGTH = 800;
 let loadingProgress = 0;
@@ -66,15 +71,21 @@ function createHyperspaceEffect() {
   const geometry = new THREE.BufferGeometry();
   const vertices = [];
   for (let i = 0; i < 5000; i++) {
-    vertices.push((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * HYPERSPACE_LENGTH);
+    vertices.push(
+      (Math.random() - 0.5) * 50,
+      (Math.random() - 0.5) * 50,
+      (Math.random() - 0.5) * HYPERSPACE_LENGTH
+    );
   }
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending });
+  const material = new THREE.PointsMaterial({
+    color: 0xffffff, size: 0.1, blending: THREE.AdditiveBlending
+  });
   hyperspaceParticles = new THREE.Points(geometry, material);
   loadingScene.add(hyperspaceParticles);
 }
 
-// === Licht & Galaxy ===
+// ===== LICHT & GALAXY =====
 mainScene.add(new THREE.AmbientLight(0xffffff, 0.4));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(10, 20, 15);
@@ -82,29 +93,44 @@ mainScene.add(directionalLight);
 
 let galaxy;
 function createGalaxy() {
-  const parameters = { count: 150000, size: 0.15, radius: 100, arms: 3, spin: 0.7, randomness: 0.5, randomnessPower: 3, insideColor: '#ffac89', outsideColor: '#54a1ff' };
+  const parameters = {
+    count: 150000, size: 0.15, radius: 100, arms: 3,
+    spin: 0.7, randomness: 0.5, randomnessPower: 3,
+    insideColor: '#ffac89', outsideColor: '#54a1ff'
+  };
   const geometry = new THREE.BufferGeometry();
   const positions = new Float32Array(parameters.count * 3);
   const colors = new Float32Array(parameters.count * 3);
   const colorInside = new THREE.Color(parameters.insideColor);
   const colorOutside = new THREE.Color(parameters.outsideColor);
+
   for (let i = 0; i < parameters.count; i++) {
     const i3 = i * 3;
     const radius = Math.random() * parameters.radius;
     const spinAngle = radius * parameters.spin;
     const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2;
-    const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
-    const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1;
-    const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
+
+    const rnd = parameters.randomness;
+    const pow = parameters.randomnessPower;
+
+    const randomX = Math.pow(Math.random(), pow) * (Math.random() < 0.5 ? 1 : -1) * rnd * radius;
+    const randomY = Math.pow(Math.random(), pow) * (Math.random() < 0.5 ? 1 : -1) * rnd * radius * 0.1;
+    const randomZ = Math.pow(Math.random(), pow) * (Math.random() < 0.5 ? 1 : -1) * rnd * radius;
+
     positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
     positions[i3 + 1] = randomY;
     positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
+
     const mixedColor = colorInside.clone();
     mixedColor.lerp(colorOutside, radius / parameters.radius);
-    colors[i3] = mixedColor.r; colors[i3 + 1] = mixedColor.g; colors[i3 + 2] = mixedColor.b;
+    colors[i3] = mixedColor.r;
+    colors[i3 + 1] = mixedColor.g;
+    colors[i3 + 2] = mixedColor.b;
   }
+
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
   const canvas = document.createElement('canvas');
   canvas.width = 64; canvas.height = 64;
   const context = canvas.getContext('2d');
@@ -113,23 +139,43 @@ function createGalaxy() {
   gradient.addColorStop(0.2, 'rgba(255,255,255,1)');
   gradient.addColorStop(0.5, 'rgba(255,255,255,0.3)');
   gradient.addColorStop(1, 'rgba(255,255,255,0)');
-  context.fillStyle = gradient; context.fillRect(0, 0, 64, 64);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 64, 64);
   const particleTexture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.PointsMaterial({ size: parameters.size, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, map: particleTexture, transparent: true });
+
+  const material = new THREE.PointsMaterial({
+    size: parameters.size,
+    sizeAttenuation: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexColors: true,
+    map: particleTexture,
+    transparent: true
+  });
+
   galaxy = new THREE.Points(geometry, material);
   mainScene.add(galaxy);
 }
 createGalaxy();
 
 // Schwarzes Loch + Lens
-const blackHoleCore = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+const blackHoleCore = new THREE.Mesh(
+  new THREE.SphereGeometry(1.5, 32, 32),
+  new THREE.MeshBasicMaterial({ color: 0x000000 })
+);
 blackHoleCore.name = 'Project_Mariner (This Site)';
 mainScene.add(blackHoleCore);
 
-const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
+  generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter
+});
 const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
 mainScene.add(cubeCamera);
-const lensingSphere = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff }));
+
+const lensingSphere = new THREE.Mesh(
+  new THREE.SphereGeometry(2.5, 64, 64),
+  new THREE.MeshBasicMaterial({ envMap: cubeRenderTarget.texture, refractionRatio: 0.9, color: 0xffffff })
+);
 mainScene.add(lensingSphere);
 
 function createAccretionDisk() {
@@ -142,7 +188,9 @@ function createAccretionDisk() {
   context.fillStyle = gradient; context.fillRect(0, 0, 256, 256);
   const texture = new THREE.CanvasTexture(canvas);
   const geometry = new THREE.RingGeometry(2.5, 5, 64);
-  const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending });
+  const material = new THREE.MeshBasicMaterial({
+    map: texture, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending
+  });
   const disk = new THREE.Mesh(geometry, material);
   disk.rotation.x = Math.PI / 2;
   mainScene.add(disk);
@@ -191,11 +239,15 @@ function createPlanetTexture(color) {
   const canvas = document.createElement('canvas');
   canvas.width = 128; canvas.height = 128;
   const context = canvas.getContext('2d');
-  context.fillStyle = hsl(${color}, 70%, 50%); context.fillRect(0, 0, 128, 128);
+
+  // FIX: hsl/hsla müssen Strings sein
+  context.fillStyle = `hsl(${color}, 70%, 50%)`;
+  context.fillRect(0, 0, 128, 128);
+
   for (let i = 0; i < 3000; i++) {
     const x = Math.random() * 128; const y = Math.random() * 128; const r = Math.random() * 1.5;
     context.beginPath(); context.arc(x, y, r, 0, Math.PI * 2);
-    context.fillStyle = hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5);
+    context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`;
     context.fill();
   }
   return new THREE.CanvasTexture(canvas);
@@ -249,26 +301,25 @@ function createForcefield(radius) {
   }
   const texture = new THREE.CanvasTexture(canvas);
   const geometry = new THREE.SphereGeometry(radius, 32, 32);
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide });
+  const material = new THREE.MeshBasicMaterial({
+    map: texture, transparent: true, blending: THREE.AdditiveBlending, opacity: 0, side: THREE.DoubleSide
+  });
   const ff = new THREE.Mesh(geometry, material);
   ff.visible = false;
   return ff;
 }
 
-// === ✨ NEU: Inhalte für Analyse-Fenster (HIER EDITIEREN) ===
-// - key = EXACTER Objektname (PlanetLabel), z.B. 'Infos' oder 'Project_Mariner (This Site)'
-// - Du kannst reinen Text ODER vollständiges HTML nutzen (inkl. <img>, <ul>, <a>, …)
-// - Optional: images: [] → einfache Galerie wird automatisch unter dem Text erzeugt
+// ===== ✨ INHALTE FÜR ANALYSE-FENSTER =====
+// HTML als Template-Strings (`…`), KEIN JSX
 const OBJECT_CONTENT = {
   'Project_Mariner (This Site)': {
     title: 'Project Mariner',
-    html: <p>Hi, I’m Bahrian Novotny — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.<br><br>
+    html: `
+<p>Hi, I’m Bahrian Novotny — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.<br><br>
 From exploring the mechanics of the universe to experimenting with creative coding and engineering, I’m constantly looking for new ways to learn, build, and share ideas.<br><br>
 This website grew out of that passion. For over a year, I had planned to build a portfolio site — but I wanted something different. Something exciting. Something interactive.
 Welcome to my universe.<br><br><br><br>
-
 <b>Project Mariner: How This Site Was Born</b><br><br>
-
 It all began with a simple HTML prototype. Instead of the ship you see now, there was a pyramid you could steer in the most basic way using a joystick, along with some very
 early camera rotation controls.<br><br>
 About a week later, I had refined both the design and the functionality. I realized that by limiting the controls, the site would feel more polished — so I made the camera
@@ -277,38 +328,36 @@ Around that time, I replaced the pyramid with the USS Enterprise-D and introduce
 Next came the planets. The tricky part was making sure they stayed as far apart from each other as possible. Finally, I implemented a feature where,
 when the ship enters a planet’s inner sphere to analyze it, the planet stops moving — and as soon as the ship leaves, it accelerates to catch up to the position it would have
 reached had it never stopped.
-</p>,
+</p>
+`,
     images: []
   },
   'Infos': {
     title: 'Infos',
-    html: <p>
+    html: `
+<p>
 THIS IS <b>PROJECT_MARINER V1.0</b><br><br><br><br>
-
 NEW RELEASES:<br><br>
-
 PROJECT MARINER V1.5 PRO<br><br>
-
 V1.5 PRO SHOULD INCORPORATE MINOR BUG FIXES AS WELL AS FOLLOWING FEATURES:<br><br>
-
-NEWSLETTER-FUNCTION
-OVERVIEW-FUNCTION
-DEEP SPACE-FUNCTION
-NEW, BEAUTIFUL PLANETS CRAFTED IN BLENDER
-MORE CONTROLLS
-MATTE GLASS 1.5 PRO-MATERIAL
-ENHANCED BUTTON-ANIMATIONS
+NEWSLETTER-FUNCTION<br>
+OVERVIEW-FUNCTION<br>
+DEEP SPACE-FUNCTION<br>
+NEW, BEAUTIFUL PLANETS CRAFTED IN BLENDER<br>
+MORE CONTROLLS<br>
+MATTE GLASS 1.5 PRO-MATERIAL<br>
+ENHANCED BUTTON-ANIMATIONS<br>
 MORE FLUID ANIMATIONS FOR QUICK WARP<br><br>
-
-V2.0-SCEDULED FOR DECEMBER 2025</p>,
-    images: [
-      /* Beispiel: 'content/infos-1.jpg', 'content/infos-2.jpg' */
-    ]
+V2.0-SCEDULED FOR DECEMBER 2025
+</p>
+`,
+    images: []
   },
   'SURGE (The autonomous Robottaxi)': {
     title: 'SURGE – Autonomous Robottaxi',
-    html: <p>
-    <i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i><br><br>
+    html: `
+<p>
+<i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i><br><br>
 SURGE is my 8th-grade capstone project — a fully autonomous, electrically powered mini robotic taxi designed to navigate city streets all on its own. The idea was born from two things
 I care deeply about: cutting CO₂ emissions and exploring how robotics can reshape everyday mobility.<br><br>
 At its core, SURGE runs on an NVIDIA Jetson Nano — a compact but powerful AI computer that processes live camera data for obstacle detection and navigation. The drive system allows precise
@@ -318,75 +367,99 @@ for both style and functional feedback — such as indicating movement or chargi
 On the software side, SURGE uses AI-driven control logic for mapping, path planning, and decision-making in real time. While I initially planned to use an Intel RealSense D435 depth camera,
 I ultimately went with a Raspberry Pi camera — a simpler, lighter choice that still enabled effective autonomous navigation.<br><br>
 From mechanical design to electronics and AI control, every aspect of SURGE was designed, built, and programmed by me. It’s a fusion of engineering, AI, and creative design — and a small
-glimpse into how shared, smart mobility could work in the cities of tomorrow.</p>,
+glimpse into how shared, smart mobility could work in the cities of tomorrow.
+</p>
+`,
     images: []
   },
   'OpenImageLabel (A website to label images for professional photography)': {
     title: 'OpenImageLabel',
-    html: <p>OpenImageLabel is my latest experiment in making metadata work for you, not against you.<br><br> It started as a simple browser app, but its goal is much bigger: to become the
-    fastest way to tag and present your photos, whether you’re on a laptop, an iPhone or an Android device.<br><br>
+    html: `
+<p>OpenImageLabel is my latest experiment in making metadata work for you, not against you.<br><br>
+It started as a simple browser app, but its goal is much bigger: to become the fastest way to tag and present your photos, whether you’re on a laptop, an iPhone or an Android device.<br><br>
 The idea is straightforward: drag a photo into the page, and OpenImageLabel pulls the EXIF data straight from the file. Exposure time, aperture and ISO pop up along the top of the image,
-while the camera model appears at the bottom left.<br><br> You can adjust the font size, move and fade the text with a couple of sliders, and then copy that style to other images or apply it to
-everything at once.<br><br> There’s even a checkbox below each card to choose which photos you want to download; when you click “Download selection” or “Download all,” it generates finished JPEGs
+while the camera model appears at the bottom left.<br><br>
+You can adjust the font size, move and fade the text with a couple of sliders, and then copy that style to other images or apply it to everything at once.<br><br>
+There’s even a checkbox below each card to choose which photos you want to download; when you click “Download selection” or “Download all,” it generates finished JPEGs
 with your chosen overlays baked in.<br><br>
 I built the interface so that it stays out of your way. When you first land on the app, all you see is a big “Drag images here or click” area; only after you upload do the cards, tools and
-download options appear.<br><br> The same clean design will carry over to the iOS and Android versions I’m working on now. By turning metadata into a flexible, customisable overlay, OpenImageLabel
+download options appear.<br><br>
+The same clean design will carry over to the iOS and Android versions I’m working on now. By turning metadata into a flexible, customisable overlay, OpenImageLabel
 lets you present your shots professionally without fiddling with an editor — just load, label and share.
-</p>,
+</p>
+`,
     images: []
   },
   'Project Cablerack (A smarter way to cable-manage)': {
     title: 'Project Cablerack',
-    html: <p>I’m currently building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup will connect to
-    my monitor through a single cable, keeping the workspace clean and simple.<br><br>
+    html: `
+<p>
+I’m currently building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup will connect to
+my monitor through a single cable, keeping the workspace clean and simple.<br><br>
 Inside the rack, an HDMI switcher box will allow me to change outputs at the press of a remote-control button. To keep everything cool — especially when the plexiglass door is closed — I’m
-adding ARGB fans for both airflow and style.<br><br> All of this will be integrated with Apple Home, so I can control cooling and lighting via my HomePod mini.
+adding ARGB fans for both airflow and style.<br><br>
+All of this will be integrated with Apple Home, so I can control cooling and lighting via my HomePod mini.
 This way, Project Cablerack won’t just organise my gear — it will make it easier, cooler (literally), and far more enjoyable to use.
-</p>,
+</p>
+`,
     images: []
   },
   'Socials/Other Sites': {
-  title: 'Socials & Links',
-  html: <ul>
-    <li><b>My GitHub profile:</b> <a href="https://github.com/ProfessorEngineergit" target="_blank" rel="noopener">github.com/ProfessorEngineergit</a></li>
-    <li><b>GitHub profile (school):</b> <a href="https://github.com/makerLab314" target="_blank" rel="noopener">github.com/makerLab314</a></li>
-    <li><b>YouTube:</b> <a href="https://www.youtube.com/@droneXplorer-t1n" target="_blank" rel="noopener">youtube.com/@droneXplorer-t1n</a></li>
-    <li><b>Skypixel:</b> <a href="https://www.skypixel.com/users/till-bahrian" target="_blank" rel="noopener">skypixel.com/users/till-bahrian</a></li>
-    <li><b>Book me as a drone pilot:</b> <a href="https://bahriannovotny.wixstudio.com/meinewebsite" target="_blank" rel="noopener">bahriannovotny.wixstudio.com/meinewebsite</a></li>
-    <li><b>Book 3D print services:</b> <a href="https://lorenzobaymueller.wixstudio.com/3d-print-hub" target="_blank" rel="noopener">lorenzobaymueller.wixstudio.com/3d-print-hub</a></li>
-  </ul>,
-  images: []
-},
+    title: 'Socials & Links',
+    html: `
+<ul>
+  <li><b>My GitHub profile:</b> <a href="https://github.com/ProfessorEngineergit" target="_blank" rel="noopener">github.com/ProfessorEngineergit</a></li>
+  <li><b>GitHub profile (school):</b> <a href="https://github.com/makerLab314" target="_blank" rel="noopener">github.com/makerLab314</a></li>
+  <li><b>YouTube:</b> <a href="https://www.youtube.com/@droneXplorer-t1n" target="_blank" rel="noopener">youtube.com/@droneXplorer-t1n</a></li>
+  <li><b>Skypixel:</b> <a href="https://www.skypixel.com/users/till-bahrian" target="_blank" rel="noopener">skypixel.com/users/till-bahrian</a></li>
+  <li><b>Book me as a drone pilot:</b> <a href="https://bahriannovotny.wixstudio.com/meinewebsite" target="_blank" rel="noopener">bahriannovotny.wixstudio.com/meinewebsite</a></li>
+  <li><b>Book 3D print services:</b> <a href="https://lorenzobaymueller.wixstudio.com/3d-print-hub" target="_blank" rel="noopener">lorenzobaymueller.wixstudio.com/3d-print-hub</a></li>
+</ul>
+`,
+    images: []
+  },
   'HA-Lightswitch (Making analog Lightswitches smart)': {
     title: 'HA-Lightswitch',
-    html: <p>At my school, there’s a small makerspace called the MakerLab. Over time, we’ve automated the entire room to a high degree — but one thing remained: the lights. Since this is a
-    school, we couldn’t just take apart the existing light switches.<br><br>
-Our solution was to design a custom 3D-printed case that allows a servo motor to physically flip a standard analog light switch, all without any permanent modification.<br><br> The servo is controlled
-through Home Assistant via MQTT, running on an Arduino.<br><br>
+    html: `
+<p>
+At my school, there’s a small makerspace called the MakerLab. Over time, we’ve automated the entire room to a high degree — but one thing remained: the lights. Since this is a
+school, we couldn’t just take apart the existing light switches.<br><br>
+Our solution was to design a custom 3D-printed case that allows a servo motor to physically flip a standard analog light switch, all without any permanent modification.<br><br>
+The servo is controlled through Home Assistant via MQTT, running on an Arduino.<br><br>
 It’s a simple, inexpensive, and fully reversible way to add smart-light control to any space where replacing the switch isn’t an option.
-You can download the project files and read more on our GitHub page: https://github.com/makerLab314/OpenLightswitch-HA</p>,
+You can download the project files and read more on our GitHub page:<br>
+<a href="https://github.com/makerLab314/OpenLightswitch-HA" target="_blank" rel="noopener">github.com/makerLab314/OpenLightswitch-HA</a>
+</p>
+`,
     images: []
   },
   'My Creative Work (Filming, flying, photography)': {
     title: 'Creative Work',
-    html: <p>Flying a drone is more than just capturing the view from above — it’s about telling a story in a way no ground-based camera can.<br><br> With my DJI Mini 2, I enjoy creating videos
-    that inspire and make people want to watch.
+    html: `
+<p>
+Flying a drone is more than just capturing the view from above — it’s about telling a story in a way no ground-based camera can.<br><br>
+With my DJI Mini 2, I enjoy creating videos that inspire and make people want to watch.<br><br>
 Under the name DroneXplorer, I produce cinematic footage for a variety of projects — from paid projects, where I film houses, etc., to personal creative explorations.<br><br>
-
-Flying brings me a feeling of liberty and endless possibility. The feeling of flying over our beautiful Earth at the same altitude as birds is merely indescribable.</p>,
+Flying brings me a feeling of liberty and endless possibility. The feeling of flying over our beautiful Earth at the same altitude as birds is merely indescribable.
+</p>
+`,
     images: []
   },
   '3D-Printing (The ultimate engineering-tool)': {
     title: '3D-Printing',
-    html: <p>3D-Printing has become an essential tool for me. Since I was very young I have always made inventions.<br><br> In kindergarten I already had concepts for self-landing rockets,
-    without having ever heard of Falcon 9.<br><br> I developed ideas for power plants,
-    that would be climate friendly. But I never could take these ideas past my mind and a sheet of paper.<br><br> Till three years ago, when I first saw a 3D-Printer in a library. I learned
-    CAD that same week and printed out a smart desk, that we had concepted in
-    a project week in school.<br><br> One year later, I had purchased my own 3D-printer. It has truly been a great tool for me!</p>,
+    html: `
+<p>
+3D-Printing has become an essential tool for me. Since I was very young I have always made inventions.<br><br>
+In kindergarten I already had concepts for self-landing rockets, without having ever heard of Falcon 9.<br><br>
+I developed ideas for power plants, that would be climate friendly. But I never could take these ideas past my mind and a sheet of paper.<br><br>
+Till three years ago, when I first saw a 3D-Printer in a library. I learned CAD that same week and printed out a smart desk, that we had concepted in a project week in school.<br><br>
+One year later, I had purchased my own 3D-printer. It has truly been a great tool for me!
+</p>
+`,
     images: []
   }
 };
-// === Ende Inhalte ===
+// ===== ENDE INHALTE =====
 
 // States
 let appState = 'loading';
@@ -403,42 +476,48 @@ loader.setDRACOLoader(dracoLoader);
 
 const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
 
-loader.load(modelURL, (gltf) => {
-  loadingProgress = 1;
-  progressBar.style.width = '100%';
-  loadingPercentage.textContent = '100%';
-  loadingTitle.textContent = 'Drop out of Warp-Speed';
-  loadingScreen.classList.add('clickable');
+loader.load(
+  modelURL,
+  (gltf) => {
+    loadingProgress = 1;
+    progressBar.style.width = '100%';
+    loadingPercentage.textContent = '100%';
+    loadingTitle.textContent = 'Drop out of Warp-Speed';
+    loadingScreen.classList.add('clickable');
 
-  ship = gltf.scene;
-  ship.rotation.y = Math.PI;
-  mainScene.add(ship);
-  ship.position.set(0, 0, 30);
-  forcefield = createForcefield(5.1); ship.add(forcefield);
-  ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
-  camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
-  cameraPivot.rotation.y = Math.PI;
+    ship = gltf.scene;
+    ship.rotation.y = Math.PI;
+    mainScene.add(ship);
+    ship.position.set(0, 0, 30);
+    forcefield = createForcefield(5.1);
+    ship.add(forcefield);
+    ship.add(cameraPivot); cameraPivot.add(cameraHolder); cameraHolder.add(camera);
+    camera.position.set(0, 4, -15); camera.lookAt(cameraHolder.position);
+    cameraPivot.rotation.y = Math.PI;
 
-  loadingScreen.addEventListener('click', () => {
-    loadingScreen.style.opacity = '0';
-    setTimeout(() => loadingScreen.style.display = 'none', 500);
-    audio.play();
-    appState = 'intro';
-    infoElement.classList.add('ui-visible');
-    bottomBar.classList.add('ui-visible');
-    joystickZone.classList.add('ui-visible');
-  }, { once: true });
+    loadingScreen.addEventListener('click', () => {
+      loadingScreen.style.opacity = '0';
+      setTimeout(() => loadingScreen.style.display = 'none', 500);
+      if (audio) { audio.play().catch(() => {}); }
+      appState = 'intro';
+      infoElement.classList.add('ui-visible');
+      bottomBar.classList.add('ui-visible');
+      joystickZone.classList.add('ui-visible');
+    }, { once: true });
 
-  // Quick Warp Liste aufbauen, wenn Modell da ist
-  buildWarpList();
-}, (xhr) => {
-  if (xhr.lengthComputable) {
-    loadingProgress = Math.min(1, xhr.loaded / xhr.total);
-    const percentComplete = Math.round(loadingProgress * 100);
-    progressBar.style.width = percentComplete + '%';
-    loadingPercentage.textContent = percentComplete + '%';
-  }
-}, (error) => { console.error('Ladefehler:', error); loadingTitle.textContent = 'Fehler!'; });
+    // Quick Warp Liste aufbauen, wenn Modell da ist
+    buildWarpList();
+  },
+  (xhr) => {
+    if (xhr.lengthComputable) {
+      loadingProgress = Math.min(1, xhr.loaded / xhr.total);
+      const percentComplete = Math.round(loadingProgress * 100);
+      progressBar.style.width = percentComplete + '%';
+      loadingPercentage.textContent = percentComplete + '%';
+    }
+  },
+  (error) => { console.error('Ladefehler:', error); loadingTitle.textContent = 'Fehler!'; }
+);
 
 // Steuerung
 const keyboard = {};
@@ -454,19 +533,44 @@ let isDraggingMouse = false;
 let initialPinchDistance = 0;
 let previousTouch = { x: 0, y: 0 };
 
-muteButton.addEventListener('click', () => { audio.muted = !audio.muted; muteButton.classList.toggle('muted'); });
-window.addEventListener('keydown', (e) => { keyboard[e.key.toLowerCase()] = true; if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) e.preventDefault(); });
+muteButton.addEventListener('click', () => {
+  if (!audio) return;
+  audio.muted = !audio.muted;
+  muteButton.classList.toggle('muted');
+});
+
+window.addEventListener('keydown', (e) => {
+  keyboard[e.key.toLowerCase()] = true;
+  if ((e.key === '=' || e.key === '-' || e.key === '+') && (e.ctrlKey || e.metaKey)) e.preventDefault();
+});
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
-nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white', size: 120 })
-  .on('move', (evt, data) => { if (data.vector && ship) { joystickMove.forward = data.vector.y * 0.1; joystickMove.turn = -data.vector.x * 0.05; } })
-  .on('end', () => joystickMove = { forward: 0, turn: 0 });
+
+// Achtung: nipplejs muss im HTML geladen sein.
+nipplejs.create({
+  zone: document.getElementById('joystick-zone'),
+  mode: 'static',
+  position: { left: '50%', top: '50%' },
+  color: 'white',
+  size: 120
+})
+.on('move', (evt, data) => {
+  if (data.vector && ship) {
+    joystickMove.forward = data.vector.y * 0.1;
+    joystickMove.turn = -data.vector.x * 0.05;
+  }
+})
+.on('end', () => joystickMove = { forward: 0, turn: 0 });
 
 renderer.domElement.addEventListener('touchstart', (e) => {
   const joystickTouch = Array.from(e.changedTouches).some(t => t.target.closest('#joystick-zone'));
   if (joystickTouch) return;
   e.preventDefault();
   for (const touch of e.changedTouches) {
-    if (cameraFingerId === null) { cameraFingerId = touch.identifier; cameraVelocity.set(0, 0); previousTouch.x = touch.clientX; previousTouch.y = touch.clientY; }
+    if (cameraFingerId === null) {
+      cameraFingerId = touch.identifier;
+      cameraVelocity.set(0, 0);
+      previousTouch.x = touch.clientX; previousTouch.y = touch.clientY;
+    }
   }
   if (e.touches.length >= 2) { initialPinchDistance = getPinchDistance(e); zoomVelocity = 0; }
 }, { passive: false });
@@ -496,7 +600,8 @@ renderer.domElement.addEventListener('touchend', (e) => {
 
 renderer.domElement.addEventListener('mousedown', (e) => {
   if (e.target.closest('#joystick-zone')) return;
-  isDraggingMouse = true; cameraVelocity.set(0, 0); previousTouch.x = e.clientX; previousTouch.y = e.clientY;
+  isDraggingMouse = true; cameraVelocity.set(0, 0);
+  previousTouch.x = e.clientX; previousTouch.y = e.clientY;
 });
 window.addEventListener('mousemove', (e) => {
   if (isDraggingMouse) {
@@ -506,6 +611,7 @@ window.addEventListener('mousemove', (e) => {
   }
 });
 window.addEventListener('mouseup', () => { isDraggingMouse = false; });
+
 renderer.domElement.addEventListener('wheel', (e) => {
   e.preventDefault();
   zoomVelocity += e.deltaY * (e.ctrlKey ? 0.01 : 0.05);
@@ -518,7 +624,7 @@ function getPinchDistance(e) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// === Analyse-Fenster (NEU: Inhalte aus OBJECT_CONTENT) ===
+// ===== Analyse-Fenster (mit String-Templates, kein JSX) =====
 analyzeButton.addEventListener('click', () => {
   if (!currentlyAnalyzedObject) return;
 
@@ -530,13 +636,13 @@ analyzeButton.addEventListener('click', () => {
   if (content && (content.html || (content.images && content.images.length))) {
     let html = content.html ? content.html : '';
     if (content.images && content.images.length) {
-      const imgs = content.images.map(src => <img src="${src}" alt="">).join('');
-      html += <div class="analysis-gallery">${imgs}</div>;
+      const imgs = content.images.map(src => `<img src="${src}" alt="">`).join('');
+      html += `<div class="analysis-gallery">${imgs}</div>`;
     }
     analysisTextContent.innerHTML = html;
   } else {
-    // Fallback-Hinweis, falls kein Content hinterlegt ist
-    analysisTextContent.innerHTML = <p>Für <em>${objName}</em> ist noch kein Text/Bild hinterlegt. Trage Inhalte im <code>OBJECT_CONTENT</code>-Block ein.</p>;
+    analysisTextContent.innerHTML =
+      `<p>Für <em>${objName}</em> ist noch kein Text/Bild hinterlegt. Trage Inhalte im <code>OBJECT_CONTENT</code>-Block ein.</p>`;
   }
 
   analysisWindow.classList.add('visible');
@@ -547,7 +653,7 @@ closeAnalysisButton.addEventListener('click', () => {
   appState = 'playing';
 });
 
-// Quick Warp Interaktion
+// ===== Quick Warp =====
 quickWarpBtn.addEventListener('click', () => {
   quickWarpOverlay.classList.add('visible');
   quickWarpOverlay.setAttribute('aria-hidden', 'false');
@@ -617,7 +723,7 @@ function performWarp(targetId) {
   cameraPivot.rotation.y = 0;
 }
 
-// === Animation ===
+// ===== Animation =====
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
 
@@ -625,8 +731,10 @@ function animate() {
   requestAnimationFrame(animate);
 
   if (appState === 'loading') {
-    hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
-    if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) hyperspaceParticles.position.z = -HYPERSPACE_LENGTH / 2;
+    if (hyperspaceParticles) {
+      hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
+      if (hyperspaceParticles.position.z > HYPERSPACE_LENGTH / 2) hyperspaceParticles.position.z = -HYPERSPACE_LENGTH / 2;
+    }
     renderer.render(loadingScene, loadingCamera);
     return;
   }
