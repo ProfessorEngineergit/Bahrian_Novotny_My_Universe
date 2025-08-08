@@ -92,7 +92,6 @@ function createGalaxy() {
     const i3 = i * 3;
     const radius = Math.random() * parameters.radius;
     const spinAngle = radius * parameters.spin;
-    the:
     const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2;
     const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
     const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1;
@@ -192,11 +191,11 @@ function createPlanetTexture(color) {
   const canvas = document.createElement('canvas');
   canvas.width = 128; canvas.height = 128;
   const context = canvas.getContext('2d');
-  context.fillStyle = `hsl(${color}, 70%, 50%)`; context.fillRect(0, 0, 128, 128);
+  context.fillStyle = hsl(${color}, 70%, 50%); context.fillRect(0, 0, 128, 128);
   for (let i = 0; i < 3000; i++) {
     const x = Math.random() * 128; const y = Math.random() * 128; const r = Math.random() * 1.5;
     context.beginPath(); context.arc(x, y, r, 0, Math.PI * 2);
-    context.fillStyle = `hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5)`;
+    context.fillStyle = hsla(${color + Math.random() * 40 - 20}, 70%, ${Math.random() * 50 + 25}%, 0.5);
     context.fill();
   }
   return new THREE.CanvasTexture(canvas);
@@ -256,11 +255,14 @@ function createForcefield(radius) {
   return ff;
 }
 
-// === ✨ Inhalte für Analyse-Fenster (editierbar) ===
+// === ✨ NEU: Inhalte für Analyse-Fenster (HIER EDITIEREN) ===
+// - key = EXACTER Objektname (PlanetLabel), z.B. 'Infos' oder 'Project_Mariner (This Site)'
+// - Du kannst reinen Text ODER vollständiges HTML nutzen (inkl. <img>, <ul>, <a>, …)
+// - Optional: images: [] → einfache Galerie wird automatisch unter dem Text erzeugt
 const OBJECT_CONTENT = {
   'Project_Mariner (This Site)': {
     title: 'Project Mariner',
-    html: `<p>Hi, I’m Bahrian Novotny — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.<br><br>
+    html: <p>Hi, I’m Bahrian Novotny — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.<br><br>
 From exploring the mechanics of the universe to experimenting with creative coding and engineering, I’m constantly looking for new ways to learn, build, and share ideas.<br><br>
 This website grew out of that passion. For over a year, I had planned to build a portfolio site — but I wanted something different. Something exciting. Something interactive.
 Welcome to my universe.<br><br><br><br>
@@ -275,12 +277,12 @@ Around that time, I replaced the pyramid with the USS Enterprise-D and introduce
 Next came the planets. The tricky part was making sure they stayed as far apart from each other as possible. Finally, I implemented a feature where,
 when the ship enters a planet’s inner sphere to analyze it, the planet stops moving — and as soon as the ship leaves, it accelerates to catch up to the position it would have
 reached had it never stopped.
-</p>`,
+</p>,
     images: []
   },
   'Infos': {
     title: 'Infos',
-    html: `<p>
+    html: <p>
 THIS IS <b>PROJECT_MARINER V1.0</b><br><br><br><br>
 
 NEW RELEASES:<br><br>
@@ -298,12 +300,14 @@ MATTE GLASS 1.5 PRO-MATERIAL
 ENHANCED BUTTON-ANIMATIONS
 MORE FLUID ANIMATIONS FOR QUICK WARP<br><br>
 
-V2.0-SCEDULED FOR DECEMBER 2025</p>`,
-    images: []
+V2.0-SCEDULED FOR DECEMBER 2025</p>,
+    images: [
+      /* Beispiel: 'content/infos-1.jpg', 'content/infos-2.jpg' */
+    ]
   },
   'SURGE (The autonomous Robottaxi)': {
     title: 'SURGE – Autonomous Robottaxi',
-    html: `<p>
+    html: <p>
     <i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i><br><br>
 SURGE is my 8th-grade capstone project — a fully autonomous, electrically powered mini robotic taxi designed to navigate city streets all on its own. The idea was born from two things
 I care deeply about: cutting CO₂ emissions and exploring how robotics can reshape everyday mobility.<br><br>
@@ -314,12 +318,12 @@ for both style and functional feedback — such as indicating movement or chargi
 On the software side, SURGE uses AI-driven control logic for mapping, path planning, and decision-making in real time. While I initially planned to use an Intel RealSense D435 depth camera,
 I ultimately went with a Raspberry Pi camera — a simpler, lighter choice that still enabled effective autonomous navigation.<br><br>
 From mechanical design to electronics and AI control, every aspect of SURGE was designed, built, and programmed by me. It’s a fusion of engineering, AI, and creative design — and a small
-glimpse into how shared, smart mobility could work in the cities of tomorrow.</p>`,
+glimpse into how shared, smart mobility could work in the cities of tomorrow.</p>,
     images: []
   },
   'OpenImageLabel (A website to label images for professional photography)': {
     title: 'OpenImageLabel',
-    html: `<p>OpenImageLabel is my latest experiment in making metadata work for you, not against you.<br><br> It started as a simple browser app, but its goal is much bigger: to become the
+    html: <p>OpenImageLabel is my latest experiment in making metadata work for you, not against you.<br><br> It started as a simple browser app, but its goal is much bigger: to become the
     fastest way to tag and present your photos, whether you’re on a laptop, an iPhone or an Android device.<br><br>
 The idea is straightforward: drag a photo into the page, and OpenImageLabel pulls the EXIF data straight from the file. Exposure time, aperture and ISO pop up along the top of the image,
 while the camera model appears at the bottom left.<br><br> You can adjust the font size, move and fade the text with a couple of sliders, and then copy that style to other images or apply it to
@@ -328,58 +332,57 @@ with your chosen overlays baked in.<br><br>
 I built the interface so that it stays out of your way. When you first land on the app, all you see is a big “Drag images here or click” area; only after you upload do the cards, tools and
 download options appear.<br><br> The same clean design will carry over to the iOS and Android versions I’m working on now. By turning metadata into a flexible, customisable overlay, OpenImageLabel
 lets you present your shots professionally without fiddling with an editor — just load, label and share.
-</p>`,
+</p>,
     images: []
   },
   'Project Cablerack (A smarter way to cable-manage)': {
     title: 'Project Cablerack',
-    html: `<p>I’m currently building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup will connect to
+    html: <p>I’m currently building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup will connect to
     my monitor through a single cable, keeping the workspace clean and simple.<br><br>
 Inside the rack, an HDMI switcher box will allow me to change outputs at the press of a remote-control button. To keep everything cool — especially when the plexiglass door is closed — I’m
 adding ARGB fans for both airflow and style.<br><br> All of this will be integrated with Apple Home, so I can control cooling and lighting via my HomePod mini.
 This way, Project Cablerack won’t just organise my gear — it will make it easier, cooler (literally), and far more enjoyable to use.
-</p>`,
+</p>,
     images: []
   },
   'Socials/Other Sites': {
-    title: 'Socials & Links',
-    html: `<ul>
-      <li><b>My GitHub profile:</b> <a href="https://github.com/ProfessorEngineergit" target="_blank" rel="noopener">github.com/ProfessorEngineergit</a></li>
-      <li><b>GitHub profile (school):</b> <a href="https://github.com/makerLab314" target="_blank" rel="noopener">github.com/makerLab314</a></li>
-      <li><b>YouTube:</b> <a href="https://www.youtube.com/@droneXplorer-t1n" target="_blank" rel="noopener">youtube.com/@droneXplorer-t1n</a></li>
-      <li><b>Skypixel:</b> <a href="https://www.skypixel.com/users/till-bahrian" target="_blank" rel="noopener">skypixel.com/users/till-bahrian</a></li>
-      <li><b>Book me as a drone pilot:</b> <a href="https://bahriannovotny.wixstudio.com/meinewebsite" target="_blank" rel="noopener">bahriannovotny.wixstudio.com/meinewebsite</a></li>
-      <li><b>Book 3D print services:</b> <a href="https://lorenzobaymueller.wixstudio.com/3d-print-hub" target="_blank" rel="noopener">lorenzobaymueller.wixstudio.com/3d-print-hub</a></li>
-    </ul>`,
-    images: []
-  },
+  title: 'Socials & Links',
+  html: `<ul>
+    <li><b>My GitHub profile:</b> <a href="https://github.com/ProfessorEngineergit" target="_blank" rel="noopener">github.com/ProfessorEngineergit</a></li>
+    <li><b>GitHub profile (school):</b> <a href="https://github.com/makerLab314" target="_blank" rel="noopener">github.com/makerLab314</a></li>
+    <li><b>YouTube:</b> <a href="https://www.youtube.com/@droneXplorer-t1n" target="_blank" rel="noopener">youtube.com/@droneXplorer-t1n</a></li>
+    <li><b>Skypixel:</b> <a href="https://www.skypixel.com/users/till-bahrian" target="_blank" rel="noopener">skypixel.com/users/till-bahrian</a></li>
+    <li><b>Book me as a drone pilot:</b> <a href="https://bahriannovotny.wixstudio.com/meinewebsite" target="_blank" rel="noopener">bahriannovotny.wixstudio.com/meinewebsite</a></li>
+    <li><b>Book 3D print services:</b> <a href="https://lorenzobaymueller.wixstudio.com/3d-print-hub" target="_blank" rel="noopener">lorenzobaymueller.wixstudio.com/3d-print-hub</a></li>
+  </ul>`,
+  images: []
+},
   'HA-Lightswitch (Making analog Lightswitches smart)': {
     title: 'HA-Lightswitch',
-    html: `<p>At my school, there’s a small makerspace called the MakerLab. Over time, we’ve automated the entire room to a high degree — but one thing remained: the lights. Since this is a
+    html: <p>At my school, there’s a small makerspace called the MakerLab. Over time, we’ve automated the entire room to a high degree — but one thing remained: the lights. Since this is a
     school, we couldn’t just take apart the existing light switches.<br><br>
 Our solution was to design a custom 3D-printed case that allows a servo motor to physically flip a standard analog light switch, all without any permanent modification.<br><br> The servo is controlled
 through Home Assistant via MQTT, running on an Arduino.<br><br>
 It’s a simple, inexpensive, and fully reversible way to add smart-light control to any space where replacing the switch isn’t an option.
-You can download the project files and read more on our GitHub page:<br>
-<a href="https://github.com/makerLab314/OpenLightswitch-HA" target="_blank" rel="noopener">github.com/makerLab314/OpenLightswitch-HA</a></p>`,
+You can download the project files and read more on our GitHub page: https://github.com/makerLab314/OpenLightswitch-HA</p>,
     images: []
   },
   'My Creative Work (Filming, flying, photography)': {
     title: 'Creative Work',
-    html: `<p>Flying a drone is more than just capturing the view from above — it’s about telling a story in a way no ground-based camera can.<br><br> With my DJI Mini 2, I enjoy creating videos
+    html: <p>Flying a drone is more than just capturing the view from above — it’s about telling a story in a way no ground-based camera can.<br><br> With my DJI Mini 2, I enjoy creating videos
     that inspire and make people want to watch.
 Under the name DroneXplorer, I produce cinematic footage for a variety of projects — from paid projects, where I film houses, etc., to personal creative explorations.<br><br>
 
-Flying brings me a feeling of liberty and endless possibility. The feeling of flying over our beautiful Earth at the same altitude as birds is merely indescribable.</p>`,
+Flying brings me a feeling of liberty and endless possibility. The feeling of flying over our beautiful Earth at the same altitude as birds is merely indescribable.</p>,
     images: []
   },
   '3D-Printing (The ultimate engineering-tool)': {
     title: '3D-Printing',
-    html: `<p>3D-Printing has become an essential tool for me. Since I was very young I have always made inventions.<br><br> In kindergarten I already had concepts for self-landing rockets,
+    html: <p>3D-Printing has become an essential tool for me. Since I was very young I have always made inventions.<br><br> In kindergarten I already had concepts for self-landing rockets,
     without having ever heard of Falcon 9.<br><br> I developed ideas for power plants,
     that would be climate friendly. But I never could take these ideas past my mind and a sheet of paper.<br><br> Till three years ago, when I first saw a 3D-Printer in a library. I learned
     CAD that same week and printed out a smart desk, that we had concepted in
-    a project week in school.<br><br> One year later, I had purchased my own 3D-printer. It has truly been a great tool for me!</p>`,
+    a project week in school.<br><br> One year later, I had purchased my own 3D-printer. It has truly been a great tool for me!</p>,
     images: []
   }
 };
@@ -527,12 +530,13 @@ analyzeButton.addEventListener('click', () => {
   if (content && (content.html || (content.images && content.images.length))) {
     let html = content.html ? content.html : '';
     if (content.images && content.images.length) {
-      const imgs = content.images.map(src => `<img src="${src}" alt="">`).join('');
-      html += `<div class="analysis-gallery">${imgs}</div>`;
+      const imgs = content.images.map(src => <img src="${src}" alt="">).join('');
+      html += <div class="analysis-gallery">${imgs}</div>;
     }
     analysisTextContent.innerHTML = html;
   } else {
-    analysisTextContent.innerHTML = `<p>Für <em>${objName}</em> ist noch kein Text/Bild hinterlegt. Trage Inhalte im <code>OBJECT_CONTENT</code>-Block ein.</p>`;
+    // Fallback-Hinweis, falls kein Content hinterlegt ist
+    analysisTextContent.innerHTML = <p>Für <em>${objName}</em> ist noch kein Text/Bild hinterlegt. Trage Inhalte im <code>OBJECT_CONTENT</code>-Block ein.</p>;
   }
 
   analysisWindow.classList.add('visible');
@@ -613,60 +617,12 @@ function performWarp(targetId) {
   cameraPivot.rotation.y = 0;
 }
 
-// === NEU: Planet-Tapping (Raycaster) ===
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-let _downPos = null;
-let _downTime = 0;
-
-renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('#joystick-zone') || (quickWarpOverlay && quickWarpOverlay.classList.contains('visible'))) return;
-  _downPos = { x: e.clientX, y: e.clientY };
-  _downTime = performance.now();
-});
-
-renderer.domElement.addEventListener('pointerup', (e) => {
-  if (!_downPos) return;
-  const moved = Math.hypot(e.clientX - _downPos.x, e.clientY - _downPos.y);
-  const dt = performance.now() - _downTime;
-  const isTap = moved < 6 && dt < 300;
-  _downPos = null;
-  if (!isTap) return;
-
-  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-
-  const planetMeshes = planets.map(p => p.mesh);
-  const intersects = raycaster.intersectObjects(planetMeshes, true);
-  if (intersects.length) {
-    let obj = intersects[0].object;
-    let idx = -1;
-    while (obj) {
-      idx = planets.findIndex(p => p.mesh === obj);
-      if (idx !== -1) break;
-      obj = obj.parent;
-    }
-    if (idx !== -1) performWarp('planet-' + idx);
-  }
-});
-
-// === Speed-Settings (NEU) ===
-let baseSpeedMultiplier = 2;       // doppelt so schnell
-let thrustHoldTimer = 0;           // wie lange "vorwärts" gehalten wird
-const THRUST_HOLD_THRESHOLD = 3;   // Sekunden bis Turbo greift
-const EXTRA_ACCEL_PER_SEC = 0.5;   // zusätzlicher Faktor pro Sekunde nach 3s
-const MAX_EXTRA_MULT = 4;          // Deckel für den Extramultiplikator
-
 // === Animation ===
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
 
 function animate() {
   requestAnimationFrame(animate);
-
-  const delta = clock.getDelta(); // NEU: zeitbasiert für Turbo
-  const elapsedTime = clock.getElapsedTime();
 
   if (appState === 'loading') {
     hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
@@ -676,6 +632,7 @@ function animate() {
   }
   if (appState === 'paused') return;
 
+  const elapsedTime = clock.getElapsedTime();
   const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
   pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
   pacingCircle.material.opacity = 0.3 + pulse * 0.4;
@@ -695,27 +652,10 @@ function animate() {
     const finalForward = joystickMove.forward + keyForward;
     const finalTurn = joystickMove.turn + keyTurn;
 
-    // --- Turbo-Logik: hält man vorwärts > 3s, wird's immer schneller ---
-    const isThrustingForward = finalForward > 0;
-    if (isThrustingForward) {
-      thrustHoldTimer += delta;
-    } else {
-      thrustHoldTimer = 0;
-    }
-    let extraMult = 1;
-    if (thrustHoldTimer > THRUST_HOLD_THRESHOLD) {
-      const over = thrustHoldTimer - THRUST_HOLD_THRESHOLD;
-      extraMult = Math.min(MAX_EXTRA_MULT, 1 + over * EXTRA_ACCEL_PER_SEC);
-    }
-
-    // Endgeschwindigkeit anwenden
-    const moveForward = finalForward * baseSpeedMultiplier * extraMult;
-    const turnAmount = finalTurn;
-
     const shipRadius = 5;
     const previousPosition = ship.position.clone();
-    ship.translateZ(moveForward);
-    ship.rotateY(turnAmount);
+    ship.translateZ(finalForward);
+    ship.rotateY(finalTurn);
 
     // Kollisionsschutz zum Zentrum
     const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
