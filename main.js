@@ -255,99 +255,66 @@ function createForcefield(radius) {
   return ff;
 }
 
-// === ✨ NEU: Inhalte für Analyse-Fenster (HIER EDITIEREN) ===
-// - key = EXACTER Objektname (PlanetLabel), z.B. 'Infos' oder 'Project_Mariner (This Site)'
-// - Du kannst reinen Text ODER vollständiges HTML nutzen (inkl. <img>, <ul>, <a>, …)
-// - Optional: images: [] → einfache Galerie wird automatisch unter dem Text erzeugt
+// === ✨ Inhalte für Analyse-Fenster (editierbar) ===
 const OBJECT_CONTENT = {
   'Project_Mariner (This Site)': {
     title: 'Project Mariner',
-    html: `<p>Hi, I’m Bahrian Novotny — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.<br><br>
-From exploring the mechanics of the universe to experimenting with creative coding and engineering, I’m constantly looking for new ways to learn, build, and share ideas.<br><br>
-This website grew out of that passion. For over a year, I had planned to build a portfolio site — but I wanted something different. Something exciting. Something interactive.
-Welcome to my universe.<br><br><br><br>
-
-<b>Project Mariner: How This Site Was Born</b><br><br>
-
-It all began with a simple HTML prototype. Instead of the ship you see now, there was a pyramid you could steer in the most basic way using a joystick, along with some very
-early camera rotation controls.<br><br>
-About a week later, I had refined both the design and the functionality. I realized that by limiting the controls, the site would feel more polished — so I made the camera
-snap back to a fixed position and only allowed permanent zoom adjustments.<br><br>
-Around that time, I replaced the pyramid with the USS Enterprise-D and introduced a loading screen.<br><br>
-Next came the planets. The tricky part was making sure they stayed as far apart from each other as possible. Finally, I implemented a feature where,
-when the ship enters a planet’s inner sphere to analyze it, the planet stops moving — and as soon as the ship leaves, it accelerates to catch up to the position it would have
-reached had it never stopped.
-</p>`,
+    html: `<p>Hi, I’m Bahrian Novotny — a 15-year-old high school student with a deep fascination for science, technology, and the endless possibilities they open up.</p>
+<p>From exploring the mechanics of the universe to experimenting with creative coding and engineering, I’m constantly looking for new ways to learn, build, and share ideas.</p>
+<p>This website grew out of that passion. For over a year, I’d planned to build a portfolio site — but I wanted something different. Something exciting. Something interactive. Welcome to my universe.</p>
+<h3>Project Mariner: How this site was born</h3>
+<p>It began with a simple HTML prototype. Instead of the ship you see now, there was a pyramid you could steer using a basic joystick, along with very early camera rotation controls.</p>
+<p>About a week later, I had refined both design and functionality. I realized that by limiting the controls, the site would feel more polished — so I made the camera snap back to a fixed position and only allowed persistent zoom adjustments.</p>
+<p>Around that time, I replaced the pyramid with the USS Enterprise-D and introduced a loading screen.</p>
+<p>Next came the planets. The tricky part was keeping them as far apart from each other as possible. Finally, I implemented a feature where, when the ship enters a planet’s inner sphere to analyze it, the planet stops — and as soon as the ship leaves, it accelerates to catch up to where it would have been if it had never stopped.</p>`,
     images: []
   },
   'Infos': {
     title: 'Infos',
-    html: `<p>
-THIS IS <b>PROJECT_MARINER V1.0</b><br><br><br><br>
-
-NEW RELEASES:<br><br>
-
-PROJECT MARINER V1.5 PRO<br><br>
-
-V1.5 PRO SHOULD INCORPORATE MINOR BUG FIXES AS WELL AS FOLLOWING FEATURES:<br><br>
-
-NEWSLETTER-FUNCTION
-OVERVIEW-FUNCTION
-DEEP SPACE-FUNCTION
-NEW, BEAUTIFUL PLANETS CRAFTED IN BLENDER
-MORE CONTROLLS
-MATTE GLASS 1.5 PRO-MATERIAL
-ENHANCED BUTTON-ANIMATIONS
-MORE FLUID ANIMATIONS FOR QUICK WARP<br><br>
-
-V2.0-SCEDULED FOR DECEMBER 2025</p>`,
-    images: [
-      /* Beispiel: 'content/infos-1.jpg', 'content/infos-2.jpg' */
-    ]
+    html: `<p>THIS IS <b>PROJECT_MARINER V1.0</b></p>
+<h3>Upcoming releases</h3>
+<p><b>Project Mariner V1.5 Pro</b></p>
+<p>V1.5 Pro will include minor bug fixes as well as the following features:</p>
+<ul>
+  <li>Newsletter function</li>
+  <li>Overview function</li>
+  <li>Deep Space function</li>
+  <li>New, beautiful planets crafted in Blender</li>
+  <li>More controls</li>
+  <li>Matte glass “1.5 Pro” material</li>
+  <li>Enhanced button animations</li>
+  <li>More fluid animations for Quick Warp</li>
+</ul>
+<p><b>V2.0 — scheduled for December 2025</b></p>`,
+    images: []
   },
   'SURGE (The autonomous Robottaxi)': {
-    title: 'SURGE – Autonomous Robottaxi',
-    html: `<p>
-    <i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i><br><br>
-SURGE is my 8th-grade capstone project — a fully autonomous, electrically powered mini robotic taxi designed to navigate city streets all on its own. The idea was born from two things
-I care deeply about: cutting CO₂ emissions and exploring how robotics can reshape everyday mobility.<br><br>
-At its core, SURGE runs on an NVIDIA Jetson Nano — a compact but powerful AI computer that processes live camera data for obstacle detection and navigation. The drive system allows precise
-and flexible movement in tight spaces, making it ideal for urban environments.<br><br>
-The design process began with sketches and CAD models, which I brought to life using 3D printing. The chassis was built to be modular, making upgrades easy, and I integrated LED accents
-for both style and functional feedback — such as indicating movement or charging status.<br><br>
-On the software side, SURGE uses AI-driven control logic for mapping, path planning, and decision-making in real time. While I initially planned to use an Intel RealSense D435 depth camera,
-I ultimately went with a Raspberry Pi camera — a simpler, lighter choice that still enabled effective autonomous navigation.<br><br>
-From mechanical design to electronics and AI control, every aspect of SURGE was designed, built, and programmed by me. It’s a fusion of engineering, AI, and creative design — and a small
-glimpse into how shared, smart mobility could work in the cities of tomorrow.</p>`,
+    title: 'SURGE – Autonomous Robotaxi',
+    html: `<p><i>(SURGE: Smart Urban Robotic Guidance & Exploration Pod)</i></p>
+<p>SURGE is my 8th-grade capstone project — a fully autonomous, electrically powered miniature robotaxi designed to navigate city streets on its own. The idea was born from two things I care deeply about: cutting CO₂ emissions and exploring how robotics can reshape everyday mobility.</p>
+<p>At its core, SURGE runs on an NVIDIA Jetson Nano — a compact but powerful AI computer that processes live camera data for obstacle detection and navigation. The drive system allows precise, flexible movement in tight spaces, making it ideal for urban environments.</p>
+<p>The design process began with sketches and CAD models, which I brought to life using 3D printing. The chassis is modular for easy upgrades, and I integrated LED accents for both style and functional feedback — such as indicating movement or charging status.</p>
+<p>On the software side, SURGE uses AI-driven control logic for mapping, path planning, and real-time decision-making. While I initially planned to use an Intel RealSense D435 depth camera, I ultimately chose a Raspberry Pi camera — a simpler, lighter option that still enabled effective autonomous navigation.</p>
+<p>From mechanical design to electronics and AI control, every aspect of SURGE was designed, built, and programmed by me. It’s a fusion of engineering, AI, and creative design — and a glimpse into how shared, smart mobility could work in the cities of tomorrow.</p>`,
     images: []
   },
   'OpenImageLabel (A website to label images for professional photography)': {
     title: 'OpenImageLabel',
-    html: `<p>OpenImageLabel is my latest experiment in making metadata work for you, not against you.<br><br> It started as a simple browser app, but its goal is much bigger: to become the
-    fastest way to tag and present your photos, whether you’re on a laptop, an iPhone or an Android device.<br><br>
-The idea is straightforward: drag a photo into the page, and OpenImageLabel pulls the EXIF data straight from the file. Exposure time, aperture and ISO pop up along the top of the image,
-while the camera model appears at the bottom left.<br><br> You can adjust the font size, move and fade the text with a couple of sliders, and then copy that style to other images or apply it to
-everything at once.<br><br> There’s even a checkbox below each card to choose which photos you want to download; when you click “Download selection” or “Download all,” it generates finished JPEGs
-with your chosen overlays baked in.<br><br>
-I built the interface so that it stays out of your way. When you first land on the app, all you see is a big “Drag images here or click” area; only after you upload do the cards, tools and
-download options appear.<br><br> The same clean design will carry over to the iOS and Android versions I’m working on now. By turning metadata into a flexible, customisable overlay, OpenImageLabel
-lets you present your shots professionally without fiddling with an editor — just load, label and share.
-</p>`,
+    html: `<p>OpenImageLabel is my latest experiment in making metadata work for you, not against you. It started as a simple browser app, but the goal is bigger: to become the fastest way to tag and present your photos — on a laptop, iPhone, or Android device.</p>
+<p>Drag a photo onto the page and OpenImageLabel pulls EXIF data straight from the file. Exposure time, aperture, and ISO appear along the top of the image, while the camera model shows at the bottom left. You can adjust font size, move and fade the text with a couple of sliders, and then copy that style to other images or apply it to everything at once. There’s also a checkbox under each card to choose which photos to download; “Download selection” or “Download all” produces finished JPEGs with your overlays baked in.</p>
+<p>The interface stays out of your way: on first load you just see a big “Drag images here or click” area; only after you upload do the cards, tools, and download options appear. The same clean design will carry over to the iOS and Android versions I’m working on. By turning metadata into a flexible, customizable overlay, OpenImageLabel lets you present your shots professionally without fiddling with an editor — just load, label, and share.</p>`,
     images: []
   },
   'Project Cablerack (A smarter way to cable-manage)': {
     title: 'Project Cablerack',
-    html: `<p>I’m currently building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup will connect to
-    my monitor through a single cable, keeping the workspace clean and simple.<br><br>
-Inside the rack, an HDMI switcher box will allow me to change outputs at the press of a remote-control button. To keep everything cool — especially when the plexiglass door is closed — I’m
-adding ARGB fans for both airflow and style.<br><br> All of this will be integrated with Apple Home, so I can control cooling and lighting via my HomePod mini.
-This way, Project Cablerack won’t just organise my gear — it will make it easier, cooler (literally), and far more enjoyable to use.
-</p>`,
+    html: `<p>I’m building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup connects to my monitor through a single cable, keeping the workspace clean and simple.</p>
+<p>Inside the rack, an HDMI switcher lets me change outputs at the press of a remote-control button. To keep everything cool — especially with the plexiglass door closed — I’m adding ARGB fans for both airflow and style. Everything integrates with Apple Home, so I can control cooling and lighting via a HomePod mini.</p>
+<p>The result: tidier gear that’s easier — and cooler (literally) — to use.</p>`,
     images: []
   },
- 'Socials/Other Sites': {
-  title: 'Socials & Links',
-  html: `<ul>
+  'Socials/Other Sites': {
+    title: 'Socials & Links',
+    html: `<ul>
     <li><b>My GitHub profile:</b> <a href="https://github.com/ProfessorEngineergit" target="_blank" rel="noopener">github.com/ProfessorEngineergit</a></li>
     <li><b>GitHub profile (school):</b> <a href="https://github.com/makerLab314" target="_blank" rel="noopener">github.com/makerLab314</a></li>
     <li><b>YouTube:</b> <a href="https://www.youtube.com/@droneXplorer-t1n" target="_blank" rel="noopener">youtube.com/@droneXplorer-t1n</a></li>
@@ -355,34 +322,28 @@ This way, Project Cablerack won’t just organise my gear — it will make it ea
     <li><b>Book me as a drone pilot:</b> <a href="https://bahriannovotny.wixstudio.com/meinewebsite" target="_blank" rel="noopener">bahriannovotny.wixstudio.com/meinewebsite</a></li>
     <li><b>Book 3D print services:</b> <a href="https://lorenzobaymueller.wixstudio.com/3d-print-hub" target="_blank" rel="noopener">lorenzobaymueller.wixstudio.com/3d-print-hub</a></li>
   </ul>`,
-  images: []
-},
+    images: []
+  },
   'HA-Lightswitch (Making analog Lightswitches smart)': {
     title: 'HA-Lightswitch',
-    html: `<p>At my school, there’s a small makerspace called the MakerLab. Over time, we’ve automated the entire room to a high degree — but one thing remained: the lights. Since this is a
-    school, we couldn’t just take apart the existing light switches.<br><br>
-Our solution was to design a custom 3D-printed case that allows a servo motor to physically flip a standard analog light switch, all without any permanent modification.<br><br> The servo is controlled
-through Home Assistant via MQTT, running on an Arduino.<br><br>
-It’s a simple, inexpensive, and fully reversible way to add smart-light control to any space where replacing the switch isn’t an option.
-You can download the project files and read more on our GitHub page: https://github.com/makerLab314/OpenLightswitch-HA</p>`,
+    html: `<p>At my school there’s a small makerspace called the MakerLab. Over time, we automated the entire room to a high degree — but one thing remained: the lights. Since this is a school, we couldn’t just take apart the existing light switches.</p>
+<p>Our solution was a custom 3D-printed case that lets a servo motor physically flip a standard analog light switch — with no permanent modification. The servo is controlled through Home Assistant via MQTT, running on an Arduino.</p>
+<p>It’s a simple, inexpensive, and fully reversible way to add smart-light control wherever replacing the switch isn’t an option.</p>
+<p>You can download the project files and read more on GitHub:<br>
+<a href="https://github.com/makerLab314/OpenLightswitch-HA" target="_blank" rel="noopener">github.com/makerLab314/OpenLightswitch-HA</a></p>`,
     images: []
   },
   'My Creative Work (Filming, flying, photography)': {
     title: 'Creative Work',
-    html: `<p>Flying a drone is more than just capturing the view from above — it’s about telling a story in a way no ground-based camera can.<br><br> With my DJI Mini 2, I enjoy creating videos
-    that inspire and make people want to watch.
-Under the name DroneXplorer, I produce cinematic footage for a variety of projects — from paid projects, where I film houses, etc., to personal creative explorations.<br><br>
-
-Flying brings me a feeling of liberty and endless possibility. The feeling of flying over our beautiful Earth at the same altitude as birds is merely indescribable.</p>`,
+    html: `<p>Flying a drone is more than capturing the view from above — it’s about telling a story in a way no ground-based camera can. With my DJI Mini 2, I enjoy creating videos that inspire and make people want to watch.</p>
+<p>Under the name “DroneXplorer,” I produce cinematic footage for a variety of projects — from paid work (e.g., filming houses) to personal creative explorations.</p>
+<p>Flying gives me a feeling of freedom and endless possibility. Skimming over our beautiful Earth at bird height is hard to describe — and unforgettable.</p>`,
     images: []
   },
   '3D-Printing (The ultimate engineering-tool)': {
-    title: '3D-Printing',
-    html: `<p>3D-Printing has become an essential tool for me. Since I was very young I have always made inventions.<br><br> In kindergarten I already had concepts for self-landing rockets,
-    without having ever heard of Falcon 9.<br><br> I developed ideas for power plants,
-    that would be climate friendly. But I never could take these ideas past my mind and a sheet of paper.<br><br> Till three years ago, when I first saw a 3D-Printer in a library. I learned
-    CAD that same week and printed out a smart desk, that we had concepted in
-    a project week in school.<br><br> One year later, I had purchased my own 3D-printer. It has truly been a great tool for me!</p>`,
+    title: '3D Printing',
+    html: `<p>3D printing has become an essential tool for me. Since I was very young, I’ve been inventing things. In kindergarten I already had concepts for self-landing rockets — without ever having heard of Falcon 9. I even sketched out ideas for climate-friendly power plants.</p>
+<p>But I couldn’t take those ideas beyond my head and a sheet of paper — until three years ago, when I first saw a 3D printer at a library. I learned CAD that same week and printed a smart desk we had designed during a school project week. A year later, I bought my own 3D printer. It’s been a game-changer for turning ideas into reality.</p>`,
     images: []
   }
 };
@@ -518,7 +479,7 @@ function getPinchDistance(e) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// === Analyse-Fenster (NEU: Inhalte aus OBJECT_CONTENT) ===
+// === Analyse-Fenster (Inhalte aus OBJECT_CONTENT) ===
 analyzeButton.addEventListener('click', () => {
   if (!currentlyAnalyzedObject) return;
 
@@ -535,7 +496,6 @@ analyzeButton.addEventListener('click', () => {
     }
     analysisTextContent.innerHTML = html;
   } else {
-    // Fallback-Hinweis, falls kein Content hinterlegt ist
     analysisTextContent.innerHTML = `<p>Für <em>${objName}</em> ist noch kein Text/Bild hinterlegt. Trage Inhalte im <code>OBJECT_CONTENT</code>-Block ein.</p>`;
   }
 
@@ -621,8 +581,55 @@ function performWarp(targetId) {
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
 
+// ======= NEU: Speed-Settings (doppelt + Turbo) =======
+let baseSpeedMultiplier = 2;       // doppelt so schnell
+let thrustHoldTimer = 0;           // wie lange vorwärts gehalten wird
+const THRUST_HOLD_THRESHOLD = 3;   // nach 3s beginnt Turbo
+const EXTRA_ACCEL_PER_SEC = 0.5;   // zusätzlicher Faktor pro Sekunde nach 3s
+const MAX_EXTRA_MULT = 4;          // Deckel für Extra-Multiplikator
+
+// ======= NEU: Picking für Tap-to-Warp =======
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let _downPos = null;
+let _downTime = 0;
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('#joystick-zone') || quickWarpOverlay.classList.contains('visible')) return;
+  _downPos = { x: e.clientX, y: e.clientY };
+  _downTime = performance.now();
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!_downPos) return;
+  const moved = Math.hypot(e.clientX - _downPos.x, e.clientY - _downPos.y);
+  const dt = performance.now() - _downTime;
+  const isTap = moved < 6 && dt < 300;
+  _downPos = null;
+  if (!isTap) return;
+
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+  const planetMeshes = planets.map(p => p.mesh);
+  const intersects = raycaster.intersectObjects(planetMeshes, true);
+
+  if (intersects.length) {
+    let obj = intersects[0].object;
+    let idx = -1;
+    while (obj) {
+      idx = planets.findIndex(p => p.mesh === obj);
+      if (idx !== -1) break;
+      obj = obj.parent;
+    }
+    if (idx !== -1) performWarp('planet-' + idx);
+  }
+});
+
 function animate() {
   requestAnimationFrame(animate);
+
+  const delta = clock.getDelta(); // NEU: Zeitbasierte Turbo-Berechnung
 
   if (appState === 'loading') {
     hyperspaceParticles.position.z += (loadingProgress * 0.05 + 0.01) * 20;
@@ -652,10 +659,27 @@ function animate() {
     const finalForward = joystickMove.forward + keyForward;
     const finalTurn = joystickMove.turn + keyTurn;
 
+    // --- Turbo-Logik ---
+    const isThrustingForward = finalForward > 0;
+    if (isThrustingForward) {
+      thrustHoldTimer += delta;
+    } else {
+      thrustHoldTimer = 0;
+    }
+
+    let extraMult = 1;
+    if (thrustHoldTimer > THRUST_HOLD_THRESHOLD) {
+      const over = thrustHoldTimer - THRUST_HOLD_THRESHOLD;
+      extraMult = Math.min(MAX_EXTRA_MULT, 1 + over * EXTRA_ACCEL_PER_SEC);
+    }
+
+    const moveForward = finalForward * baseSpeedMultiplier * extraMult;
+    const turnAmount = finalTurn;
+
     const shipRadius = 5;
     const previousPosition = ship.position.clone();
-    ship.translateZ(finalForward);
-    ship.rotateY(finalTurn);
+    ship.translateZ(moveForward);
+    ship.rotateY(turnAmount);
 
     // Kollisionsschutz zum Zentrum
     const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
