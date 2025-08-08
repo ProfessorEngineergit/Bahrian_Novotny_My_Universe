@@ -43,6 +43,7 @@ const audio = document.getElementById('media-player');
 const analysisWindow = document.getElementById('analysis-window');
 const analysisTitle = document.getElementById('analysis-title');
 const analysisTextContent = document.getElementById('analysis-text-content');
+const analysisMedia = document.getElementById('analysis-media');
 const closeAnalysisButton = document.getElementById('close-analysis-button');
 
 // Quick Warp UI
@@ -51,9 +52,66 @@ const quickWarpOverlay = document.getElementById('quick-warp-overlay');
 const warpList = document.getElementById('warp-list');
 const warpHereBtn = document.getElementById('warp-here');
 const warpCloseBtn = document.getElementById('warp-close');
-const warpFlash = document.getElementById('warp-flash');
 
-let chosenWarpTargetId = null;
+// === CONTENT: EDIT HERE ===
+// Trage hier deine Texte/Bilder je Objekt ein.
+// - body: kann HTML enthalten (<p>, <ul>, <b>…)
+// - images: Array mit Bild-URLs (relative Pfade zu deinen GitHub-Pages sind ok)
+const CONTENT = {
+  blackhole: {
+    title: "Project_Mariner (This Site)",
+    body: `
+      <p>Willkommen in meinem Universum. Hier findest du alle Projekte, Socials und mehr – visualisiert als Planeten.</p>
+      <p>Tippe auf einen Planeten, um mehr zu erfahren oder nutze <i>Quick Warp</i>, um direkt hinzuspringen.</p>
+    `,
+    images: [
+      "./assets/blackhole/cover.jpg"
+    ]
+  },
+  planets: [
+    {
+      title: "Infos",
+      body: `<p>Kurze Übersicht über mich, Kontakt, und was dich hier erwartet.</p>`,
+      images: ["./assets/planets/infos-1.jpg","./assets/planets/infos-2.jpg"]
+    },
+    {
+      title: "SURGE — Autonomous Robottaxi",
+      body: `<p>SURGE ist mein Konzept für ein autonomes Robotaxi. Fokus: Sicherheit, Redundanz, UX.</p>`,
+      images: ["./assets/planets/surge-1.jpg"]
+    },
+    {
+      title: "OpenImageLabel",
+      body: `<p>Web-App zum Labeln von Fotos für professionelle Fotografie-Workflows.</p>`,
+      images: ["./assets/planets/oil-1.jpg","./assets/planets/oil-2.jpg"]
+    },
+    {
+      title: "Project Cablerack",
+      body: `<p>Ein smartes Kabelmanagement-System: modular, clean, effizient.</p>`,
+      images: ["./assets/planets/cablerack-1.jpg"]
+    },
+    {
+      title: "Socials / Other Sites",
+      body: `<p>Folge mir auf meinen Socials oder sieh dir andere Projekte an.</p>`,
+      images: ["./assets/planets/socials-1.jpg"]
+    },
+    {
+      title: "HA-Lightswitch",
+      body: `<p>Macht analoge Lichtschalter smart – kompakt, unauffällig, Home-Automation ready.</p>`,
+      images: ["./assets/planets/halightswitch-1.jpg","./assets/planets/halightswitch-2.jpg"]
+    },
+    {
+      title: "My Creative Work",
+      body: `<p>Film, Drohnenflüge, Fotografie – eine Auswahl meiner kreativen Arbeiten.</p>`,
+      images: ["./assets/planets/creative-1.jpg"]
+    },
+    {
+      title: "3D-Printing",
+      body: `<p>3D-Druck als Engineering-Werkzeug: Prototypen, Halterungen, Tools.</p>`,
+      images: ["./assets/planets/3dprint-1.jpg","./assets/planets/3dprint-2.jpg"]
+    }
+  ]
+};
+// === END CONTENT ===
 
 // === Hyperspace-Loading ===
 const loadingScene = new THREE.Scene();
@@ -92,6 +150,7 @@ function createGalaxy() {
     const i3 = i * 3;
     const radius = Math.random() * parameters.radius;
     const spinAngle = radius * parameters.spin;
+    the:
     const branchAngle = (i % parameters.arms) / parameters.arms * Math.PI * 2;
     const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
     const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.1;
@@ -385,15 +444,41 @@ function getPinchDistance(e) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// Analyse-Fenster
+// Analyse-Fenster – dynamische Befüllung
+function renderAnalysis({ title, body, images }) {
+  analysisTitle.textContent = title || '';
+  analysisTextContent.innerHTML = body || '';
+  analysisMedia.innerHTML = '';
+  (images || []).forEach(src => {
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.src = src;
+    img.alt = title || 'image';
+    analysisMedia.appendChild(img);
+  });
+}
+
 analyzeButton.addEventListener('click', () => {
-  if (currentlyAnalyzedObject) {
-    analysisTitle.textContent = currentlyAnalyzedObject.name;
-    analysisTextContent.textContent =
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.";
-    analysisWindow.classList.add('visible');
-    appState = 'paused';
+  if (!currentlyAnalyzedObject) return;
+
+  // Blackhole?
+  if (currentlyAnalyzedObject === blackHoleCore) {
+    renderAnalysis(CONTENT.blackhole || { title: blackHoleCore.name, body: '', images: [] });
+  } else {
+    // Welcher Planet?
+    const idx = planets.findIndex(p => p.mesh === currentlyAnalyzedObject);
+    const planetMeta = CONTENT.planets[idx];
+    const fallback = {
+      title: currentlyAnalyzedObject.name || `Planet ${idx + 1}`,
+      body: `<p>Kein Inhalt definiert. Bearbeite CONTENT.planets[${idx}] in main.js.</p>`,
+      images: []
+    };
+    renderAnalysis(planetMeta || fallback);
   }
+
+  analysisWindow.classList.add('visible');
+  appState = 'paused';
 });
 closeAnalysisButton.addEventListener('click', () => {
   analysisWindow.classList.remove('visible');
@@ -407,6 +492,21 @@ quickWarpBtn.addEventListener('click', () => {
 });
 warpCloseBtn.addEventListener('click', closeWarpOverlay);
 
+let chosenWarpTargetId = null;
+warpList.addEventListener('click', (e) => {
+  const li = e.target.closest('li');
+  if (!li) return;
+  [...warpList.children].forEach(x => x.classList.remove('active'));
+  li.classList.add('active');
+  chosenWarpTargetId = li.dataset.targetId;
+  warpHereBtn.disabled = !chosenWarpTargetId;
+});
+warpHereBtn.addEventListener('click', () => {
+  if (!chosenWarpTargetId || !ship) return;
+  performWarp(chosenWarpTargetId);
+  closeWarpOverlay();
+});
+
 function closeWarpOverlay() {
   quickWarpOverlay.classList.remove('visible');
   quickWarpOverlay.setAttribute('aria-hidden', 'true');
@@ -418,54 +518,36 @@ function closeWarpOverlay() {
 function buildWarpList() {
   warpList.innerHTML = '';
   const entries = [
-    { id: 'blackhole', name: blackHoleCore.name },
-    ...planets.map((p, i) => ({ id: 'planet-' + i, name: p.mesh.name }))
+    { id: 'blackhole', name: CONTENT.blackhole?.title || blackHoleCore.name },
+    ...planets.map((p, i) => ({ id: 'planet-' + i, name: CONTENT.planets[i]?.title || p.mesh.name }))
   ];
   for (const entry of entries) {
     const li = document.createElement('li');
     li.textContent = entry.name;
     li.dataset.targetId = entry.id;
-    li.addEventListener('click', () => {
-      [...warpList.children].forEach(x => x.classList.remove('active'));
-      li.classList.add('active');
-      chosenWarpTargetId = entry.id;
-      warpHereBtn.disabled = false;
-    });
     warpList.appendChild(li);
   }
 }
 
-warpHereBtn.addEventListener('click', () => {
-  if (!chosenWarpTargetId || !ship) return;
-  // Flash FX
-  warpFlash.classList.add('active');
-  setTimeout(() => warpFlash.classList.remove('active'), 180);
-
-  // kurzer Halt, dann Warp
-  appState = 'paused';
-  setTimeout(() => {
-    performWarp(chosenWarpTargetId);
-    appState = 'playing';
-  }, 160);
-
-  closeWarpOverlay();
-});
-
 function performWarp(targetId) {
   if (targetId === 'blackhole') {
-    const target = new THREE.Vector3(0, 0, 0);
-    ship.position.copy(target.clone().add(new THREE.Vector3(0, 0, 30)));
-    ship.lookAt(target);
+    const r = pacingCircle.geometry.parameters.radius * pacingCircle.scale.x;
+    ship.position.set(0, 0, -(r * 0.8));
+    ship.lookAt(0, 0, 0);
   } else {
     const idx = parseInt(targetId.split('-')[1], 10);
     const p = planets[idx];
+    if (!p) return;
     const worldPos = new THREE.Vector3();
     p.mesh.getWorldPosition(worldPos);
 
-    // 12 Einheiten vor Planet, abhängig vom Planeten-Radius
-    const dir = new THREE.Vector3().subVectors(ship.position, worldPos).normalize(); // von Planet weg
-    if (dir.lengthSq() === 0) dir.set(0, 0, 1);
-    ship.position.copy(worldPos.clone().add(dir.multiplyScalar(12 + p.mesh.geometry.parameters.radius)));
+    const boundaryR = p.boundaryCircle.geometry.parameters.radius * p.boundaryCircle.scale.x;
+    let dir = new THREE.Vector3().subVectors(ship.position, worldPos);
+    if (dir.lengthSq() < 1e-6) dir.set(1, 0, 0);
+    dir.normalize();
+
+    const targetPos = worldPos.clone().add(dir.multiplyScalar(boundaryR * 0.8));
+    ship.position.copy(targetPos);
     ship.lookAt(worldPos);
   }
   cameraPivot.rotation.y = 0;
@@ -474,6 +556,7 @@ function performWarp(targetId) {
 // === Animation ===
 const clock = new THREE.Clock();
 const worldPosition = new THREE.Vector3();
+const GLOBAL_ANGULAR_SPEED = 0.02;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -491,7 +574,6 @@ function animate() {
   pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
   pacingCircle.material.opacity = 0.3 + pulse * 0.4;
 
-  // Planeten: konstante Winkelgeschwindigkeit → konstante Phasenabstände
   planets.forEach(planet => {
     planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
@@ -511,7 +593,6 @@ function animate() {
     ship.translateZ(finalForward);
     ship.rotateY(finalTurn);
 
-    // Kollisionsschutz zum Zentrum
     const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
     const collisionThreshold = shipRadius + blackHoleRadius;
     if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
@@ -519,7 +600,6 @@ function animate() {
       if (forcefield) { forcefield.visible = true; forcefield.material.opacity = 1.0; }
     }
 
-    // Aktives Objekt bestimmen
     let activeObject = null;
     const distanceToCenterSq = ship.position.lengthSq();
     const circleCurrentRadius = pacingCircle.geometry.parameters.radius * pacingCircle.scale.x;
@@ -542,14 +622,13 @@ function animate() {
     }
   }
 
-  // Intro → danach Quick Warp-Button zeigen
   if (appState === 'intro') {
     cameraPivot.rotation.y = THREE.MathUtils.lerp(cameraPivot.rotation.y, 0, 0.02);
     if (Math.abs(cameraPivot.rotation.y) < 0.01) {
       cameraPivot.rotation.y = 0;
       appState = 'playing';
-      // erst jetzt sichtbar
       quickWarpBtn.classList.remove('hidden');
+      buildWarpList();
     }
   } else if (appState === 'playing') {
     if (ship) {
@@ -566,12 +645,12 @@ function animate() {
     }
   }
 
-  cameraVelocity.multiplyScalar(DAMPING);
+  cameraVelocity.multiplyScalar(0.90);
   zoomDistance += zoomVelocity;
-  zoomVelocity *= DAMPING;
-  zoomDistance = THREE.MathUtils.clamp(zoomDistance, minZoom, maxZoom);
-  if (zoomDistance === minZoom || zoomDistance === maxZoom) zoomVelocity = 0;
-  if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
+  zoomVelocity *= 0.90;
+  zoomDistance = THREE.MathUtils.clamp(zoomDistance, 8, 25);
+  if (zoomDistance === 8 || zoomDistance === 25) zoomVelocity = 0;
+  camera.position.normalize().multiplyScalar(zoomDistance);
 
   accretionDisk.rotation.z += 0.005;
 
@@ -580,7 +659,6 @@ function animate() {
     if (forcefield.material.opacity <= 0) forcefield.visible = false;
   }
 
-  // Refraction Capture
   lensingSphere.visible = false; blackHoleCore.visible = false; accretionDisk.visible = false;
   cubeCamera.update(renderer, mainScene);
   lensingSphere.visible = true; blackHoleCore.visible = true; accretionDisk.visible = true;
