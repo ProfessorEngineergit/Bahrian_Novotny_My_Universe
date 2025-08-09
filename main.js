@@ -368,7 +368,7 @@ SURGE is my 8th-grade capstone project — an autonomous, electrically powered m
     html: `
 <p>A custom sheet-metal rack for five laptops, one-cable desk setup, HDMI switching, ARGB cooling, and Apple Home integration.</p>
 `,
-    images: []
+    images: [Rack 2.png]
   },
   'Socials/Other Sites': {
     title: 'Socials & Links',
