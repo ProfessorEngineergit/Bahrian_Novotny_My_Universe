@@ -584,11 +584,6 @@ if (activeObject && !isAnalyzeButtonVisible) {
   isAnalyzeButtonVisible = false;
 }
 
-// Optional: Glow entfernen, sobald Analyse-Fenster geöffnet wird
-analyzeButton.addEventListener('click', () => {
-  analyzeButton.classList.remove('btn-outline-glow');
-});
-
 // ===== Quick Warp =====
 quickWarpBtn.addEventListener('click', () => {
   quickWarpOverlay.classList.add('visible');
