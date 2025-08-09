@@ -77,6 +77,7 @@ canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none
   border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
   cursor: pointer; padding: 12px; transition: background-color .2s ease;
 }
+
 #analyze-button {
   padding: 12px 24px; background: rgba(0,0,0,0.3);
   border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 16px;
@@ -88,6 +89,28 @@ canvas { display: block; position: absolute; top: 0; left: 0; touch-action: none
 #speaker-icon { fill: white; }
 #mute-slash { fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(0.8); transition: opacity .3s ease, transform .3s ease; }
 #mute-button.muted #mute-slash { opacity: 1; transform: scale(1); }
+
+/* === Analyze-Button Glow === */
+#analyze-button.btn-outline-glow {
+  position: relative;
+  isolation: isolate;
+}
+#analyze-button.btn-outline-glow::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border: 2px solid rgba(255,255,255,0.9);
+  border-radius: 14px;
+  box-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 24px rgba(255,255,255,0.6);
+  pointer-events: none;
+  opacity: 1;
+  animation: btnPulse 1.4s ease-in-out infinite;
+}
+@keyframes btnPulse {
+  0%   { transform: scale(0.98); opacity: 1; }
+  60%  { transform: scale(1.04); opacity: 0.55; }
+  100% { transform: scale(0.98); opacity: 1; }
+}
 
 /* === Quick Warp === */
 .hidden { display: none !important; }
