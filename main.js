@@ -494,6 +494,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 
 // nipplejs muss im HTML geladen sein
+/* global nipplejs */
 nipplejs.create({
   zone: document.getElementById('joystick-zone'),
   mode: 'static',
@@ -573,16 +574,39 @@ function getPinchDistance(e) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// === Analyze-Button anzeigen/ausblenden ===
-if (activeObject && !isAnalyzeButtonVisible) {
-  analyzeButton.classList.add('ui-visible');
-  analyzeButton.classList.add('btn-outline-glow'); // Glow beim Einblenden
-  isAnalyzeButtonVisible = true;
-} else if (!activeObject && isAnalyzeButtonVisible) {
-  analyzeButton.classList.remove('ui-visible');
-  analyzeButton.classList.remove('btn-outline-glow'); // Glow beim Ausblenden
-  isAnalyzeButtonVisible = false;
-}
+// ===== Analyse-Fenster =====
+analyzeButton.addEventListener('click', () => {
+  if (!currentlyAnalyzedObject) return;
+
+  const objName = currentlyAnalyzedObject.name;
+  const content = OBJECT_CONTENT[objName];
+
+  analysisTitle.textContent = (content && content.title) ? content.title : objName;
+
+  if (content && (content.html || (content.images && content.images.length))) {
+    let html = content.html ? content.html : '';
+    if (content.images && content.images.length) {
+      const imgs = content.images
+        .map(src => `<img src="${encodeURI(src)}" loading="lazy" alt="">`)
+        .join('');
+      html += `<div class="analysis-gallery">${imgs}</div>`;
+    }
+    analysisTextContent.innerHTML = html;
+  } else {
+    analysisTextContent.innerHTML =
+      `<p>Für <em>${objName}</em> ist noch kein Text/Bild hinterlegt. Trage Inhalte im <code>OBJECT_CONTENT</code>-Block ein.</p>`;
+  }
+
+  // Optional: Glow entfernen, sobald das Fenster geöffnet wird
+  analyzeButton.classList.remove('btn-outline-glow');
+
+  analysisWindow.classList.add('visible');
+  appState = 'paused';
+});
+closeAnalysisButton.addEventListener('click', () => {
+  analysisWindow.classList.remove('visible');
+  appState = 'playing';
+});
 
 // ===== Quick Warp =====
 quickWarpBtn.addEventListener('click', () => {
@@ -721,10 +745,15 @@ function animate() {
     planets.forEach(p => p.isFrozen = (activeObject === p.mesh));
     currentlyAnalyzedObject = activeObject;
 
+    // === Analyze-Button anzeigen/ausblenden + Glow toggeln ===
     if (activeObject && !isAnalyzeButtonVisible) {
-      analyzeButton.classList.add('ui-visible'); isAnalyzeButtonVisible = true;
+      analyzeButton.classList.add('ui-visible');
+      analyzeButton.classList.add('btn-outline-glow');
+      isAnalyzeButtonVisible = true;
     } else if (!activeObject && isAnalyzeButtonVisible) {
-      analyzeButton.classList.remove('ui-visible'); isAnalyzeButtonVisible = false;
+      analyzeButton.classList.remove('ui-visible');
+      analyzeButton.classList.remove('btn-outline-glow');
+      isAnalyzeButtonVisible = false;
     }
   }
 
