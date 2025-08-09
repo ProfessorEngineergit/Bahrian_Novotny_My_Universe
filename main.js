@@ -60,9 +60,7 @@ let chosenWarpTargetId = null;
 
 // ===== HYPERSPACE-LOADING =====
 const loadingScene = new THREE.Scene();
-const loadingCamera = new THREE.PerspectiveCamera(
-  75, window.innerWidth / window.innerHeight, 0.1, 1000
-);
+const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 let hyperspaceParticles;
 const HYPERSPACE_LENGTH = 800;
 let loadingProgress = 0;
@@ -158,7 +156,7 @@ function createGalaxy() {
 }
 createGalaxy();
 
-// Schwarzes Loch + Lens
+// Schwarzes Loch + Lens  (Name bleibt Project_Mariner)
 const blackHoleCore = new THREE.Mesh(
   new THREE.SphereGeometry(1.5, 32, 32),
   new THREE.MeshBasicMaterial({ color: 0x000000 })
@@ -240,7 +238,7 @@ function createPlanetTexture(color) {
   canvas.width = 128; canvas.height = 128;
   const context = canvas.getContext('2d');
 
-  // FIX: hsl/hsla müssen Strings sein
+  // HSL/HSLA als Strings
   context.fillStyle = `hsl(${color}, 70%, 50%)`;
   context.fillRect(0, 0, 128, 128);
 
@@ -310,7 +308,6 @@ function createForcefield(radius) {
 }
 
 // ===== ✨ INHALTE FÜR ANALYSE-FENSTER =====
-// HTML als Template-Strings (`…`), KEIN JSX
 const OBJECT_CONTENT = {
   'Project_Mariner (This Site)': {
     title: 'Project Mariner',
@@ -336,19 +333,17 @@ reached had it never stopped.
     title: 'Infos',
     html: `
 <p>
-THIS IS <b>PROJECT_MARINER V1.0</b><br><br><br><br>
-NEW RELEASES:<br><br>
-PROJECT MARINER V1.5 PRO<br><br>
-V1.5 PRO SHOULD INCORPORATE MINOR BUG FIXES AS WELL AS FOLLOWING FEATURES:<br><br>
-NEWSLETTER-FUNCTION<br>
-OVERVIEW-FUNCTION<br>
-DEEP SPACE-FUNCTION<br>
-NEW, BEAUTIFUL PLANETS CRAFTED IN BLENDER<br>
-MORE CONTROLLS<br>
-MATTE GLASS 1.5 PRO-MATERIAL<br>
-ENHANCED BUTTON-ANIMATIONS<br>
-MORE FLUID ANIMATIONS FOR QUICK WARP<br><br>
-V2.0-SCEDULED FOR DECEMBER 2025
+THIS IS <b>MY_UNIVERSE V1.0</b><br><br>
+UPCOMING: <b>V1.5 PRO</b> (minor fixes +)<br>
+– Newsletter function<br>
+– Overview function<br>
+– Deep Space function<br>
+– New Blender-crafted planets<br>
+– More controls<br>
+– Matte Glass 1.5 Pro material<br>
+– Enhanced button animations<br>
+– Smoother Quick Warp<br><br>
+<b>V2.0</b> — scheduled for December 2025
 </p>
 `,
     images: []
@@ -356,51 +351,22 @@ V2.0-SCEDULED FOR DECEMBER 2025
   'SURGE (The autonomous Robottaxi)': {
     title: 'SURGE – Autonomous Robottaxi',
     html: `
-<p>
-<i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i><br><br>
-SURGE is my 8th-grade capstone project — a fully autonomous, electrically powered mini robotic taxi designed to navigate city streets all on its own. The idea was born from two things
-I care deeply about: cutting CO₂ emissions and exploring how robotics can reshape everyday mobility.<br><br>
-At its core, SURGE runs on an NVIDIA Jetson Nano — a compact but powerful AI computer that processes live camera data for obstacle detection and navigation. The drive system allows precise
-and flexible movement in tight spaces, making it ideal for urban environments.<br><br>
-The design process began with sketches and CAD models, which I brought to life using 3D printing. The chassis was built to be modular, making upgrades easy, and I integrated LED accents
-for both style and functional feedback — such as indicating movement or charging status.<br><br>
-On the software side, SURGE uses AI-driven control logic for mapping, path planning, and decision-making in real time. While I initially planned to use an Intel RealSense D435 depth camera,
-I ultimately went with a Raspberry Pi camera — a simpler, lighter choice that still enabled effective autonomous navigation.<br><br>
-From mechanical design to electronics and AI control, every aspect of SURGE was designed, built, and programmed by me. It’s a fusion of engineering, AI, and creative design — and a small
-glimpse into how shared, smart mobility could work in the cities of tomorrow.
-</p>
+<p><i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i><br><br>
+SURGE is my 8th-grade capstone project — an autonomous, electrically powered mini robotic taxi. It runs on an NVIDIA Jetson Nano, uses live camera input for navigation, and is built with modular 3D-printed parts. From design to AI control, I built and programmed everything myself.</p>
 `,
     images: []
   },
   'OpenImageLabel (A website to label images for professional photography)': {
     title: 'OpenImageLabel',
     html: `
-<p>OpenImageLabel is my latest experiment in making metadata work for you, not against you.<br><br>
-It started as a simple browser app, but its goal is much bigger: to become the fastest way to tag and present your photos, whether you’re on a laptop, an iPhone or an Android device.<br><br>
-The idea is straightforward: drag a photo into the page, and OpenImageLabel pulls the EXIF data straight from the file. Exposure time, aperture and ISO pop up along the top of the image,
-while the camera model appears at the bottom left.<br><br>
-You can adjust the font size, move and fade the text with a couple of sliders, and then copy that style to other images or apply it to everything at once.<br><br>
-There’s even a checkbox below each card to choose which photos you want to download; when you click “Download selection” or “Download all,” it generates finished JPEGs
-with your chosen overlays baked in.<br><br>
-I built the interface so that it stays out of your way. When you first land on the app, all you see is a big “Drag images here or click” area; only after you upload do the cards, tools and
-download options appear.<br><br>
-The same clean design will carry over to the iOS and Android versions I’m working on now. By turning metadata into a flexible, customisable overlay, OpenImageLabel
-lets you present your shots professionally without fiddling with an editor — just load, label and share.
-</p>
+<p>OpenImageLabel turns EXIF data into clean overlays you can tweak and batch-export — fast labeling for photographers across desktop and mobile.</p>
 `,
     images: []
   },
   'Project Cablerack (A smarter way to cable-manage)': {
     title: 'Project Cablerack',
     html: `
-<p>
-I’m currently building a custom rack made from precision-cut sheet metal, designed to hold all five of my laptops in perfectly fitted slots. The entire setup will connect to
-my monitor through a single cable, keeping the workspace clean and simple.<br><br>
-Inside the rack, an HDMI switcher box will allow me to change outputs at the press of a remote-control button. To keep everything cool — especially when the plexiglass door is closed — I’m
-adding ARGB fans for both airflow and style.<br><br>
-All of this will be integrated with Apple Home, so I can control cooling and lighting via my HomePod mini.
-This way, Project Cablerack won’t just organise my gear — it will make it easier, cooler (literally), and far more enjoyable to use.
-</p>
+<p>A custom sheet-metal rack for five laptops, one-cable desk setup, HDMI switching, ARGB cooling, and Apple Home integration.</p>
 `,
     images: []
   },
@@ -408,12 +374,12 @@ This way, Project Cablerack won’t just organise my gear — it will make it ea
     title: 'Socials & Links',
     html: `
 <ul>
-  <li><b>My GitHub profile:</b> <a href="https://github.com/ProfessorEngineergit" target="_blank" rel="noopener">github.com/ProfessorEngineergit</a></li>
-  <li><b>GitHub profile (school):</b> <a href="https://github.com/makerLab314" target="_blank" rel="noopener">github.com/makerLab314</a></li>
+  <li><b>GitHub:</b> <a href="https://github.com/ProfessorEngineergit" target="_blank" rel="noopener">github.com/ProfessorEngineergit</a></li>
+  <li><b>School GitHub:</b> <a href="https://github.com/makerLab314" target="_blank" rel="noopener">github.com/makerLab314</a></li>
   <li><b>YouTube:</b> <a href="https://www.youtube.com/@droneXplorer-t1n" target="_blank" rel="noopener">youtube.com/@droneXplorer-t1n</a></li>
   <li><b>Skypixel:</b> <a href="https://www.skypixel.com/users/till-bahrian" target="_blank" rel="noopener">skypixel.com/users/till-bahrian</a></li>
-  <li><b>Book me as a drone pilot:</b> <a href="https://bahriannovotny.wixstudio.com/meinewebsite" target="_blank" rel="noopener">bahriannovotny.wixstudio.com/meinewebsite</a></li>
-  <li><b>Book 3D print services:</b> <a href="https://lorenzobaymueller.wixstudio.com/3d-print-hub" target="_blank" rel="noopener">lorenzobaymueller.wixstudio.com/3d-print-hub</a></li>
+  <li><b>Book me (drone):</b> <a href="https://bahriannovotny.wixstudio.com/meinewebsite" target="_blank" rel="noopener">bahriannovotny.wixstudio.com/meinewebsite</a></li>
+  <li><b>3D print services:</b> <a href="https://lorenzobaymueller.wixstudio.com/3d-print-hub" target="_blank" rel="noopener">lorenzobaymueller.wixstudio.com/3d-print-hub</a></li>
 </ul>
 `,
     images: []
@@ -421,40 +387,22 @@ This way, Project Cablerack won’t just organise my gear — it will make it ea
   'HA-Lightswitch (Making analog Lightswitches smart)': {
     title: 'HA-Lightswitch',
     html: `
-<p>
-At my school, there’s a small makerspace called the MakerLab. Over time, we’ve automated the entire room to a high degree — but one thing remained: the lights. Since this is a
-school, we couldn’t just take apart the existing light switches.<br><br>
-Our solution was to design a custom 3D-printed case that allows a servo motor to physically flip a standard analog light switch, all without any permanent modification.<br><br>
-The servo is controlled through Home Assistant via MQTT, running on an Arduino.<br><br>
-It’s a simple, inexpensive, and fully reversible way to add smart-light control to any space where replacing the switch isn’t an option.
-You can download the project files and read more on our GitHub page:<br>
-<a href="https://github.com/makerLab314/OpenLightswitch-HA" target="_blank" rel="noopener">github.com/makerLab314/OpenLightswitch-HA</a>
-</p>
+<p>3D-printed, servo-driven add-on to flip analog wall switches without modification. Controlled via Home Assistant + MQTT on an Arduino.<br>
+Code & files: <a href="https://github.com/makerLab314/OpenLightswitch-HA" target="_blank" rel="noopener">github.com/makerLab314/OpenLightswitch-HA</a></p>
 `,
     images: []
   },
   'My Creative Work (Filming, flying, photography)': {
     title: 'Creative Work',
     html: `
-<p>
-Flying a drone is more than just capturing the view from above — it’s about telling a story in a way no ground-based camera can.<br><br>
-With my DJI Mini 2, I enjoy creating videos that inspire and make people want to watch.<br><br>
-Under the name DroneXplorer, I produce cinematic footage for a variety of projects — from paid projects, where I film houses, etc., to personal creative explorations.<br><br>
-Flying brings me a feeling of liberty and endless possibility. The feeling of flying over our beautiful Earth at the same altitude as birds is merely indescribable.
-</p>
+<p>Drone storytelling with a DJI Mini 2 — cinematic shots that make people want to watch. Projects for clients and personal explorations.</p>
 `,
     images: []
   },
   '3D-Printing (The ultimate engineering-tool)': {
     title: '3D-Printing',
     html: `
-<p>
-3D-Printing has become an essential tool for me. Since I was very young I have always made inventions.<br><br>
-In kindergarten I already had concepts for self-landing rockets, without having ever heard of Falcon 9.<br><br>
-I developed ideas for power plants, that would be climate friendly. But I never could take these ideas past my mind and a sheet of paper.<br><br>
-Till three years ago, when I first saw a 3D-Printer in a library. I learned CAD that same week and printed out a smart desk, that we had concepted in a project week in school.<br><br>
-One year later, I had purchased my own 3D-printer. It has truly been a great tool for me!
-</p>
+<p>From kindergarten rocket ideas to CAD and a home 3D-printer — additive manufacturing became my go-to tool to turn concepts into reality.</p>
 `,
     images: []
   }
@@ -474,7 +422,8 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 loader.setDRACOLoader(dracoLoader);
 
-const modelURL = 'https://professorengineergit.github.io/Project_Mariner/enterprise-V2.0.glb';
+// Neuer Repo-/Pages-Pfad für die GLB:
+const modelURL = 'https://professorengineergit.github.io/Bahrian_Novotny_My_Universe/enterprise-V2.0.glb';
 
 loader.load(
   modelURL,
@@ -505,7 +454,6 @@ loader.load(
       joystickZone.classList.add('ui-visible');
     }, { once: true });
 
-    // Quick Warp Liste aufbauen, wenn Modell da ist
     buildWarpList();
   },
   (xhr) => {
@@ -545,7 +493,7 @@ window.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keyup', (e) => { keyboard[e.key.toLowerCase()] = false; });
 
-// Achtung: nipplejs muss im HTML geladen sein.
+// nipplejs muss im HTML geladen sein
 nipplejs.create({
   zone: document.getElementById('joystick-zone'),
   mode: 'static',
@@ -624,7 +572,7 @@ function getPinchDistance(e) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// ===== Analyse-Fenster (mit String-Templates, kein JSX) =====
+// ===== Analyse-Fenster =====
 analyzeButton.addEventListener('click', () => {
   if (!currentlyAnalyzedObject) return;
 
@@ -745,7 +693,7 @@ function animate() {
   pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
   pacingCircle.material.opacity = 0.3 + pulse * 0.4;
 
-  // Planeten: konstante Winkelgeschwindigkeit → konstante Phasenabstände
+  // Planeten
   planets.forEach(planet => {
     planet.boundaryCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
     planet.boundaryCircle.material.opacity = 0.3 + pulse * 0.4;
