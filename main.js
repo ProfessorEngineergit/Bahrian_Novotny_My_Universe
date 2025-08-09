@@ -354,7 +354,7 @@ UPCOMING: <b>V1.5 PRO</b> (minor fixes +)<br>
 <p><i>(SURGE: Smart Urban Robotic Guidance & Exploration-Pod)</i><br><br>
 SURGE is my 8th-grade capstone project — an autonomous, electrically powered mini robotic taxi. It runs on an NVIDIA Jetson Nano, uses live camera input for navigation, and is built with modular 3D-printed parts. From design to AI control, I built and programmed everything myself.</p>
 `,
-    images: [SURGE 1.jpeg]
+    images: ['https://github.com/ProfessorEngineergit/Bahrian_Novotny_My_Universe/blob/main/SURGE%201.jpeg']
   },
   'OpenImageLabel (A website to label images for professional photography)': {
     title: 'OpenImageLabel',
