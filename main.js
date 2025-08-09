@@ -503,7 +503,8 @@ nipplejs.create({
 })
 .on('move', (evt, data) => {
   if (data.vector && ship) {
-    joystickMove.forward = data.vector.y * 0.1;
+    // 3x schneller vor/zurück
+    joystickMove.forward = data.vector.y * 0.3;
     joystickMove.turn = -data.vector.x * 0.05;
   }
 })
@@ -703,7 +704,8 @@ function animate() {
   });
 
   if (ship) {
-    const keyForward = (keyboard['w'] ? 0.1 : 0) + (keyboard['s'] ? -0.1 : 0);
+    // 3x schneller per Tastatur
+    const keyForward = (keyboard['w'] ? 0.3 : 0) + (keyboard['s'] ? -0.3 : 0);
     const keyTurn = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
     const finalForward = joystickMove.forward + keyForward;
     const finalTurn = joystickMove.turn + keyTurn;
