@@ -573,33 +573,20 @@ function getPinchDistance(e) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// ===== Analyse-Fenster =====
+// === Analyze-Button anzeigen/ausblenden ===
+if (activeObject && !isAnalyzeButtonVisible) {
+  analyzeButton.classList.add('ui-visible');
+  analyzeButton.classList.add('btn-outline-glow'); // Glow beim Einblenden
+  isAnalyzeButtonVisible = true;
+} else if (!activeObject && isAnalyzeButtonVisible) {
+  analyzeButton.classList.remove('ui-visible');
+  analyzeButton.classList.remove('btn-outline-glow'); // Glow beim Ausblenden
+  isAnalyzeButtonVisible = false;
+}
+
+// Optional: Glow entfernen, sobald Analyse-Fenster geöffnet wird
 analyzeButton.addEventListener('click', () => {
-  if (!currentlyAnalyzedObject) return;
-
-  const objName = currentlyAnalyzedObject.name;
-  const content = OBJECT_CONTENT[objName];
-
-  analysisTitle.textContent = (content && content.title) ? content.title : objName;
-
-  if (content && (content.html || (content.images && content.images.length))) {
-    let html = content.html ? content.html : '';
-    if (content.images && content.images.length) {
-      const imgs = content.images.map(src => `<img src="${src}" alt="">`).join('');
-      html += `<div class="analysis-gallery">${imgs}</div>`;
-    }
-    analysisTextContent.innerHTML = html;
-  } else {
-    analysisTextContent.innerHTML =
-      `<p>Für <em>${objName}</em> ist noch kein Text/Bild hinterlegt. Trage Inhalte im <code>OBJECT_CONTENT</code>-Block ein.</p>`;
-  }
-
-  analysisWindow.classList.add('visible');
-  appState = 'paused';
-});
-closeAnalysisButton.addEventListener('click', () => {
-  analysisWindow.classList.remove('visible');
-  appState = 'playing';
+  analyzeButton.classList.remove('btn-outline-glow');
 });
 
 // ===== Quick Warp =====
