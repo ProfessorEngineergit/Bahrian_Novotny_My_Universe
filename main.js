@@ -820,34 +820,45 @@ window.addEventListener('resize', () => {
 
 // ===== DARK GLASS INTERACTIVE LIGHT EFFECT =====
 // Track mouse position for dynamic light reflections on UI elements
-document.addEventListener('mousemove', (e) => {
+// Using requestAnimationFrame for throttling to improve performance
+let mouseX = 0, mouseY = 0;
+let rafPending = false;
+
+function updateLightEffects() {
   const interactiveElements = document.querySelectorAll(
     '#mute-button, #analyze-button, #quick-warp-btn, #warp-here, #warp-close, #close-analysis-button, #joystick-zone, #bottom-bar, #warp-list li'
   );
   
   interactiveElements.forEach(el => {
     const rect = el.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = ((mouseX - rect.left) / rect.width) * 100;
+    const y = ((mouseY - rect.top) / rect.height) * 100;
     el.style.setProperty('--mouse-x', `${x}%`);
     el.style.setProperty('--mouse-y', `${y}%`);
   });
+  
+  rafPending = false;
+}
+
+document.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(updateLightEffects);
+  }
 });
 
 // Touch support for mobile devices
 document.addEventListener('touchmove', (e) => {
   if (e.touches.length === 0) return;
   const touch = e.touches[0];
+  mouseX = touch.clientX;
+  mouseY = touch.clientY;
   
-  const interactiveElements = document.querySelectorAll(
-    '#mute-button, #analyze-button, #quick-warp-btn, #warp-here, #warp-close, #close-analysis-button'
-  );
-  
-  interactiveElements.forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const x = ((touch.clientX - rect.left) / rect.width) * 100;
-    const y = ((touch.clientY - rect.top) / rect.height) * 100;
-    el.style.setProperty('--mouse-x', `${x}%`);
-    el.style.setProperty('--mouse-y', `${y}%`);
-  });
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(updateLightEffects);
+  }
 }, { passive: true });
