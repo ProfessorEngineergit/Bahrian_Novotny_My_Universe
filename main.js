@@ -817,3 +817,37 @@ window.addEventListener('resize', () => {
   loadingCamera.aspect = window.innerWidth / window.innerHeight;
   loadingCamera.updateProjectionMatrix();
 });
+
+// ===== DARK GLASS INTERACTIVE LIGHT EFFECT =====
+// Track mouse position for dynamic light reflections on UI elements
+document.addEventListener('mousemove', (e) => {
+  const interactiveElements = document.querySelectorAll(
+    '#mute-button, #analyze-button, #quick-warp-btn, #warp-here, #warp-close, #close-analysis-button, #joystick-zone, #bottom-bar, #warp-list li'
+  );
+  
+  interactiveElements.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    el.style.setProperty('--mouse-x', `${x}%`);
+    el.style.setProperty('--mouse-y', `${y}%`);
+  });
+});
+
+// Touch support for mobile devices
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 0) return;
+  const touch = e.touches[0];
+  
+  const interactiveElements = document.querySelectorAll(
+    '#mute-button, #analyze-button, #quick-warp-btn, #warp-here, #warp-close, #close-analysis-button'
+  );
+  
+  interactiveElements.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    const x = ((touch.clientX - rect.left) / rect.width) * 100;
+    const y = ((touch.clientY - rect.top) / rect.height) * 100;
+    el.style.setProperty('--mouse-x', `${x}%`);
+    el.style.setProperty('--mouse-y', `${y}%`);
+  });
+}, { passive: true });
