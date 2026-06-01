@@ -612,6 +612,20 @@ closeAnalysisButton.addEventListener('click', () => {
   appState = 'playing';
 });
 
+// ===== Tap-to-zoom for analysis images =====
+const imageLightbox = document.createElement('div');
+imageLightbox.id = 'image-lightbox';
+imageLightbox.innerHTML = '<img alt="">';
+document.body.appendChild(imageLightbox);
+const lightboxImg = imageLightbox.querySelector('img');
+imageLightbox.addEventListener('click', () => imageLightbox.classList.remove('visible'));
+analysisTextContent.addEventListener('click', (e) => {
+  if (e.target && e.target.tagName === 'IMG') {
+    lightboxImg.src = e.target.currentSrc || e.target.src;
+    imageLightbox.classList.add('visible');
+  }
+});
+
 // ===== Quick Warp =====
 quickWarpBtn.addEventListener('click', () => {
   quickWarpOverlay.classList.add('visible');
@@ -649,6 +663,7 @@ function buildWarpList() {
 
 warpHereBtn.addEventListener('click', () => {
   if (!chosenWarpTargetId || !ship) return;
+  const targetId = chosenWarpTargetId; // closeWarpOverlay() clears it before the timeout fires
   if (warpFlash) {
     warpFlash.classList.add('active');
     setTimeout(() => warpFlash.classList.remove('active'), 180);
@@ -656,7 +671,7 @@ warpHereBtn.addEventListener('click', () => {
 
   appState = 'paused';
   setTimeout(() => {
-    performWarp(chosenWarpTargetId);
+    performWarp(targetId);
     appState = 'playing';
   }, 160);
 
@@ -722,8 +737,10 @@ function animate() {
 
     const shipRadius = 5;
     const previousPosition = ship.position.clone();
+    // Invert steering while reversing so turning stays intuitive relative to travel
+    const appliedTurn = finalForward < 0 ? -finalTurn : finalTurn;
     ship.translateZ(finalForward);
-    ship.rotateY(finalTurn);
+    ship.rotateY(appliedTurn);
 
     // Kollisionsschutz zum Zentrum
     const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
