@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1480" width="1200" height="1480" font-family="'Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <radialGradient id="bg" cx="40%" cy="22%" r="90%">
+      <stop offset="0%" stop-color="#0b111e"/><stop offset="55%" stop-color="#070b14"/><stop offset="100%" stop-color="#03040a"/>
+    </radialGradient>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#16223a" stroke-width="1" opacity="0.45"/>
+    </pattern>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9fc0ff" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#2a4a86" stop-opacity="0.16"/>
+    </linearGradient>
+    <linearGradient id="cursorfill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#bcd2ff"/><stop offset="100%" stop-color="#54a1ff"/>
+    </linearGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffedd8"/><stop offset="45%" stop-color="#ff9a55"/><stop offset="100%" stop-color="#ff6a1a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="pb" cx="35%" cy="32%" r="75%"><stop offset="0%" stop-color="#bcd8ff"/><stop offset="50%" stop-color="#4f8fe0"/><stop offset="100%" stop-color="#163a66"/></radialGradient>
+    <radialGradient id="pa" cx="35%" cy="32%" r="75%"><stop offset="0%" stop-color="#ffe0b0"/><stop offset="50%" stop-color="#e8954a"/><stop offset="100%" stop-color="#6e3c12"/></radialGradient>
+    <filter id="glow" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <g id="tile">
+      <path d="M-205,12 L0,70 L0,86 L-205,28 Z" fill="#0a1322" fill-opacity="0.7"/>
+      <path d="M205,12 L0,70 L0,86 L205,28 Z" fill="#060c18" fill-opacity="0.85"/>
+      <path d="M0,-46 L205,12 L0,70 L-205,12 Z" fill="url(#glass)" stroke="#7fb4ff" stroke-width="1.6" stroke-opacity="0.8"/>
+      <path d="M0,-46 L205,12 L0,70" fill="none" stroke="#bcd6ff" stroke-width="1" stroke-opacity="0.5"/>
+    </g>
+  </defs>
+
+  <rect width="1200" height="1480" fill="url(#bg)"/>
+  <rect width="1200" height="1480" fill="url(#grid)"/>
+  <g stroke="#2e5cff" stroke-width="1.5" opacity="0.5" fill="none">
+    <path d="M26 26H56M26 26V56"/><path d="M1174 26H1144M1174 26V56"/>
+    <path d="M26 1454H56M26 1454V1424"/><path d="M1174 1454H1144M1174 1454V1424"/>
+  </g>
+
+  <!-- title -->
+  <text x="60" y="66" fill="#5b7bb8" font-size="15" letter-spacing="6" font-family="ui-monospace,'SF Mono',monospace">FIG. 01 — SYSTEM TEARDOWN</text>
+  <text x="58" y="112" fill="#e8eefc" font-size="40" font-weight="800" letter-spacing="1">EXPLODED VIEW</text>
+  <text x="60" y="140" fill="#8aa2cf" font-size="15" letter-spacing="1" font-family="ui-monospace,'SF Mono',monospace">the render pipeline, layer by layer — built bottom-up in Three.js</text>
+
+  <!-- explosion connector axes (behind tiles) -->
+  <g stroke="#2e5cff" stroke-width="1.4" stroke-dasharray="2 7" opacity="0.45">
+    <line x1="225" y1="232" x2="225" y2="1262"/>
+    <line x1="635" y1="232" x2="635" y2="1262"/>
+  </g>
+
+  <!-- 8 stacked iso tiles (drawn back-to-front) -->
+  <use href="#tile" x="430" y="210"/>
+  <use href="#tile" x="430" y="360"/>
+  <use href="#tile" x="430" y="510"/>
+  <use href="#tile" x="430" y="660"/>
+  <use href="#tile" x="430" y="810"/>
+  <use href="#tile" x="430" y="960"/>
+  <use href="#tile" x="430" y="1110"/>
+  <use href="#tile" x="430" y="1260"/>
+
+  <!-- L1 INTERFACE -->
+  <g transform="translate(430 210)">
+    <rect x="-60" y="-20" width="120" height="58" rx="13" fill="#0c1626" fill-opacity="0.85" stroke="#9fc0ff" stroke-opacity="0.6" stroke-width="1.4"/>
+    <rect x="-46" y="-7" width="70" height="6" rx="3" fill="#9fc0ff" fill-opacity="0.7"/>
+    <rect x="-46" y="7" width="48" height="5" rx="2.5" fill="#5f7cad"/>
+    <rect x="-46" y="20" width="92" height="13" rx="6.5" fill="#3a6fd0" fill-opacity="0.8"/>
+  </g>
+
+  <!-- L2 CSS2D LABELS -->
+  <g transform="translate(430 360)">
+    <line x1="6" y1="-8" x2="6" y2="-40" stroke="#cfe0ff" stroke-width="1.4" opacity="0.8"/>
+    <circle cx="6" cy="-6" r="4.5" fill="#fff"/>
+    <rect x="-44" y="-58" width="100" height="20" rx="5" fill="#0c1626" fill-opacity="0.85" stroke="#9fc0ff" stroke-opacity="0.5" stroke-width="1.2"/>
+    <text x="6" y="-44" text-anchor="middle" fill="#cfe0ff" font-size="11" font-family="ui-monospace,'SF Mono',monospace">PLANET</text>
+  </g>
+
+  <!-- L3 POST-FX bloom -->
+  <g transform="translate(430 510)" filter="url(#glow)">
+    <circle cx="0" cy="6" r="10" fill="#fff"/>
+    <g stroke="#bcd6ff" stroke-width="2.4" stroke-linecap="round">
+      <line x1="0" y1="-16" x2="0" y2="28"/><line x1="-22" y1="6" x2="22" y2="6"/>
+      <line x1="-15" y1="-9" x2="15" y2="21"/><line x1="15" y1="-9" x2="-15" y2="21"/>
+    </g>
+  </g>
+
+  <!-- L4 VESSEL (rounded cursor) -->
+  <g transform="translate(430 660) rotate(28)">
+    <path d="M0 -30 L19 19 L0 8 L-19 19 Z" fill="url(#cursorfill)" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" filter="url(#glow)"/>
+  </g>
+
+  <!-- L5 PLANETS -->
+  <g transform="translate(430 810)">
+    <ellipse cx="0" cy="8" rx="120" ry="34" fill="none" stroke="#3a4d72" stroke-width="1.4"/>
+    <circle cx="-70" cy="-2" r="13" fill="url(#pb)"/>
+    <circle cx="34" cy="20" r="18" fill="url(#pa)"/>
+    <circle cx="96" cy="-2" r="9" fill="#3fb89a"/>
+  </g>
+
+  <!-- L6 SINGULARITY -->
+  <g transform="translate(430 960)">
+    <ellipse cx="0" cy="6" rx="86" ry="26" fill="none" stroke="url(#core)" stroke-width="9" filter="url(#glow)"/>
+    <ellipse cx="0" cy="6" rx="20" ry="9" fill="#03040a"/>
+  </g>
+
+  <!-- L7 GALAXY -->
+  <g transform="translate(430 1110)">
+    <g fill="none" stroke="#6f93ff" stroke-width="2" opacity="0.55" stroke-linecap="round">
+      <path d="M-4 4 C 30 -10, 78 -16, 120 8"/>
+      <path d="M4 8 C -30 22, -80 26, -120 6"/>
+    </g>
+    <g fill="#cfe0ff">
+      <circle cx="-90" cy="2" r="1.6"/><circle cx="-60" cy="14" r="1.4"/><circle cx="-30" cy="20" r="1.6"/>
+      <circle cx="0" cy="10" r="1.8"/><circle cx="30" cy="2" r="1.5"/><circle cx="64" cy="-2" r="1.4"/>
+      <circle cx="96" cy="6" r="1.6"/><circle cx="-48" cy="-6" r="1.3"/><circle cx="50" cy="16" r="1.4"/>
+      <circle cx="-104" cy="10" r="1.3"/><circle cx="112" cy="-2" r="1.3"/><circle cx="14" cy="22" r="1.4"/>
+    </g>
+    <g fill="#ffd9b8"><circle cx="-12" cy="4" r="1.6"/><circle cx="22" cy="12" r="1.5"/><circle cx="-40" cy="12" r="1.4"/></g>
+  </g>
+
+  <!-- L8 ENGINE -->
+  <g transform="translate(430 1260)" stroke="#9fc0ff" stroke-opacity="0.8" fill="none" stroke-width="1.5">
+    <path d="M-30 -14 L20 -14 L34 0 L-16 0 Z"/>
+    <path d="M-16 0 L-16 22 L34 22 L34 0"/>
+    <path d="M20 -14 L20 8 M34 0 L34 22"/>
+    <text x="-2" y="16" fill="#cfe0ff" stroke="none" font-size="12" text-anchor="middle" font-family="ui-monospace,'SF Mono',monospace">GL</text>
+  </g>
+
+  <!-- ===== labels (right) ===== -->
+  <g font-family="ui-monospace,'SF Mono',monospace">
+    <!-- leader template per layer: from right vertex (635, y+12) to (700,y) -->
+    <g>
+      <g stroke="#2e5cff" stroke-width="1.4" opacity="0.7">
+        <path d="M635 222 H705" fill="none"/><path d="M635 372 H705" fill="none"/><path d="M635 522 H705" fill="none"/>
+        <path d="M635 672 H705" fill="none"/><path d="M635 822 H705" fill="none"/><path d="M635 972 H705" fill="none"/>
+        <path d="M635 1122 H705" fill="none"/><path d="M635 1272 H705" fill="none"/>
+      </g>
+      <g fill="#2e5cff"><circle cx="635" cy="222" r="3"/><circle cx="635" cy="372" r="3"/><circle cx="635" cy="522" r="3"/><circle cx="635" cy="672" r="3"/><circle cx="635" cy="822" r="3"/><circle cx="635" cy="972" r="3"/><circle cx="635" cy="1122" r="3"/><circle cx="635" cy="1272" r="3"/></g>
+    </g>
+
+    <!-- 01 -->
+    <text x="716" y="210" fill="#3f567f" font-size="13" letter-spacing="2">01</text>
+    <text x="752" y="216" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">Dark Glass Interface</text>
+    <text x="752" y="240" fill="#7e9bd0" font-size="13.5">HTML / CSS overlay · blur · glow borders</text>
+    <!-- 02 -->
+    <text x="716" y="360" fill="#3f567f" font-size="13" letter-spacing="2">02</text>
+    <text x="752" y="366" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">CSS2D Labels</text>
+    <text x="752" y="390" fill="#7e9bd0" font-size="13.5">HTML elements pinned to objects in 3D</text>
+    <!-- 03 -->
+    <text x="716" y="510" fill="#3f567f" font-size="13" letter-spacing="2">03</text>
+    <text x="752" y="516" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">Post-Processing</text>
+    <text x="752" y="540" fill="#7e9bd0" font-size="13.5">UnrealBloomPass · EffectComposer</text>
+    <!-- 04 -->
+    <text x="716" y="660" fill="#3f567f" font-size="13" letter-spacing="2">04</text>
+    <text x="752" y="666" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">The Vessel</text>
+    <text x="752" y="690" fill="#7e9bd0" font-size="13.5">USS Enterprise-D · Draco-compressed GLB</text>
+    <!-- 05 -->
+    <text x="716" y="810" fill="#3f567f" font-size="13" letter-spacing="2">05</text>
+    <text x="752" y="816" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">Planets &#215;8</text>
+    <text x="752" y="840" fill="#7e9bd0" font-size="13.5">procedural textures · freeze-on-approach</text>
+    <!-- 06 -->
+    <text x="716" y="960" fill="#3f567f" font-size="13" letter-spacing="2">06</text>
+    <text x="752" y="966" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">Singularity</text>
+    <text x="752" y="990" fill="#7e9bd0" font-size="13.5">black hole · accretion disk · lens refraction</text>
+    <!-- 07 -->
+    <text x="716" y="1110" fill="#3f567f" font-size="13" letter-spacing="2">07</text>
+    <text x="752" y="1116" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">Spiral Galaxy</text>
+    <text x="752" y="1140" fill="#7e9bd0" font-size="13.5">150,000 particles · 3 arms · additive blend</text>
+    <!-- 08 -->
+    <text x="716" y="1260" fill="#3f567f" font-size="13" letter-spacing="2">08</text>
+    <text x="752" y="1266" fill="#e8eefc" font-size="22" font-weight="700" font-family="'Helvetica Neue',Arial,sans-serif">Engine</text>
+    <text x="752" y="1290" fill="#7e9bd0" font-size="13.5">Three.js r150 · single WebGL canvas</text>
+  </g>
+
+  <!-- number badges on left vertices -->
+  <g font-family="ui-monospace,'SF Mono',monospace" text-anchor="middle">
+    <g fill="#0a1322" stroke="#54a1ff" stroke-width="1.4">
+      <circle cx="225" cy="222" r="15"/><circle cx="225" cy="372" r="15"/><circle cx="225" cy="522" r="15"/><circle cx="225" cy="672" r="15"/>
+      <circle cx="225" cy="822" r="15"/><circle cx="225" cy="972" r="15"/><circle cx="225" cy="1122" r="15"/><circle cx="225" cy="1272" r="15"/>
+    </g>
+    <g fill="#8ab4ff" font-size="13">
+      <text x="225" y="227">1</text><text x="225" y="377">2</text><text x="225" y="527">3</text><text x="225" y="677">4</text>
+      <text x="225" y="827">5</text><text x="225" y="977">6</text><text x="225" y="1127">7</text><text x="225" y="1277">8</text>
+    </g>
+  </g>
+</svg>

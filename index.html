@@ -19,8 +19,27 @@
   </script>
 </head>
 <body>
-  <div id="info">STEUERUNG: JOYSTICK (LINKS) | KAMERA: 1-FINGER-WISCHEN | ZOOM: 2-FINGER-PINCH</div>
+  <div id="info">CONTROLS: JOYSTICK (LEFT) | CAMERA: 1-FINGER SWIPE | ZOOM: 2-FINGER PINCH</div>
   <div id="joystick-zone"></div>
+
+  <!-- Quick Warp -->
+  <button id="quick-warp-btn" class="hidden liquid-glass" aria-haspopup="dialog">Quick Warp</button>
+
+  <div id="quick-warp-overlay" aria-hidden="true">
+    <div class="warp-cloud liquid-glass">
+      <header class="warp-header">
+        <h2>Warp Navigation</h2>
+        <button id="warp-close" title="Close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </header>
+      <ul id="warp-list" role="listbox" aria-label="Destinations"></ul>
+      <div id="warp-action">
+        <button id="warp-here" disabled>Warp here</button>
+      </div>
+    </div>
+  </div>
+  <div id="warp-flash"></div>
 
   <div id="bottom-bar" class="liquid-glass">
     <button id="analyze-button" title="Objekt analysieren" aria-label="Objekt analysieren">Analyze Object</button>

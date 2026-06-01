@@ -46,6 +46,15 @@ const analysisTitle = document.getElementById('analysis-title');
 const analysisTextContent = document.getElementById('analysis-text-content');
 const closeAnalysisButton = document.getElementById('close-analysis-button');
 
+// Quick Warp UI
+const quickWarpBtn    = document.getElementById('quick-warp-btn');
+const quickWarpOverlay = document.getElementById('quick-warp-overlay');
+const warpList        = document.getElementById('warp-list');
+const warpHereBtn     = document.getElementById('warp-here');
+const warpCloseBtn    = document.getElementById('warp-close');
+const warpFlash       = document.getElementById('warp-flash');
+let chosenWarpTargetId = null;
+
 /* --- Hyperspace Loading --- */
 const loadingScene = new THREE.Scene();
 const loadingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -443,8 +452,10 @@ loader.load(
       infoElement.classList.add('ui-visible');
       bottomBar.classList.add('ui-visible');
       joystickZone.classList.add('ui-visible');
-
       motionToggleButton.classList.add('ui-visible');
+
+      buildWarpList();
+      quickWarpBtn.classList.remove('hidden');
     }, { once: true });
   },
   (xhr) => {
@@ -628,10 +639,13 @@ function animate() {
     renderer.render(loadingScene, loadingCamera);
     return;
   }
-  if (appState === 'paused') return;
-
   const elapsedTime = clock.getElapsedTime();
   const pulse = Math.sin(elapsedTime * 0.8) * 0.5 + 0.5;
+
+  // Always keep the scene alive (galaxy, disk, pulses) even when analysis window is open
+  if (galaxy) galaxy.rotation.y += 0.00004;
+  accretionDisk.rotation.z += 0.005;
+
   pacingCircle.scale.set(1 + pulse * 0.1, 1 + pulse * 0.1, 1);
   pacingCircle.material.opacity = 0.3 + pulse * 0.4;
 
@@ -643,23 +657,43 @@ function animate() {
     if (!planet.isFrozen) planet.pivot.rotation.y = THREE.MathUtils.lerp(planet.pivot.rotation.y, targetRotation, 0.02);
   });
 
+  // Skip ship movement & camera when analysis window is open
+  if (appState === 'paused') {
+    lensingSphere.visible = false; blackHoleCore.visible = false; accretionDisk.visible = false;
+    cubeCamera.update(renderer, mainScene);
+    lensingSphere.visible = true; blackHoleCore.visible = true; accretionDisk.visible = true;
+    composer.render();
+    labelRenderer.render(mainScene, camera);
+    return;
+  }
+
   if (ship) {
     const keyForward = (keyboard['w'] ? 0.3 : 0) + (keyboard['s'] ? -0.3 : 0);
     const keyTurn    = (keyboard['a'] ? 0.05 : 0) + (keyboard['d'] ? -0.05 : 0);
 
     const finalForward = joystickMove.forward + keyForward + (gyroControlActive ? gyroInput.forward : 0);
     const finalTurn    = joystickMove.turn    + keyTurn    + (gyroControlActive ? gyroInput.turn    : 0);
+    // Invert steering when reversing so left/right stays intuitive
+    const appliedTurn  = finalForward < 0 ? -finalTurn : finalTurn;
 
     const shipRadius = 5;
     const previousPosition = ship.position.clone();
     ship.translateZ(finalForward);
-    ship.rotateY(finalTurn);
+    ship.rotateY(appliedTurn);
 
-    // Kollisionsschutz zum Zentrum (ohne Forcefield-Rendering)
+    // Collision: black hole
     const blackHoleRadius = blackHoleCore.geometry.parameters.radius;
-    const collisionThreshold = shipRadius + blackHoleRadius;
-    if (ship.position.distanceTo(blackHoleCore.position) < collisionThreshold) {
+    if (ship.position.distanceTo(blackHoleCore.position) < shipRadius + blackHoleRadius) {
       ship.position.copy(previousPosition);
+    }
+
+    // Collision: planets (can't fly through them)
+    for (const planet of planets) {
+      planet.mesh.getWorldPosition(worldPosition);
+      if (ship.position.distanceTo(worldPosition) < shipRadius + planet.mesh.geometry.parameters.radius) {
+        ship.position.copy(previousPosition);
+        break;
+      }
     }
 
     // Aktives Objekt bestimmen
@@ -707,8 +741,6 @@ function animate() {
   if (zoomDistance === minZoom || zoomDistance === maxZoom) zoomVelocity = 0;
   if (camera) camera.position.normalize().multiplyScalar(zoomDistance);
 
-  accretionDisk.rotation.z += 0.005;
-
   // Refraction Capture
   lensingSphere.visible = false; blackHoleCore.visible = false; accretionDisk.visible = false;
   cubeCamera.update(renderer, mainScene);
@@ -745,6 +777,81 @@ function addPointerGlow(el) {
   el.addEventListener('pointercancel',() => el.classList.remove('hover-active', 'touch-hover'), { passive: true });
 }
 [analyzeButton, muteButton, motionToggleButton, closeAnalysisButton].forEach(addPointerGlow);
+
+/* --- Quick Warp --- */
+quickWarpBtn.addEventListener('click', () => {
+  quickWarpOverlay.classList.add('visible');
+  quickWarpOverlay.setAttribute('aria-hidden', 'false');
+});
+warpCloseBtn.addEventListener('click', closeWarpOverlay);
+
+function closeWarpOverlay() {
+  quickWarpOverlay.classList.remove('visible');
+  quickWarpOverlay.setAttribute('aria-hidden', 'true');
+  chosenWarpTargetId = null;
+  warpHereBtn.disabled = true;
+  [...warpList.children].forEach(li => li.classList.remove('active'));
+}
+
+function buildWarpList() {
+  warpList.innerHTML = '';
+  const entries = [
+    { id: 'blackhole', name: blackHoleCore.name },
+    ...planets.map((p, i) => ({ id: 'planet-' + i, name: p.mesh.name }))
+  ];
+  for (const entry of entries) {
+    const li = document.createElement('li');
+    li.textContent = entry.name;
+    li.dataset.targetId = entry.id;
+    li.addEventListener('click', () => {
+      [...warpList.children].forEach(x => x.classList.remove('active'));
+      li.classList.add('active');
+      chosenWarpTargetId = entry.id;
+      warpHereBtn.disabled = false;
+    });
+    warpList.appendChild(li);
+  }
+}
+
+warpHereBtn.addEventListener('click', () => {
+  if (!chosenWarpTargetId || !ship) return;
+  const targetId = chosenWarpTargetId; // capture before closeWarpOverlay clears it
+  if (warpFlash) { warpFlash.classList.add('active'); setTimeout(() => warpFlash.classList.remove('active'), 180); }
+  appState = 'paused';
+  setTimeout(() => { performWarp(targetId); appState = 'playing'; }, 160);
+  closeWarpOverlay();
+});
+
+function performWarp(targetId) {
+  if (targetId === 'blackhole') {
+    ship.position.set(0, 0, 30);
+    ship.lookAt(new THREE.Vector3(0, 0, 0));
+  } else {
+    const idx = parseInt(targetId.split('-')[1], 10);
+    const p = planets[idx];
+    const worldPos = new THREE.Vector3();
+    p.mesh.getWorldPosition(worldPos);
+    const dir = new THREE.Vector3().subVectors(ship.position, worldPos).normalize();
+    if (dir.lengthSq() === 0) dir.set(0, 0, 1);
+    ship.position.copy(worldPos.clone().add(dir.multiplyScalar(12 + p.mesh.geometry.parameters.radius)));
+    ship.lookAt(worldPos);
+  }
+  cameraPivot.rotation.y = 0;
+}
+
+/* --- Tap-to-zoom for analysis images --- */
+const imageLightbox = document.createElement('div');
+imageLightbox.id = 'image-lightbox';
+imageLightbox.innerHTML = '<img alt="">';
+document.body.appendChild(imageLightbox);
+const lightboxImg = imageLightbox.querySelector('img');
+imageLightbox.addEventListener('click', () => imageLightbox.classList.remove('visible'));
+analysisTextContent.addEventListener('click', (e) => {
+  if (e.target && e.target.tagName === 'IMG') {
+    lightboxImg.src = e.target.currentSrc || e.target.src;
+    imageLightbox.classList.add('visible');
+  }
+});
 
 /* --- Tab verlassen: Audio stoppen + hartes Reload beim Zurückkehren --- */
 document.addEventListener('visibilitychange', () => {
