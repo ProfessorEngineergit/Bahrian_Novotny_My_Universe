@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" font-family="'Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <radialGradient id="space" cx="62%" cy="48%" r="80%">
+      <stop offset="0%" stop-color="#0c1322"/>
+      <stop offset="55%" stop-color="#070b14"/>
+      <stop offset="100%" stop-color="#03040a"/>
+    </radialGradient>
+    <radialGradient id="disk" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffd9b8" stop-opacity="0.95"/>
+      <stop offset="22%" stop-color="#ffac89" stop-opacity="0.7"/>
+      <stop offset="55%" stop-color="#6f93ff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#54a1ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffc7a3"/>
+      <stop offset="50%" stop-color="#9fb6ff"/>
+      <stop offset="100%" stop-color="#54a1ff"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="55%" stop-color="#bcd2ff"/>
+      <stop offset="100%" stop-color="#54a1ff"/>
+    </linearGradient>
+    <linearGradient id="cursorfill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#bcd2ff"/>
+      <stop offset="100%" stop-color="#54a1ff"/>
+    </linearGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffedd8"/>
+      <stop offset="40%" stop-color="#ff9a55"/>
+      <stop offset="100%" stop-color="#ff6a1a" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#1b2740" stroke-width="1" opacity="0.45"/>
+    </pattern>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="420" fill="url(#space)"/>
+  <rect width="1200" height="420" fill="url(#grid)"/>
+
+  <!-- starfield -->
+  <g fill="#cfe0ff">
+    <circle cx="120" cy="60" r="1.1" opacity="0.7"/><circle cx="240" cy="120" r="0.9" opacity="0.5"/>
+    <circle cx="340" cy="40" r="1.3" opacity="0.8"/><circle cx="60" cy="200" r="1" opacity="0.6"/>
+    <circle cx="180" cy="320" r="1.2" opacity="0.7"/><circle cx="300" cy="280" r="0.8" opacity="0.5"/>
+    <circle cx="500" cy="70" r="1" opacity="0.6"/><circle cx="1140" cy="90" r="1.2" opacity="0.7"/>
+    <circle cx="1080" cy="350" r="1" opacity="0.6"/><circle cx="980" cy="60" r="0.9" opacity="0.5"/>
+    <circle cx="640" cy="360" r="1.1" opacity="0.6"/><circle cx="760" cy="40" r="1" opacity="0.6"/>
+    <circle cx="1160" cy="220" r="0.9" opacity="0.5"/><circle cx="420" cy="380" r="1" opacity="0.6"/>
+    <circle cx="900" cy="380" r="0.8" opacity="0.4"/><circle cx="1020" cy="160" r="1.4" opacity="0.85"/>
+  </g>
+
+  <!-- galaxy -->
+  <g transform="translate(800 205)">
+    <ellipse cx="0" cy="0" rx="295" ry="168" fill="url(#disk)" filter="url(#softglow)" opacity="1"/>
+    <!-- blurred glow pass -->
+    <g fill="none" stroke="url(#arm)" stroke-width="13" stroke-linecap="round" filter="url(#softglow)" opacity="0.6">
+      <path id="armp" d="M0 0 C 55 -22, 150 -50, 222 -18 C 292 14, 300 96, 244 156"/>
+      <use href="#armp" transform="rotate(120)"/>
+      <use href="#armp" transform="rotate(240)"/>
+    </g>
+    <!-- crisp arms -->
+    <g fill="none" stroke="url(#arm)" stroke-width="7" stroke-linecap="round" opacity="1">
+      <use href="#armp"/>
+      <use href="#armp" transform="rotate(120)"/>
+      <use href="#armp" transform="rotate(240)"/>
+    </g>
+    <!-- star dots along disk -->
+    <g fill="#ffe7d2">
+      <circle cx="70" cy="-22" r="1.6" opacity="0.9"/><circle cx="150" cy="-40" r="1.3" opacity="0.8"/>
+      <circle cx="210" cy="-10" r="1.4" opacity="0.8"/><circle cx="-60" cy="30" r="1.5" opacity="0.85"/>
+      <circle cx="-150" cy="50" r="1.2" opacity="0.7"/><circle cx="-200" cy="10" r="1.3" opacity="0.75"/>
+    </g>
+    <g fill="#bcd6ff">
+      <circle cx="120" cy="70" r="1.4" opacity="0.8"/><circle cx="40" cy="120" r="1.2" opacity="0.7"/>
+      <circle cx="-110" cy="-70" r="1.3" opacity="0.75"/><circle cx="-40" cy="-120" r="1.2" opacity="0.7"/>
+      <circle cx="240" cy="60" r="1.1" opacity="0.6"/><circle cx="-230" cy="-30" r="1.1" opacity="0.6"/>
+    </g>
+    <!-- black hole core + accretion -->
+    <ellipse cx="0" cy="0" rx="46" ry="20" fill="none" stroke="url(#core)" stroke-width="9" filter="url(#glow)"/>
+    <circle cx="0" cy="0" r="34" fill="url(#core)" opacity="0.9"/>
+    <circle cx="0" cy="0" r="11" fill="#03040a"/>
+    <circle cx="0" cy="0" r="11" fill="none" stroke="#ffd9b8" stroke-width="0.8" opacity="0.6"/>
+  </g>
+
+  <!-- navigation cursor (the vessel) -->
+  <g transform="translate(556 236) rotate(42)">
+    <!-- motion trail -->
+    <g stroke="#7fb4ff" stroke-linecap="round" fill="none" opacity="0.55">
+      <path d="M-9 26 C -16 70, -16 110, -10 150" stroke-width="5" opacity="0.5"/>
+      <path d="M9 26 C 16 70, 16 110, 10 150" stroke-width="5" opacity="0.5"/>
+      <path d="M0 22 C 0 70, 0 120, 0 165" stroke-width="3" opacity="0.7"/>
+    </g>
+    <!-- rounded cursor -->
+    <path d="M0 -30 L19 19 L0 8 L-19 19 Z" fill="url(#cursorfill)" stroke="#ffffff"
+          stroke-width="4" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
+  </g>
+
+  <!-- title block -->
+  <g>
+    <rect x="64" y="150" width="40" height="3" fill="#54a1ff"/>
+    <text x="64" y="135" fill="#5b7bb8" font-size="14" letter-spacing="6" font-family="ui-monospace,'SF Mono',monospace">INTERACTIVE&#160;&#160;3D&#160;&#160;SPACE&#160;&#160;PORTFOLIO</text>
+    <text x="62" y="210" fill="#e8eefc" font-size="34" font-weight="700" letter-spacing="2">BAHRIAN NOVOTNY&#8217;S</text>
+    <text x="62" y="270" fill="url(#title)" font-size="74" font-weight="800" letter-spacing="3">UNIVERSE</text>
+    <text x="64" y="312" fill="#8aa2cf" font-size="15" letter-spacing="1" font-family="ui-monospace,'SF Mono',monospace">Pilot the USS Enterprise-D through a 150,000-particle galaxy.</text>
+  </g>
+
+  <!-- frame ticks -->
+  <g stroke="#2e5cff" stroke-width="1.4" opacity="0.55">
+    <path d="M20 20 H44 M20 20 V44" fill="none"/>
+    <path d="M1180 20 H1156 M1180 20 V44" fill="none"/>
+    <path d="M20 400 H44 M20 400 V376" fill="none"/>
+    <path d="M1180 400 H1156 M1180 400 V376" fill="none"/>
+  </g>
+  <text x="1176" y="412" text-anchor="end" fill="#3f567f" font-size="11" letter-spacing="3" font-family="ui-monospace,'SF Mono',monospace">THREE.JS · WEBGL · BLOOM</text>
+</svg>
