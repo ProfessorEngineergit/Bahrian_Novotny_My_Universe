@@ -1,0 +1,61 @@
+# File Manifest - Bahrian Novotny My Universe
+
+## Overview
+This repository contains a 3D interactive web application featuring the USS Enterprise and planetary exploration.
+
+## File Structure and Sizes
+
+### Web Application Core
+- `index.html` (3,565 bytes) - Main HTML file with Three.js setup
+- `main.js` (33,058 bytes) - Main JavaScript application logic
+- `style.css` (9,846 bytes) - Styling and UI layout
+
+### 3D Models
+- `enterprise-V2.0.glb` (9,395,108 bytes) - Main USS Enterprise 3D model
+- `downscaled_USS_Enterprise_D.glb` (9,394,408 bytes) - Optimized Enterprise model
+- `3dbenchy.stl` (11,285,384 bytes) - 3D printing test model
+
+### Audio Files
+- `Arcadia.mp3` (1,561,329 bytes) - Background music (MP3 format)
+- `Arcadia.wav` (2 bytes) - Background music (WAV format - appears to be placeholder)
+
+### Fonts
+- `Nasalization V2.woff` (19,472 bytes) - Custom font (WOFF format)
+- `Nasalization V2.woff2` (16,400 bytes) - Custom font (WOFF2 format)
+
+### Images
+- `OpenImageLabel.jpeg` (432,746 bytes) - UI element image
+- `Rack 1.png` (2 bytes) - Equipment rack image (placeholder)
+- `Rack 2.png` (1,641,243 bytes) - Equipment rack image
+- `SURGE1.jpeg` (2 bytes) - Surge protection image (placeholder)
+- `SURGE 2.jpeg` (1,245,655 bytes) - Surge protection image
+
+### Assets Directory
+- `Assets/downscaled_USS_Enterprise_D.glb` - Additional 3D model
+
+### Documentation
+- `README.md` (1,516 bytes) - Project documentation
+- `LICENSE` (34,523 bytes) - License file
+
+### Total Repository Size
+Approximately 34+ MB (excluding .git directory)
+
+## File Types Summary
+- **3D Models**: 3 files (~30 MB)
+- **Audio**: 2 files (~1.5 MB)
+- **Images**: 4 files (~3.3 MB)
+- **Web Files**: 3 files (46 KB)
+- **Fonts**: 2 files (36 KB)
+- **Documentation**: 2 files (36 KB)
+
+## Technology Stack
+- **Frontend**: HTML5, CSS3, JavaScript (ES6 modules)
+- **3D Graphics**: Three.js (v0.150.1)
+- **Controls**: nipplejs for joystick controls
+- **Audio**: HTML5 Audio API
+- **Fonts**: Custom web fonts (Nasalization V2)
+
+## Dependencies
+- Three.js (loaded from CDN)
+- nipplejs (loaded from CDN)
+- Modern browser with WebGL support required
